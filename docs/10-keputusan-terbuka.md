@@ -11,6 +11,8 @@
 | 5 | Auth | **better-auth langsung** (Clerk dibatalkan); Fase 1: email + kata sandi admin | 2026-11-08 |
 | 6 | Backend | **NestJS + TypeScript + GraphQL** | 2026-11-08 |
 | 7 | Urutan kerja | **CMS/platform dulu**; aplikasi mobile menyusul | 2026-11-08 |
+| 8 | Frontend CMS | **Next.js + Apollo + Tailwind** (dikunci via setup Full F00) | 2026-11-08 |
+| 9 | Package manager & monorepo | **Bun + Turborepo** (Node.js sebagai runtime apps) | 2026-11-08 |
 
 ## 2. Sisa Pertanyaan
 
@@ -26,13 +28,13 @@ Fase 1 (platform) tidak tergantung jawaban ini, tetapi Fase 2 tidak bisa mulai t
 
 Cara jawab: cukup `Q1: A`.
 
-### Q2. Frontend CMS — setuju dengan rekomendasi Next.js?
+### Q2. Frontend CMS — TERJAWAB
 
-Rekomendasi di [08-tech-stack.md](08-tech-stack.md): Next.js + Apollo + Tailwind. Keputusan ini reversibel (tidak mengubah backend), tetapi ditunggu sebelum Fase 1 mulai agar fondasi web langsung dibangun di atasnya.
+Diputuskan saat setup F00: **Next.js + Apollo + Tailwind** (scope Full F00). Scaffold `apps/cms` sudah mengikuti keputusan ini.
 
 ### Q3. Operasional
 
-- Penyedia email transaksional + domain pengirim apa? (Wajib sebelum login admin bisa dipakai penuh.)
+- Penyedia email transaksional + domain pengirim apa? (Wajib sebelum login admin bisa dipakai penuh — dibutuhkan di F01.)
 - Hosting: sudah punya VPS/cloud? Anggaran bulanan? Batasan data-di-Indonesia?
 - Target waktu fase 1 dan siapa operator CMS sehari-hari?
 

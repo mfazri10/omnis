@@ -519,16 +519,16 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 20
-          cache: "pnpm"
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm test -- --shard=${{ strategy.matrix.shard }}
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run test -- --shard=${{ strategy.matrix.shard }}
         env:
           TEST_PG_CONNECTION: postgres://test:test@localhost:5432
           TEST_REDIS_URL: redis://localhost:6379
-      - run: pnpm test:e2e
+      # NOTE: test:e2e menyusul di F01 (script belum ada di F00)
+      - run: bun run test:e2e
         env:
           TEST_PG_CONNECTION: postgres://test:test@localhost:5432
           TEST_REDIS_URL: redis://localhost:6379

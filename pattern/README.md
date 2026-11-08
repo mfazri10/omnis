@@ -22,5 +22,5 @@ Konsep koding untuk proyek ini (scope: CMS/platform dulu). Sifatnya **menjelaska
 
 ## Keputusan Tertunda yang Mempengaruhi Pattern
 
-- **Package manager** (Bun vs pnpm) — baru memengaruhi perintah, bukan struktur kode.
+- **Package manager: Bun** (+ Turborepo) — dikunci saat setup F00.
 - Komponen UI web (shadcn-style atau alternatif) — pola di [frontend-pattern.md](frontend-pattern.md) tidak bergantung mereknya.

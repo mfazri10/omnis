@@ -5,7 +5,7 @@
 | FR | — (penopang semua fitur) |
 | Fase | 0–1 |
 | Prioritas | Must |
-| Status | Belum mulai |
+| Status | Selesai |
 | Dependensi | — |
 
 ## Tujuan
@@ -14,18 +14,18 @@ Repositori, lingkungan dev, dan kerangka backend siap menampung seluruh fitur pl
 
 ## Lingkup Backend
 
-- [ ] Struktur monorepo: `apps/api` (NestJS), `apps/cms` (web), `packages/` bersama (config, types)
-- [ ] Docker Compose dev: Postgres, Redis, API, worker, CMS web — satu perintah jalan
-- [ ] Koneksi database: control-plane (tetap) + connection factory App DB dinamis per slug
-- [ ] Sistem migrasi per database (control-plane + template App DB)
-- [ ] GraphQL code-first menyala + batas kompleksitas/kedalaman query
-- [ ] Konfigurasi environment per lingkungan (dev/staging/prod); tanpa secret di repo
-- [ ] Health-check endpoint (`/health`: API, control-plane DB, Redis)
-- [ ] CI dasar: install, lint, typecheck, tes unit
+- [x] Struktur monorepo: `apps/api` (NestJS), `apps/cms` (web), `packages/` bersama (config, types)
+- [x] Docker Compose dev: Postgres, Redis, API, worker, CMS web — satu perintah jalan
+- [x] Koneksi database: control-plane (tetap) + connection factory App DB dinamis per slug
+- [x] Sistem migrasi per database (control-plane + template App DB)
+- [x] GraphQL code-first menyala + batas kompleksitas/kedalaman query
+- [x] Konfigurasi environment per lingkungan (dev/staging/prod); tanpa secret di repo
+- [x] Health-check endpoint (`/health`: API, control-plane DB, Redis)
+- [x] CI dasar: install, lint, typecheck, tes unit
 
 ## Lingkup CMS UI
 
-- [ ] Aplikasi web menyala dengan halaman kosong + koneksi GraphQL terbukti (query health/version tampil)
+- [x] Aplikasi web menyala dengan halaman kosong + koneksi GraphQL terbukti (query health/version tampil)
 
 ## Kriteria Selesai
 
