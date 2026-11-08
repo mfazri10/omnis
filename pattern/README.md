@@ -14,6 +14,7 @@ Konsep koding untuk proyek ini (scope: CMS/platform dulu). Sifatnya **menjelaska
 ## Konvensi Bersama Semua Lapisan
 
 - **TypeScript `strict: true`**, tanpa `any` (gunakan tipe eksplisit, generics, atau `unknown` + validasi).
+- **Import tipe harus `import type`** — runtime Bun tidak mengeliminasi import tipe otomatis; class untuk DI Nest tetap import nilai biasa.
 - **Identifier kode Bahasa Inggris**; pesan ke pengguna Bahasa Indonesia.
 - **ID adalah string di TypeScript/GraphQL** (`ID` scalar) — kolom Postgres-nya `bigint`, jangan expose angka mentah ke JSON.
 - **Waktu dalam ISO-8601 UTC**; format lokal hanya di tampilan.

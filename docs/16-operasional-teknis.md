@@ -8,17 +8,20 @@ Dokumen ini mengatur aspek operasional runtime: rate limiting, health check, mon
 
 ### 1.1 Strategi
 
-Sliding window per IP, didukung Redis sebagai backing store. Implementasi menggunakan `@nestjs/throttler` dengan custom Redis storage agar state rate limit bertahan lintas restart dan konsisten antar proses (bila di-scale horizontal).
+Sliding window per IP dengan Redis sebagai backing store, agar state bertahan lintas restart dan konsisten antar proses (bila di-scale horizontal). Untuk endpoint auth dipakai middleware Express kustom (`apps/api/src/auth/rate-limit.middleware.ts`) — bukan `@nestjs/throttler` — karena better-auth ditangani satu mounted handler, bukan controller Nest.
 
 ### 1.2 Limit per Endpoint
 
 | Endpoint | Limit | Window | Keterangan |
 |---|---|---|---|
-| `POST /auth/sign-in` | 5 request | 1 menit | Brute-force login |
-| `POST /auth/forgot-password` | 3 request | 5 menit | Penyalahgunaan reset |
-| `POST /uploads` | 30 request | 1 menit | Upload media REST |
-| `POST /graphql` (authenticated) | 120 request | 1 menit | Operasi CMS normal |
-| `POST /graphql` (unauthenticated) | 20 request | 1 menit | Introspeksi / query publik |
+| `POST /api/auth/sign-in/email` | 5 request | 1 menit | Brute-force login (F01 ✓) |
+| `POST /api/auth/request-password-reset` | 3 request | 5 menit | Penyalahgunaan reset (F01 ✓) |
+| `/api/auth/*` lainnya | 120 request | 1 menit | Default endpoint auth (F01 ✓) |
+| `POST /uploads` | 30 request | 1 menit | Upload media REST (menyusul F09) |
+| `POST /graphql` (authenticated) | 120 request | 1 menit | Operasi CMS normal (menyusul) |
+| `POST /graphql` (unauthenticated) | 20 request | 1 menit | Introspeksi / query publik (menyusul) |
+
+Endpoint auth di-mount di `/api/auth/*` (default better-auth, dikunci F01).
 
 ### 1.3 Response saat Terkena Limit
 
@@ -34,40 +37,17 @@ Sliding window per IP, didukung Redis sebagai backing store. Implementasi menggu
 }
 ```
 
-### 1.4 Implementasi NestJS
+### 1.4 Implementasi
 
-```typescript
-// throttler.module.ts
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { ThrottlerStorageRedisService } from '@nestjs/throttler/dist/throttler-storage-redis.service';
+Middleware Express kustom (`apps/api/src/auth/rate-limit.middleware.ts`), dipasang di `main.ts` sebelum handler better-auth:
 
-@Module({
-  imports: [
-    ThrottlerModule.forRoot({
-      throttlers: [
-        { name: 'short', ttl: 60_000, limit: 120 },   // default authenticated
-      ],
-      storage: new ThrottlerStorageRedisService(redisClient),
-    }),
-  ],
-  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
-})
-export class AppThrottlerModule {}
-```
+- Aturan dicocokkan dari path: `/sign-in/*`, `/request-password-reset`, default `/` untuk endpoint auth lain.
+- Sliding window memakai sorted set Redis (`ZREMRANGEBYSCORE` + `ZCARD`, lalu `ZADD` + `EXPIRE`).
+- Klien Redis di-resolve per-request via getter — `main.ts` berjalan sebelum `app.init()`, sehingga capture langsung akan mengunci `undefined`.
+- Redis mati = fail-open (diloloskan + warning), bukan fail-closed.
+- Endpoint lifecycle publik (`/sign-up/*`, `/delete-user`, `/change-email`) diblokir 403 — akun admin hanya via seed/CMS.
 
-Endpoint-specific limit diterapkan via decorator `@Throttle()` pada controller/resolver masing-masing:
-
-```typescript
-@Throttle({ short: { ttl: 60_000, limit: 5 } })
-@Post('auth/sign-in')
-signIn() { /* ... */ }
-
-@Throttle({ short: { ttl: 300_000, limit: 3 } })
-@Post('auth/forgot-password')
-forgotPassword() { /* ... */ }
-```
-
-GraphQL unauthenticated vs authenticated dibedakan di custom guard yang memeriksa keberadaan sesi sebelum menentukan limit mana yang berlaku.
+Limit GraphQL (authenticated vs unauthenticated) menyusul di fitur CMS berikutnya.
 
 ---
 

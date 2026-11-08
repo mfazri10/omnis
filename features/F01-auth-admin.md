@@ -5,7 +5,7 @@
 | FR | FR-PLAT-01 |
 | Fase | 1 |
 | Prioritas | Must |
-| Status | Belum mulai |
+| Status | Selesai |
 | Dependensi | F00 |
 
 ## Tujuan
@@ -14,20 +14,20 @@ Admin bisa masuk CMS dengan email + kata sandi secara aman; sesi bisa dicabut sa
 
 ## Lingkup Backend
 
-- [ ] better-auth terpasang pada control-plane DB (tabel `user`, `session`, `account`, `verification`)
-- [ ] Profil `admins` tertaut ke identitas better-auth (`auth_user_id`)
-- [ ] Sign-in / sign-out / sesi cookie (`httpOnly`, `secure`, `sameSite`)
-- [ ] Lupa kata sandi: kirim tautan reset via email + atur ulang bertoken kedaluwarsa
-- [ ] Ganti kata sandi dari profil (wajib kata sandi lama)
-- [ ] Guard autentikasi: tolak request bersesi tidak valid / profil nonaktif (`UNAUTHENTICATED`)
-- [ ] Rate limit pada sign-in dan lupa kata sandi
-- [ ] Seed Super Admin pertama via perintah terkendali (bukan data statis di repo)
+- [x] better-auth terpasang pada control-plane DB (tabel `user`, `session`, `account`, `verification`)
+- [x] Profil `admins` tertaut ke identitas better-auth (`auth_user_id`)
+- [x] Sign-in / sign-out / sesi cookie (`httpOnly`, `secure`, `sameSite`)
+- [x] Lupa kata sandi: kirim tautan reset via email + atur ulang bertoken kedaluwarsa
+- [x] Ganti kata sandi dari profil (wajib kata sandi lama)
+- [x] Guard autentikasi: tolak request bersesi tidak valid / profil nonaktif (`UNAUTHENTICATED`)
+- [x] Rate limit pada sign-in dan lupa kata sandi
+- [x] Seed Super Admin pertama via perintah terkendali (bukan data statis di repo)
 
 ## Lingkup CMS UI
 
-- [ ] Halaman login (pesan error generik), lupa kata sandi, atur ulang kata sandi
-- [ ] Menu profil: ganti kata sandi, logout
-- [ ] Pengalihan otomatis ke login bila sesi habis; pesan yang jelas
+- [x] Halaman login (pesan error generik), lupa kata sandi, atur ulang kata sandi
+- [x] Menu profil: ganti kata sandi, logout
+- [x] Pengalihan otomatis ke login bila sesi habis; pesan yang jelas
 
 ## Kriteria Selesai
 

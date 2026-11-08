@@ -527,7 +527,7 @@ jobs:
         env:
           TEST_PG_CONNECTION: postgres://test:test@localhost:5432
           TEST_REDIS_URL: redis://localhost:6379
-      # NOTE: test:e2e menyusul di F01 (script belum ada di F00)
+      # NOTE: F01 terverifikasi via tes unit + smoke manual; skrip test:e2e otomatis menyusul
       - run: bun run test:e2e
         env:
           TEST_PG_CONNECTION: postgres://test:test@localhost:5432

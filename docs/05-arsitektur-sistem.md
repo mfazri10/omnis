@@ -81,12 +81,12 @@ API → validasi slug unik → CREATE DATABASE app_<slug>
 ### 4.3 Login admin
 
 ```text
-CMS → better-auth sign-in (email + kata sandi) → cookie sesi httpOnly
+CMS → POST /api/auth/sign-in/email (better-auth, email + kata sandi) → cookie sesi httpOnly
 Setiap request → sesi valid? → profil admin aktif?
 Logout / nonaktifkan admin → sesi dicabut
 ```
 
-better-auth hidup sebagai instance pada control-plane DB untuk identitas admin. Instance per App DB untuk user aplikasi disiapkan polanya di fase mobile (token bearer untuk mobile, bukan cookie).
+better-auth hidup sebagai instance pada control-plane DB untuk identitas admin. Instance per App DB untuk user aplikasi disiapkan polanya di fase mobile (token bearer untuk mobile, bukan cookie). Endpoint auth di-mount di `/api/auth/*` (default better-auth, dikunci F01); sign-up publik dinonaktifkan.
 
 ### 4.4 Kampanye notifikasi terjadwal
 
