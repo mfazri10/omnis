@@ -1,11 +1,11 @@
-import {
+import { Injectable } from "@nestjs/common";
+import type {
   CallHandler,
   ExecutionContext,
-  Injectable,
   NestInterceptor,
 } from "@nestjs/common";
 import { GqlExecutionContext } from "@nestjs/graphql";
-import { Observable } from "rxjs";
+import type { Observable } from "rxjs";
 import { DatabaseService } from "../../database/database.service";
 import type { GraphqlContext } from "../types/request-context";
 
@@ -24,6 +24,9 @@ export class AppDatabaseInterceptor implements NestInterceptor {
     context: ExecutionContext,
     next: CallHandler,
   ): Promise<Observable<unknown>> {
+    if (context.getType<string>() !== "graphql") {
+      return next.handle();
+    }
     const gqlCtx = GqlExecutionContext.create(context);
     const req = gqlCtx.getContext<GraphqlContext>().req;
     const rawSlug = req.headers?.[APP_SLUG_HEADER];

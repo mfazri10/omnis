@@ -22,3 +22,5 @@ bunx drizzle-kit generate --config=drizzle.config.platform.ts
 ```
 
 Lalu bungkus hasil generate menjadi modul `up`/`down` sesuai konvensi (atau tulis modul kecil secara langsung). Jangan edit migrasi yang sudah diterapkan — forward-fix (doc 12 §7).
+
+Catatan: file `.sql` + folder `meta/` hasil drizzle-kit tetap disimpan sebagai basis diff untuk generate berikutnya. Yang dieksekusi runner (`db:migrate`) hanyalah modul `.ts` — bukan file `.sql`.

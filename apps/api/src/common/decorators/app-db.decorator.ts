@@ -1,4 +1,5 @@
-import { createParamDecorator, ExecutionContext } from "@nestjs/common";
+import { createParamDecorator } from "@nestjs/common";
+import type { ExecutionContext } from "@nestjs/common";
 import { GqlExecutionContext } from "@nestjs/graphql";
 import type { Db } from "../../database/database.service";
 import { APP_DB_KEY } from "../interceptors/app-database.interceptor";

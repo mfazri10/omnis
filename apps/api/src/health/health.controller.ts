@@ -1,4 +1,5 @@
-import { Controller, Get, HttpCode } from "@nestjs/common";
+import { Controller, Get, Res } from "@nestjs/common";
+import type { Response } from "express";
 import { sql } from "drizzle-orm";
 import { DatabaseService } from "../database/database.service";
 import { RedisService } from "../redis/redis.service";
@@ -29,8 +30,9 @@ export class HealthController {
   ) {}
 
   @Get()
-  @HttpCode(200)
-  async check(): Promise<HealthResponse> {
+  async check(
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<HealthResponse> {
     const controlPlaneDb = await this.checkDb();
     const redis = await this.checkRedis();
 
@@ -42,6 +44,7 @@ export class HealthController {
         ? "degraded"
         : "ok";
 
+    res.status(status === "down" ? 503 : 200);
     return {
       status,
       checks,

@@ -1,6 +1,8 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
+import type { OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { drizzle, NodePgDatabase } from "drizzle-orm/node-postgres";
+import { drizzle } from "drizzle-orm/node-postgres";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql } from "drizzle-orm";
 import { Pool } from "pg";
 import {
@@ -34,8 +36,8 @@ interface AppRow {
  */
 @Injectable()
 export class DatabaseService implements OnModuleInit, OnModuleDestroy {
-  private controlPlanePool!: Pool;
-  private controlPlaneDb!: Db;
+  private controlPlanePool?: Pool;
+  private controlPlaneDb?: Db;
   private readonly appPools = new Map<string, CachedPool>();
   private evictionTimer?: NodeJS.Timeout;
 
@@ -45,17 +47,6 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly config: ConfigService) {}
 
   onModuleInit(): void {
-    this.controlPlanePool = new Pool({
-      connectionString: this.config.getOrThrow<string>(
-        "CONTROL_PLANE_DB_URL",
-      ),
-      min: 5,
-      max: 20,
-      idleTimeoutMillis: 30_000,
-      connectionTimeoutMillis: 5_000,
-    });
-    this.controlPlaneDb = drizzle(this.controlPlanePool);
-
     this.evictionTimer = setInterval(() => {
       void this.evictIdlePools();
     }, this.evictionIntervalMs);
@@ -70,11 +61,34 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       await cached.pool.end();
       this.appPools.delete(slug);
     }
-    await this.controlPlanePool.end();
+    if (this.controlPlanePool) {
+      await this.controlPlanePool.end();
+    }
   }
 
   getControlPlaneConnection(): Db {
-    return this.controlPlaneDb;
+    return this.ensureControlPlane().db;
+  }
+
+  /**
+   * Lazy init: factory provider (mis. AUTH) berjalan sebelum onModuleInit,
+   * sehingga pool control-plane dibuat saat pertama dipakai, bukan saat init.
+   */
+  private ensureControlPlane(): { pool: Pool; db: Db } {
+    if (!this.controlPlanePool || !this.controlPlaneDb) {
+      const pool = new Pool({
+        connectionString: this.config.getOrThrow<string>(
+          "CONTROL_PLANE_DB_URL",
+        ),
+        min: 5,
+        max: 20,
+        idleTimeoutMillis: 30_000,
+        connectionTimeoutMillis: 5_000,
+      });
+      this.controlPlanePool = pool;
+      this.controlPlaneDb = drizzle(pool);
+    }
+    return { pool: this.controlPlanePool, db: this.controlPlaneDb };
   }
 
   async getAppConnection(slug: string): Promise<Db> {
@@ -106,7 +120,8 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     totalServerConnections: number;
   } {
     const pools: Record<string, PoolMetrics> = {};
-    let totalServerConnections = this.controlPlanePool.totalCount;
+    const controlPlanePool = this.ensureControlPlane().pool;
+    let totalServerConnections = controlPlanePool.totalCount;
     for (const [slug, cached] of this.appPools) {
       pools[slug] = {
         total: cached.pool.totalCount,
@@ -117,9 +132,9 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     }
     return {
       controlPlane: {
-        total: this.controlPlanePool.totalCount,
-        idle: this.controlPlanePool.idleCount,
-        waiting: this.controlPlanePool.waitingCount,
+        total: controlPlanePool.totalCount,
+        idle: controlPlanePool.idleCount,
+        waiting: controlPlanePool.waitingCount,
       },
       appPools: { count: this.appPools.size, pools },
       totalServerConnections,
@@ -137,7 +152,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async validateSlug(slug: string): Promise<void> {
-    const result = await this.controlPlaneDb.execute(
+    const result = await this.getControlPlaneConnection().execute(
       sql`SELECT id, status FROM apps WHERE slug = ${slug} LIMIT 1`,
     );
     const rows = result.rows as unknown as AppRow[];

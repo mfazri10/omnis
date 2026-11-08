@@ -5,12 +5,16 @@ export interface EnvVars {
   API_PORT: number;
   CORS_ORIGIN: string;
   NODE_ENV: string;
+  BETTER_AUTH_SECRET: string;
+  BETTER_AUTH_URL: string;
+  CMS_ORIGIN: string;
 }
 
 const REQUIRED_KEYS = [
   "CONTROL_PLANE_DB_URL",
   "POSTGRES_BASE_URL",
   "REDIS_URL",
+  "BETTER_AUTH_SECRET",
 ] as const;
 
 function isNonEmptyString(value: unknown): value is string {
@@ -38,5 +42,12 @@ export function validateEnv(config: Record<string, unknown>): EnvVars {
     NODE_ENV: isNonEmptyString(config.NODE_ENV)
       ? config.NODE_ENV
       : "development",
+    BETTER_AUTH_SECRET: config.BETTER_AUTH_SECRET as string,
+    BETTER_AUTH_URL: isNonEmptyString(config.BETTER_AUTH_URL)
+      ? config.BETTER_AUTH_URL
+      : `http://localhost:${apiPort}`,
+    CMS_ORIGIN: isNonEmptyString(config.CMS_ORIGIN)
+      ? config.CMS_ORIGIN
+      : "http://localhost:3001",
   };
 }

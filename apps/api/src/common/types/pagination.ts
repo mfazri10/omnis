@@ -1,4 +1,4 @@
-import { Type } from "@nestjs/common";
+import type { Type } from "@nestjs/common";
 import { ArgsType, Field, Int, ObjectType } from "@nestjs/graphql";
 import { Max, Min } from "class-validator";
 
