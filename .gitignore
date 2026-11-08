@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+# NOTE: bun.lock (lockfile) SENGAJA di-commit agar versi konsisten
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# Env (jangan commit secret)
+.env
+.env.*.local
+.env.local
+
+# Logs & coverage
+*.log
+coverage/
+
+# Turbo
+.turbo/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+
+# Mobile (Fase 4)
+.expo/
+
+# Generated (dibuat ulang otomatis)
+schema.gql
