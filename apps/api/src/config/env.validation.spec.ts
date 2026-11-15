@@ -33,4 +33,26 @@ describe("validateEnv", () => {
       "API_PORT",
     );
   });
+
+  it("FCM_CREDENTIAL_KEY opsional tetapi harus 64 hex bila ada", () => {
+    expect(validateEnv({ ...base }).FCM_CREDENTIAL_KEY).toBeUndefined();
+    expect(
+      validateEnv({ ...base, FCM_CREDENTIAL_KEY: "ab".repeat(32) })
+        .FCM_CREDENTIAL_KEY,
+    ).toBe("ab".repeat(32));
+    expect(() =>
+      validateEnv({ ...base, FCM_CREDENTIAL_KEY: "terlalu-pendek" }),
+    ).toThrow("FCM_CREDENTIAL_KEY");
+  });
+
+  it("PROVISION_TIMEOUT_MS default 30000 dan harus positif", () => {
+    expect(validateEnv({ ...base }).PROVISION_TIMEOUT_MS).toBe(30000);
+    expect(
+      validateEnv({ ...base, PROVISION_TIMEOUT_MS: "60000" })
+        .PROVISION_TIMEOUT_MS,
+    ).toBe(60000);
+    expect(() =>
+      validateEnv({ ...base, PROVISION_TIMEOUT_MS: "-5" }),
+    ).toThrow("PROVISION_TIMEOUT_MS");
+  });
 });

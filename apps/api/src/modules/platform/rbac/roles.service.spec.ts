@@ -42,6 +42,10 @@ function makeService(): {
     findById: jest.fn(),
     findBySlug: jest.fn(),
     listActive: jest.fn(),
+    insert: jest.fn(),
+    list: jest.fn(),
+    updateById: jest.fn(),
+    deleteById: jest.fn(),
   };
   const assignments: Mocked<AssignmentsRepository> = {
     insert: jest.fn(),

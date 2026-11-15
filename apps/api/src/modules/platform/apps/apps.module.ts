@@ -1,13 +1,18 @@
 import { Module } from "@nestjs/common";
+import { AppConfigsRepository } from "./app-configs.repository";
 import { AppsRepository } from "./apps.repository";
 import { AppsResolver } from "./apps.resolver";
+import { AppsService } from "./apps.service";
+import { FcmCredentialService } from "./fcm-credential.service";
 
-/**
- * Modul minimal F05 (R1): repository baca + satu query daftar.
- * CRUD/provisioning/FCM/UI milik F03.
- */
 @Module({
-  providers: [AppsRepository, AppsResolver],
-  exports: [AppsRepository],
+  providers: [
+    AppsRepository,
+    AppsResolver,
+    AppsService,
+    AppConfigsRepository,
+    FcmCredentialService,
+  ],
+  exports: [AppsRepository, AppsService],
 })
 export class AppsModule {}

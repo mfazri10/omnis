@@ -8,6 +8,8 @@ export interface EnvVars {
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_URL: string;
   CMS_ORIGIN: string;
+  FCM_CREDENTIAL_KEY?: string;
+  PROVISION_TIMEOUT_MS: number;
 }
 
 const REQUIRED_KEYS = [
@@ -31,6 +33,17 @@ export function validateEnv(config: Record<string, unknown>): EnvVars {
   if (!Number.isInteger(apiPort) || apiPort <= 0) {
     throw new Error("API_PORT must be a positive integer");
   }
+  const fcmKey = config.FCM_CREDENTIAL_KEY;
+  if (
+    fcmKey !== undefined &&
+    (typeof fcmKey !== "string" || !/^[0-9a-fA-F]{64}$/.test(fcmKey))
+  ) {
+    throw new Error("FCM_CREDENTIAL_KEY must be 64 hex characters");
+  }
+  const provisionTimeout = Number(config.PROVISION_TIMEOUT_MS ?? 30000);
+  if (!Number.isInteger(provisionTimeout) || provisionTimeout <= 0) {
+    throw new Error("PROVISION_TIMEOUT_MS must be a positive integer");
+  }
   return {
     CONTROL_PLANE_DB_URL: config.CONTROL_PLANE_DB_URL as string,
     POSTGRES_BASE_URL: config.POSTGRES_BASE_URL as string,
@@ -49,5 +62,10 @@ export function validateEnv(config: Record<string, unknown>): EnvVars {
     CMS_ORIGIN: isNonEmptyString(config.CMS_ORIGIN)
       ? config.CMS_ORIGIN
       : "http://localhost:3001",
+    FCM_CREDENTIAL_KEY:
+      typeof config.FCM_CREDENTIAL_KEY === "string"
+        ? config.FCM_CREDENTIAL_KEY
+        : undefined,
+    PROVISION_TIMEOUT_MS: provisionTimeout,
   };
 }
