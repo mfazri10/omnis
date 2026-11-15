@@ -46,7 +46,7 @@
 - R8: FCM AES-256-GCM (`iv:tag:data` hex); env `FCM_CREDENTIAL_KEY` opsional (64 hex); salah/tak ada → `InternalServerErrorException` jelas saat dipakai.
 - R9: Query `apps` default active-only (kompat F05); nilai eksplisit `all` + enam status; CMS registry default `all`.
 - R10: Transisi: suspend(active→suspended), unsuspend(suspended→active), archive(active|suspended→archived), delete(failed saja + best-effort DROP); suspend/archive memanggil `closeAppPool`.
-- R11: Migrasi template = `.ts` timestamp di scope `app-template` (konvensi wrapper `.ts` sama); dipakai-ulang via `migrateUp("app-template", db)`.
+- R11: Migrasi template = `.ts` timestamp di `src/database/migration/app-template/` (terkompilasi ke dist agar bisa dimuat in-process); dipakai-ulang via `migrateUp("app-template", db)`. Loader memakai `require()` jalur absolut (hasil kompilasi CJS menolak `import()` URL file://); pola file mengecualikan `.d.ts`.
 - R12: Branch `feature/F03-registry-provisioning` dari HEAD F05 (stacked — F03 butuh kode F05); kerja in-place.
 - R13: Kegagalan tengah-saga dibuktikan unit (mock) + fixture `failed`; tanpa injeksi crash live. Smoke CMS tanpa asersi konten (client-rendered).
 - R14: Timestamp GraphQL memakai `GraphQLISODateTime`.

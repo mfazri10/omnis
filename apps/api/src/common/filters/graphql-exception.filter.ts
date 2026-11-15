@@ -39,6 +39,10 @@ export class GraphqlExceptionFilter implements GqlExceptionFilter {
       } = extra;
       return this.toError(exception.message, code, rest);
     }
+    console.error(
+      "[graphql] unhandled:",
+      exception instanceof Error ? exception.stack : exception,
+    );
     return this.toError("Terjadi kesalahan pada server.", "INTERNAL_ERROR");
   }
 

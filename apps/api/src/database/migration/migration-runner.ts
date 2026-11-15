@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
@@ -23,7 +22,11 @@ export interface AppliedMigration {
 
 const MIGRATION_LOCK_ID = 7364291;
 const MIGRATIONS_ROOT = resolve(__dirname, "..", "..", "..", "migrations");
-const FILE_PATTERN = /^\d{14}_.+\.ts$/;
+// Scope app-template tinggal di src agar terkompilasi ke dist:
+// saga provisioning menjalankannya IN-PROCESS baik via bun (src/.ts)
+// maupun node (dist/.js). Scope platform hanya via CLI bun.
+const APP_TEMPLATE_DIR = resolve(__dirname, "app-template");
+const FILE_PATTERN = /^\d{14}_.+\.(ts|js)$/;
 
 function requireEnv(key: string): string {
   const value = process.env[key];
@@ -38,6 +41,9 @@ function isValidDbName(name: string): boolean {
 }
 
 function scopeDir(scope: string): string {
+  if (scope === "app-template") {
+    return APP_TEMPLATE_DIR;
+  }
   return join(MIGRATIONS_ROOT, scope);
 }
 
@@ -100,7 +106,9 @@ export async function listMigrationFiles(scope: string): Promise<string[]> {
     }
     throw error;
   });
-  return files.filter((f) => FILE_PATTERN.test(f)).sort();
+  return files
+    .filter((f) => FILE_PATTERN.test(f) && !f.endsWith(".d.ts"))
+    .sort();
 }
 
 export async function checksumFile(scope: string, file: string): Promise<string> {
@@ -115,9 +123,13 @@ export async function getApplied(db: Db): Promise<AppliedMigration[]> {
   return result.rows as unknown as AppliedMigration[];
 }
 
-async function loadModule(scope: string, file: string): Promise<MigrationModule> {
-  const url = pathToFileURL(join(scopeDir(scope), file)).href;
-  const mod = (await import(url)) as Partial<MigrationModule>;
+function loadModule(scope: string, file: string): MigrationModule {
+  // require() jalur absolut (bukan import file://): hasil kompilasi tsc
+  // adalah CJS di mana dynamic import() diturunkan menjadi require()
+  // yang MENOLAK URL file://. require() bekerja di node (.js) maupun
+  // bun (.ts) karena path absolut biasa.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const mod = require(join(scopeDir(scope), file)) as Partial<MigrationModule>;
   if (typeof mod.up !== "function" || typeof mod.down !== "function") {
     throw new Error(`Migrasi "${file}" wajib mengekspor fungsi up dan down.`);
   }
@@ -166,7 +178,7 @@ export async function migrateUp(scope: string, db: Db): Promise<string[]> {
   const pending = files.filter((f) => !appliedSet.has(f));
   const done: string[] = [];
   for (const file of pending) {
-    const mod = await loadModule(scope, file);
+    const mod = loadModule(scope, file);
     await mod.up({ db });
     await db.execute(
       sql`INSERT INTO schema_migrations (name, checksum) VALUES (${file}, ${await checksumFile(scope, file)})`,
@@ -190,7 +202,7 @@ export async function migrateDown(
     .slice(0, steps);
   const done: string[] = [];
   for (const row of targets) {
-    const mod = await loadModule(scope, row.name);
+    const mod = loadModule(scope, row.name);
     await mod.down({ db });
     await db.execute(
       sql`DELETE FROM schema_migrations WHERE name = ${row.name}`,
