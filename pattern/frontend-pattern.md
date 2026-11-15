@@ -40,7 +40,7 @@ apps/cms/
 │   └── graphql-codegen.ts      # Konfigurasi codegen (tipe hasil di lib/__generated__/)
 ├── stores/
 │   └── use-session-store.ts    # Zustand: admin, accessibleApps, permissions, sidebar
-├── middleware.ts               # Lindungi /(shell)*: tanpa sesi → /login
+├── proxy.ts                    # Lindungi /(shell)*: tanpa sesi → /login (konvensi Next 16)
 └── utils/                      # cn(), formatTanggal, formatRupiah (murni)
 ```
 
@@ -62,10 +62,10 @@ apps/cms/
 - Semua operasi lewat dokumen ter-generate: `useQuestionsQuery`, `usePublishQuestionMutation` — dilarang menulis `gql` inline di komponen.
 - Jalankan codegen setiap skema berubah; CI gagal bila hasil generate tidak sinkron dengan skema (mencegah drift).
 
-## 3. Auth, Middleware & PermissionGate
+## 3. Auth, Proxy & PermissionGate
 
 - Login/logout/reset memakai better-auth client ke API (`/api/auth/*`); sesi berupa cookie httpOnly — frontend tidak menyimpan token.
-- `middleware.ts`: `/login` dkk. terbuka; seluruh `/(shell)` butuh sesi; route `/platform/*` butuh hak global (cek ringan di middleware, penegakan final tetap di API).
+- `proxy.ts`: `/login` dkk. terbuka; seluruh `/(shell)` butuh sesi; route `/platform/*` butuh hak global (cek ringan di proxy, penegakan final tetap di API).
 - Layout `[appSlug]`: validasi slug terhadap `accessibleApps` di store → slug asing/tak berhak = halaman 403, bukan redirect diam-diam.
 
 ```tsx
