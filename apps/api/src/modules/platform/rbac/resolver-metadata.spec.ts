@@ -72,4 +72,25 @@ describe("RBAC resolver metadata", () => {
       "platform.apps.view",
     ]);
   });
+
+  it("AppsResolver.app → platform.apps.view", () => {
+    expect(permsOf(AppsResolver.prototype, "app")).toEqual([
+      "platform.apps.view",
+    ]);
+  });
+
+  it.each([
+    "provisionApp",
+    "retryProvisionApp",
+    "updateApp",
+    "suspendApp",
+    "unsuspendApp",
+    "archiveApp",
+    "deleteApp",
+    "setFcmCredential",
+  ])("AppsResolver.%s → platform.apps.manage", (method: string) => {
+    expect(permsOf(AppsResolver.prototype, method)).toEqual([
+      "platform.apps.manage",
+    ]);
+  });
 });

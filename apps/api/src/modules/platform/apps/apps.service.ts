@@ -8,6 +8,7 @@ import type { Db } from "../../../database/database.service";
 import type { AppRow, AppStatus } from "../entities/apps.entity";
 import { AppConfigsRepository } from "./app-configs.repository";
 import { AppsRepository } from "./apps.repository";
+import type { UpdateAppRow } from "./apps.repository";
 import { FcmCredentialService } from "./fcm-credential.service";
 
 export interface AppDetail {
@@ -127,11 +128,29 @@ export class AppsService {
     return toDetail(row);
   }
 
-  async updateApp(id: string, patch: UpdateAppPatch): Promise<AppDetail> {
+  async updateApp(
+    id: string,
+    patch: UpdateAppPatch & { name?: string | null },
+  ): Promise<AppDetail> {
     const db = this.database.getControlPlaneConnection();
     const existing = await this.mustFind(db, id);
-    await this.apps.updateById(db, existing.id, patch);
-    return toDetail({ ...existing, ...patch });
+    const { name, ...rest } = patch;
+    if (name === null) {
+      throw new BadRequestException("Nama tidak boleh kosong.");
+    }
+    const clean: UpdateAppRow = { ...rest };
+    if (name !== undefined) {
+      clean.name = name;
+    }
+    if (Object.keys(clean).length === 0) {
+      throw new BadRequestException("Tidak ada field yang diubah.");
+    }
+    await this.apps.updateById(db, existing.id, clean);
+    const updated = await this.apps.findById(db, existing.id);
+    if (!updated) {
+      throw new NotFoundException("Aplikasi tidak ditemukan.");
+    }
+    return toDetail(updated);
   }
 
   async suspendApp(id: string): Promise<AppDetail> {
