@@ -16,4 +16,7 @@ export class PermissionType {
 
   @Field(() => String, { nullable: true })
   description!: string | null;
+
+  @Field({ description: "True = hanya untuk role cakupan global." })
+  globalOnly!: boolean;
 }

@@ -3,6 +3,7 @@ import { AuthGuard } from "../../../common/guards/auth.guard";
 import { PermissionGuard } from "../../../common/guards/permission.guard";
 import { PERMISSIONS_KEY } from "../../../common/decorators/require-permissions.decorator";
 import { AdminsResolver } from "../admins/admins.resolver";
+import { AppsResolver } from "../apps/apps.resolver";
 import { RolesResolver } from "./roles.resolver";
 
 const reflector = new Reflector();
@@ -58,5 +59,17 @@ describe("RBAC resolver metadata", () => {
 
   it("currentAdmin tanpa metadata permission (AuthGuard saja)", () => {
     expect(permsOf(AdminsResolver.prototype, "currentAdmin")).toBeUndefined();
+  });
+
+  it("AppsResolver dikunci AuthGuard + PermissionGuard", () => {
+    const guards = guardsOf(AppsResolver);
+    expect(guards).toContain(AuthGuard);
+    expect(guards).toContain(PermissionGuard);
+  });
+
+  it("AppsResolver.apps → platform.apps.view", () => {
+    expect(permsOf(AppsResolver.prototype, "apps")).toEqual([
+      "platform.apps.view",
+    ]);
   });
 });

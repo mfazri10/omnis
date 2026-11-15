@@ -6,6 +6,7 @@ import { PermissionGuard } from "../../../common/guards/permission.guard";
 import { AssignmentsService } from "./assignments.service";
 import { CreateRoleInput, UpdateRoleInput } from "./dto/role.input";
 import { PermissionsService } from "./permissions.service";
+import { PLATFORM_CATALOG } from "./platform.permissions";
 import type { RoleScope } from "./roles.repository";
 import { RolesService } from "./roles.service";
 import { PermissionType } from "./types/permission.type";
@@ -39,12 +40,16 @@ export class RolesResolver {
     @Args("module", { type: () => String, nullable: true }) module?: string,
   ): Promise<PermissionType[]> {
     const rows = await this.permissionsService.listByModule(module ?? undefined);
+    const sensitivity = new Map(
+      PLATFORM_CATALOG.map((def) => [def.key, def.globalOnly]),
+    );
     return rows.map((row) => ({
       id: String(row.id),
       key: row.key,
       module: row.module,
       label: row.label,
       description: row.description,
+      globalOnly: sensitivity.get(row.key) ?? false,
     }));
   }
 
