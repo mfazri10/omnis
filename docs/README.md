@@ -5,8 +5,8 @@
 | Item | Detail |
 |---|---|
 | Nama proyek | Platform CMS Multi-Aplikasi Mobile |
-| Versi dokumen | 0.3.1 — Lengkap, cakupan dokumen 01–17 |
-| Tanggal | 8 November 2026 |
+| Versi dokumen | 0.4.0 — Lengkap, cakupan dokumen 01–17 + sinkron implementasi F00/F01/F05 + rekonsiliasi saga F03 |
+| Tanggal | 16 November 2026 |
 | Status | Terkunci untuk Fase 1 (CMS/platform). Satu pertanyaan sisa: modul pilot pertama — lihat [10-keputusan-terbuka.md](10-keputusan-terbuka.md) |
 | Bahasa dokumen | Bahasa Indonesia (identifier kode memakai Bahasa Inggris) |
 
@@ -63,6 +63,8 @@
 
 | Versi | Tanggal | Perubahan |
 |---|---|---|
+| 0.4.0 | 2026-11-16 | Sinkron F05 (query RBAC, kode CONFLICT) + rekonsiliasi saga provisioning F03 (registry failed dipertahankan, tanpa createApp, enum apps) |
+| 0.3.2 | 2026-11-09 | Sinkron implementasi F00/F01: kunci mount /api/auth, rate limit middleware Express, Q2/Q9 terjawab |
 | 0.3.1 | 2026-11-08 | Tambah ERD (17): diagram Mermaid control-plane + template App DB |
 | 0.3.0 | 2026-11-08 | Tambah dokumen teknis pelengkap (11–16): pooling, migrasi, saga, caching, testing, operasional |
 | 0.2.1 | 2026-11-08 | Cakupan docs sampai nomor 10; dokumen rincian modul per aplikasi menyusul di fasenya |
