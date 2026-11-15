@@ -179,6 +179,29 @@ describe("RolesService", () => {
     ).rejects.toThrow(ConflictException);
   });
 
+  it("balapan nama duplikat (23505) → Conflict, bukan 500", async () => {
+    const { service, roles } = makeService();
+    roles.findByNameInScope.mockResolvedValue(null);
+    roles.insert.mockRejectedValue(
+      Object.assign(new Error("duplikat"), { code: "23505" }),
+    );
+    await expect(
+      service.create({ name: "X", scopeType: "global", permissionKeys: [] }),
+    ).rejects.toThrow(ConflictException);
+  });
+
+  it("balapan rename duplikat (23505) → Conflict, bukan 500", async () => {
+    const { service, roles } = makeService();
+    roles.findById.mockResolvedValue(roleRow());
+    roles.findByNameInScope.mockResolvedValue(null);
+    roles.updateById.mockRejectedValue(
+      Object.assign(new Error("duplikat"), { code: "23505" }),
+    );
+    await expect(
+      service.update("7", { name: "Bentrok" }),
+    ).rejects.toThrow(ConflictException);
+  });
+
   it("menolak hapus role yang masih dipakai penetapan", async () => {
     const { service, roles, assignments } = makeService();
     roles.findById.mockResolvedValue(roleRow());

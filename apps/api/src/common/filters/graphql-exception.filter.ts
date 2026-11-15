@@ -11,6 +11,7 @@ const STATUS_CODES: Record<number, string> = {
   [HttpStatus.FORBIDDEN]: "FORBIDDEN",
   [HttpStatus.NOT_FOUND]: "NOT_FOUND",
   [HttpStatus.BAD_REQUEST]: "BAD_USER_INPUT",
+  [HttpStatus.CONFLICT]: "CONFLICT",
 };
 
 /** Memetakan exception ke extensions.code stabil (doc 07 §1). */

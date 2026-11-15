@@ -68,12 +68,17 @@ export class RolesService {
         "Nama role sudah dipakai dalam cakupan ini.",
       );
     }
-    const created = await this.roles.insert(db, {
-      name: input.name,
-      description: input.description,
-      scopeType: input.scopeType,
-      appId,
-    });
+    let created;
+    try {
+      created = await this.roles.insert(db, {
+        name: input.name,
+        description: input.description,
+        scopeType: input.scopeType,
+        appId,
+      });
+    } catch (error: unknown) {
+      throw this.asConflict(error, "Nama role sudah dipakai dalam cakupan ini.");
+    }
     await this.roles.replaceRolePermissions(db, created.id, permissionIds);
     return this.toDetail(db, created);
   }
@@ -106,10 +111,17 @@ export class RolesService {
       );
       await this.roles.replaceRolePermissions(db, numericId, permissionIds);
     }
-    await this.roles.updateById(db, numericId, {
-      name: patch.name,
-      description: patch.description,
-    });
+    try {
+      await this.roles.updateById(db, numericId, {
+        name: patch.name,
+        description: patch.description,
+      });
+    } catch (error: unknown) {
+      throw this.asConflict(
+        error,
+        "Nama role sudah dipakai dalam cakupan ini.",
+      );
+    }
     const affected = await this.assignments.listAdminIdsByRole(db, numericId);
     await this.rbac.bumpAdminVersion(affected.map((id) => String(id)));
     const updated = await this.roles.findById(db, numericId);
@@ -237,6 +249,19 @@ export class RolesService {
       throw new BadRequestException("ID tidak valid.");
     }
     return numeric;
+  }
+
+  /** Petakan pelanggaran unique (balapan pre-check) ke Conflict; teruskan sisanya. */
+  private asConflict(error: unknown, message: string): Error {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "23505"
+    ) {
+      return new ConflictException(message);
+    }
+    throw error;
   }
 }
 

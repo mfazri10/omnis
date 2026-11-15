@@ -133,6 +133,18 @@ describe("AssignmentsService", () => {
     ).rejects.toThrow(BadRequestException);
   });
 
+  it("balapan duplikat (23505) → Conflict, bukan 500", async () => {
+    const { service, roles, assignments } = makeService();
+    roles.findById.mockResolvedValue(globalRole());
+    assignments.exists.mockResolvedValue(false);
+    assignments.insert.mockRejectedValue(
+      Object.assign(new Error("duplikat"), { code: "23505" }),
+    );
+    await expect(
+      service.assign({ adminId: "11", roleId: "6" }),
+    ).rejects.toThrow(ConflictException);
+  });
+
   it("listDetailedByAdmin memetakan id ke string", async () => {
     const { service, assignments } = makeService();
     assignments.listDetailedByAdmin.mockResolvedValue([

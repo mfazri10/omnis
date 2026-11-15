@@ -50,6 +50,9 @@ export class AssignmentsService {
     try {
       await this.assignments.insert(db, { adminId, roleId, appId });
     } catch (error: unknown) {
+      if (this.isUniqueViolation(error)) {
+        throw new ConflictException("Penetapan role ini sudah ada.");
+      }
       if (this.isForeignKeyViolation(error)) {
         throw new BadRequestException("Admin atau role tidak ditemukan.");
       }
@@ -121,12 +124,19 @@ export class AssignmentsService {
     return numeric;
   }
 
+  private isUniqueViolation(error: unknown): boolean {
+    return this.pgCode(error) === "23505";
+  }
+
   private isForeignKeyViolation(error: unknown): boolean {
-    return (
-      typeof error === "object" &&
-      error !== null &&
-      "code" in error &&
-      (error).code === "23503"
-    );
+    return this.pgCode(error) === "23503";
+  }
+
+  private pgCode(error: unknown): string | null {
+    if (typeof error !== "object" || error === null || !("code" in error)) {
+      return null;
+    }
+    const code: unknown = error.code;
+    return typeof code === "string" ? code : null;
   }
 }

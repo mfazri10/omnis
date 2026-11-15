@@ -30,6 +30,7 @@ GraphQL `errors[]` dengan `extensions.code` yang stabil untuk ditangani CMS:
 | `APP_NOT_FOUND` / `APP_SUSPENDED` | Slug salah atau aplikasi di-suspend |
 | `BAD_USER_INPUT` | Validasi gagal (detail per field di `extensions.fields`) |
 | `NOT_FOUND` | Data tidak ditemukan |
+| `CONFLICT` | Duplikat data (nama role / penetapan sudah ada) |
 
 ## 2. Operasi Global (Super Admin / permission `platform.*`)
 
