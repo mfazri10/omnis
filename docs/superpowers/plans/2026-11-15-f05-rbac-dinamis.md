@@ -75,7 +75,7 @@ CMS (`apps/cms/`):
 - `app/platform/roles/page.tsx`, `new/page.tsx`, `[id]/page.tsx`
 - `app/platform/admins/page.tsx`, `new/page.tsx`, `[id]/page.tsx`
 
-### Katalog `platform.*` (18 kunci, label Indonesia)
+### Katalog `platform.*` (16 kunci, label Indonesia)
 
 globalOnly — `platform.apps.view` (Melihat daftar aplikasi), `platform.apps.manage` (Mengelola aplikasi), `platform.roles.view`, `platform.roles.manage`, `platform.admins.view`, `platform.admins.manage`.
 Dua cakupan — `platform.users.view/manage`, `platform.media.view/create/delete`, `platform.notifications.view/send`, `platform.app-config.view/manage`, `platform.audit.view`.
@@ -156,7 +156,7 @@ git commit -m "feat(api): F05 entitas + tabel RBAC"
 
 **Interfaces:**
 - Consumes: `Db` (DatabaseService), tabel `permissions` (Task 2).
-- Produces: `PermissionDef { key, module, label, description?, globalOnly }`; `PLATFORM_CATALOG: PermissionDef[]` (18 kunci, §katalog); `PermissionsService.syncCatalog(defs): Promise<{ inserted: number; updated: number }>`; `listByModule(module?: string): Promise<PermissionRow[]>`; `RbacModule.onModuleInit` → `syncCatalog(PLATFORM_CATALOG)` (idempoten).
+- Produces: `PermissionDef { key, module, label, description?, globalOnly }`; `PLATFORM_CATALOG: PermissionDef[]` (16 kunci, §katalog); `isSensitivePermission(key): boolean` (aturan prefix `platform.{apps,roles,admins}.`); `PermissionsService.syncCatalog(defs): Promise<{ inserted: number; updated: number }>`; `listByModule(module?: string): Promise<PermissionRow[]>`; `RbacModule.onModuleInit` → `syncCatalog(PLATFORM_CATALOG)` (idempoten).
 
 - [ ] **Step 1: Tulis spec gagal** `permissions.service.spec.ts`: repo mock; `syncCatalog` dengan 1 key baru + 1 key berubah-label + 1 key sama → ekspektasi `{ inserted: 1, updated: 1 }`; `listByModule("platform")` meneruskan filter.
 ```typescript

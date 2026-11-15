@@ -11,6 +11,7 @@ import { DatabaseModule } from "./database/database.module";
 import { RedisModule } from "./redis/redis.module";
 import { HealthModule } from "./health/health.module";
 import { MetaModule } from "./meta/meta.module";
+import { RbacModule } from "./modules/platform/rbac/rbac.module";
 import { GraphqlExceptionFilter } from "./common/filters/graphql-exception.filter";
 
 @Module({
@@ -29,6 +30,7 @@ import { GraphqlExceptionFilter } from "./common/filters/graphql-exception.filte
     HealthModule,
     MetaModule,
     AuthModule,
+    RbacModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: GraphqlExceptionFilter }],
 })
