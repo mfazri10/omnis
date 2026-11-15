@@ -30,7 +30,12 @@ export class GraphqlExceptionFilter implements GqlExceptionFilter {
         typeof response === "object" && response !== null
           ? (response as Record<string, unknown>)
           : {};
-      const { message: _message, statusCode: _status, ...rest } = extra;
+      const {
+        message: _message,
+        statusCode: _status,
+        error: _error,
+        ...rest
+      } = extra;
       return this.toError(exception.message, code, rest);
     }
     return this.toError("Terjadi kesalahan pada server.", "INTERNAL_ERROR");

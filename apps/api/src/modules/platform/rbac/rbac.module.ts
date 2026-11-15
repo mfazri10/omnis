@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import type { OnModuleInit } from "@nestjs/common";
+import { PermissionGuard } from "../../../common/guards/permission.guard";
 import { AppsModule } from "../apps/apps.module";
 import { AssignmentsRepository } from "./assignments.repository";
 import { AssignmentsService } from "./assignments.service";
@@ -20,6 +21,7 @@ import { RolesService } from "./roles.service";
     AssignmentsRepository,
     AssignmentsService,
     RbacService,
+    PermissionGuard,
   ],
   exports: [
     PermissionsRepository,
@@ -29,6 +31,7 @@ import { RolesService } from "./roles.service";
     AssignmentsRepository,
     AssignmentsService,
     RbacService,
+    PermissionGuard,
   ],
 })
 export class RbacModule implements OnModuleInit {

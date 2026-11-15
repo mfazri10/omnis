@@ -252,7 +252,7 @@ it("menolak tanpa izin + membawa requiredPermission", async () => {
 });
 ```
 - [ ] **Step 2: RED.** Run dua spec Task 6. Expected: FAIL.
-- [ ] **Step 3: Implementasi** decorator + guard + export module. Filter TIDAK diubah (sebar `rest` sudah ada — spec justru menguncinya).
+- [ ] **Step 3: Implementasi** decorator + guard + export module. Filter: buang kunci `error` bawaan Nest agar extensions persis doc 07 (`{ code, requiredPermission }`).
 - [ ] **Step 4: GREEN.** Run dua spec. Expected: PASS.
 - [ ] **Step 5: Commit**
 ```bash
