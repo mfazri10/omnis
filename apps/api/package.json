@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "db:migrate": "bun src/database/migration/cli.ts",
-    "seed:admin": "bun src/scripts/seed-admin.ts"
+    "seed:admin": "bun src/scripts/seed-admin.ts",
+    "seed:demo-apps": "bun src/scripts/seed-demo-apps.ts"
   },
   "dependencies": {
     "@apollo/server": "^4.0.0",
