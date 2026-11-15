@@ -5,7 +5,7 @@
 | FR | FR-PLAT-06, FR-PLAT-07 |
 | Fase | 1 |
 | Prioritas | Must |
-| Status | Dikerjakan |
+| Status | Selesai |
 | Dependensi | F01 |
 
 ## Tujuan
@@ -14,20 +14,20 @@ Role dan permission dirangkai dari CMS (tidak hardcode), bercakupan global atau 
 
 ## Lingkup Backend
 
-- [ ] Tabel `roles`, `permissions`, `role_permissions`, `admin_role_assignments`
-- [ ] Pola pendaftaran katalog permission oleh modul (`modul.entitas.aksi`) + seed saat booting
-- [ ] CRUD role (cakupan `global`/`app`) + penetapan/pencabutan role ke admin
-- [ ] Guard permission per operasi: Super Admin lewat; selainnya cek permission dalam cakupan konteks (`FORBIDDEN` + `requiredPermission`)
-- [ ] Permission `platform.*` sensitif (apps, roles, admins) hanya untuk role global
-- [ ] CRUD admin + aktif/nonaktifkan (nonaktif = sesi dicabut, berlaku segera)
-- [ ] Proteksi: Super Admin aktif terakhir tidak bisa dinonaktifkan/dicabut
-- [ ] Cache permission singkat + invalidasi saat role/penetapan berubah
+- [x] Tabel `roles`, `permissions`, `role_permissions`, `admin_role_assignments`
+- [x] Pola pendaftaran katalog permission oleh modul (`modul.entitas.aksi`) + seed saat booting
+- [x] CRUD role (cakupan `global`/`app`) + penetapan/pencabutan role ke admin
+- [x] Guard permission per operasi: Super Admin lewat; selainnya cek permission dalam cakupan konteks (`FORBIDDEN` + `requiredPermission`)
+- [x] Permission `platform.*` sensitif (apps, roles, admins) hanya untuk role global
+- [x] CRUD admin + aktif/nonaktifkan (nonaktif = sesi dicabut, berlaku segera)
+- [x] Proteksi: Super Admin aktif terakhir tidak bisa dinonaktifkan/dicabut
+- [x] Cache permission singkat + invalidasi saat role/penetapan berubah
 
 ## Lingkup CMS UI
 
-- [ ] Daftar + form role: nama, deskripsi, cakupan, centang permission per kelompok modul
-- [ ] Daftar admin + penetapan role (bisa multi-role, multi-aplikasi) + aksi aktif/nonaktifkan
-- [ ] Tampilan "akses efektif" per admin (ringkasan aplikasi + permission)
+- [x] Daftar + form role: nama, deskripsi, cakupan, centang permission per kelompok modul
+- [x] Daftar admin + penetapan role (bisa multi-role, multi-aplikasi) + aksi aktif/nonaktifkan
+- [x] Tampilan "akses efektif" per admin (ringkasan aplikasi + permission)
 
 ## Kriteria Selesai
 

@@ -42,11 +42,12 @@ mutation provisionApp(input: ProvisionAppInput!)  # registry + DB + migrasi + co
 mutation suspendApp / archiveApp / updateApp
 
 # Admin, role, permission
-query admins(skip:take:search:) / admin(id:)
+query admins(skip:take:search:) / admin(id:) / currentAdmin
 mutation createAdmin / updateAdmin / setAdminActive
 query roles(scope: appId:) / permissions(module:)
 mutation createRole / updateRole / deleteRole
 mutation assignRole(adminId: roleId: appId:) / unassignRole
+query effectivePermissions(adminId: appId:) / adminAssignments(adminId:)
 
 # Audit & dashboard global
 query activityLogs(appId: adminId: from: to:)
