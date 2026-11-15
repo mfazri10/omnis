@@ -39,7 +39,7 @@ export class AdminsResolver {
   @Query(() => AdminConnection)
   @RequirePermissions("platform.admins.view")
   async admins(
-    @Args() pagination: PaginationArgs,
+    @Args({ type: () => PaginationArgs }) pagination: PaginationArgs,
     @Args("search", { type: () => String, nullable: true }) search?: string,
   ): Promise<AdminConnection> {
     const { items, totalCount } = await this.adminsService.listAdmins({
@@ -90,7 +90,7 @@ export class AdminsResolver {
   @Mutation(() => AdminType)
   @RequirePermissions("platform.admins.manage")
   async createAdmin(
-    @Args("input") input: CreateAdminInput,
+    @Args("input", { type: () => CreateAdminInput }) input: CreateAdminInput,
   ): Promise<AdminType> {
     const profile = await this.auth.createAdminAccount({
       name: input.name,
@@ -105,7 +105,7 @@ export class AdminsResolver {
   @RequirePermissions("platform.admins.manage")
   async updateAdmin(
     @Args("id", { type: () => ID }) id: string,
-    @Args("input") input: UpdateAdminInput,
+    @Args("input", { type: () => UpdateAdminInput }) input: UpdateAdminInput,
   ): Promise<AdminType> {
     return toAdminType(await this.adminsService.updateAdmin(id, input));
   }
@@ -114,7 +114,7 @@ export class AdminsResolver {
   @RequirePermissions("platform.admins.manage")
   async setAdminActive(
     @Args("id", { type: () => ID }) id: string,
-    @Args("active") active: boolean,
+    @Args("active", { type: () => Boolean }) active: boolean,
   ): Promise<AdminType> {
     return toAdminType(await this.adminsService.setAdminActive(id, active));
   }

@@ -5,13 +5,13 @@ export class PermissionType {
   @Field(() => ID)
   id!: string;
 
-  @Field()
+  @Field(() => String)
   key!: string;
 
-  @Field()
+  @Field(() => String)
   module!: string;
 
-  @Field()
+  @Field(() => String)
   label!: string;
 
   @Field(() => String, { nullable: true })

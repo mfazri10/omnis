@@ -5,10 +5,10 @@ export class RoleAssignmentType {
   @Field(() => ID)
   roleId!: string;
 
-  @Field()
+  @Field(() => String)
   roleName!: string;
 
-  @Field({ description: "global | app" })
+  @Field(() => String, { description: "global | app" })
   scopeType!: string;
 
   @Field(() => ID, { nullable: true })

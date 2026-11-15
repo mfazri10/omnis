@@ -56,7 +56,7 @@ export class RolesResolver {
   @Mutation(() => RoleType)
   @RequirePermissions("platform.roles.manage")
   async createRole(
-    @Args("input") input: CreateRoleInput,
+    @Args("input", { type: () => CreateRoleInput }) input: CreateRoleInput,
   ): Promise<RoleType> {
     const detail = await this.rolesService.create(input);
     return { ...detail };
@@ -66,7 +66,7 @@ export class RolesResolver {
   @RequirePermissions("platform.roles.manage")
   async updateRole(
     @Args("id", { type: () => ID }) id: string,
-    @Args("input") input: UpdateRoleInput,
+    @Args("input", { type: () => UpdateRoleInput }) input: UpdateRoleInput,
   ): Promise<RoleType> {
     const detail = await this.rolesService.update(id, input);
     return { ...detail };

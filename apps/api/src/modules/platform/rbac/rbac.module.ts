@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { Global, Module } from "@nestjs/common";
 import type { OnModuleInit } from "@nestjs/common";
 import { PermissionGuard } from "../../../common/guards/permission.guard";
 import { AppsModule } from "../apps/apps.module";
@@ -12,6 +12,8 @@ import { RolesRepository } from "./roles.repository";
 import { RolesResolver } from "./roles.resolver";
 import { RolesService } from "./roles.service";
 
+// Global: PermissionGuard dipakai semua modul domain (preseden AuthModule F01).
+@Global()
 @Module({
   imports: [AppsModule],
   providers: [

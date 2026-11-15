@@ -3,17 +3,17 @@ import { IsEmail, IsString, MaxLength, MinLength } from "class-validator";
 
 @InputType()
 export class CreateAdminInput {
-  @Field()
+  @Field(() => String)
   @IsString()
   @MinLength(1)
   @MaxLength(255)
   name!: string;
 
-  @Field()
+  @Field(() => String)
   @IsEmail()
   email!: string;
 
-  @Field()
+  @Field(() => String)
   @IsString()
   @MinLength(8)
   password!: string;
@@ -21,7 +21,7 @@ export class CreateAdminInput {
 
 @InputType()
 export class UpdateAdminInput {
-  @Field()
+  @Field(() => String)
   @IsString()
   @MinLength(1)
   @MaxLength(255)

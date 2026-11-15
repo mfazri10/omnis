@@ -11,19 +11,19 @@ import type { RoleScope } from "../roles.repository";
 
 @InputType()
 export class CreateRoleInput {
-  @Field()
+  @Field(() => String)
   @IsString()
   @MinLength(1)
   @MaxLength(255)
   name!: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @IsOptional()
   @IsString()
   @MaxLength(512)
   description?: string;
 
-  @Field({ description: "global | app" })
+  @Field(() => String, { description: "global | app" })
   @IsIn(["global", "app"])
   scopeType!: RoleScope;
 
@@ -40,14 +40,14 @@ export class CreateRoleInput {
 
 @InputType()
 export class UpdateRoleInput {
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @IsOptional()
   @IsString()
   @MinLength(1)
   @MaxLength(255)
   name?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @IsOptional()
   @IsString()
   @MaxLength(512)
