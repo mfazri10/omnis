@@ -4,6 +4,7 @@ import { AppsRepository } from "./apps.repository";
 import { AppsResolver } from "./apps.resolver";
 import { AppsService } from "./apps.service";
 import { FcmCredentialService } from "./fcm-credential.service";
+import { ProvisioningService } from "./provisioning.service";
 
 @Module({
   providers: [
@@ -12,6 +13,7 @@ import { FcmCredentialService } from "./fcm-credential.service";
     AppsService,
     AppConfigsRepository,
     FcmCredentialService,
+    ProvisioningService,
   ],
   exports: [AppsRepository, AppsService],
 })
