@@ -8,15 +8,17 @@ import {
   isSensitivePermission,
 } from "./platform.permissions";
 
-function makeService(
-  repo: Partial<Record<string, jest.Mock>>,
-): { service: PermissionsService; repo: Record<string, jest.Mock> } {
-  const full: Record<string, jest.Mock> = {
+type Mocked<T> = { [K in keyof T]: jest.Mock };
+
+function makeService(): {
+  service: PermissionsService;
+  repo: Mocked<PermissionsRepository>;
+} {
+  const full: Mocked<PermissionsRepository> = {
     findByKey: jest.fn(),
     insert: jest.fn(),
     updateByKey: jest.fn(),
     listByModule: jest.fn(),
-    ...repo,
   };
   const database = {
     getControlPlaneConnection: jest.fn().mockReturnValue({} as Db),
@@ -42,7 +44,7 @@ function rowOf(key: string, label: string): PermissionRow {
 
 describe("PermissionsService", () => {
   it("menyisipkan yang hilang, memperbarui label berubah, melewati yang sama", async () => {
-    const { service, repo } = makeService({});
+    const { service, repo } = makeService();
     repo.findByKey
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(rowOf("c.d", "Label Lama"))
@@ -58,7 +60,7 @@ describe("PermissionsService", () => {
   });
 
   it("listByModule meneruskan filter modul", async () => {
-    const { service, repo } = makeService({});
+    const { service, repo } = makeService();
     repo.listByModule.mockResolvedValue([rowOf("platform.users.view", "X")]);
     const rows = await service.listByModule("platform");
     expect(repo.listByModule).toHaveBeenCalledWith(expect.anything(), "platform");

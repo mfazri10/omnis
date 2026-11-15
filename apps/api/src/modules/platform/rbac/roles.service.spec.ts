@@ -12,21 +12,16 @@ import type { PermissionsRepository } from "./permissions.repository";
 import { RolesService } from "./roles.service";
 import type { AssignmentsRepository } from "./assignments.repository";
 
-type MockRepo = Record<string, jest.Mock>;
+type Mocked<T> = { [K in keyof T]: jest.Mock };
 
-function makeService(overrides: {
-  roles?: MockRepo;
-  permissions?: MockRepo;
-  apps?: MockRepo;
-  assignments?: MockRepo;
-}): {
+function makeService(): {
   service: RolesService;
-  roles: MockRepo;
-  permissions: MockRepo;
-  apps: MockRepo;
-  assignments: MockRepo;
+  roles: Mocked<import("./roles.repository").RolesRepository>;
+  permissions: Mocked<PermissionsRepository>;
+  apps: Mocked<AppsRepository>;
+  assignments: Mocked<AssignmentsRepository>;
 } {
-  const roles: MockRepo = {
+  const roles: Mocked<import("./roles.repository").RolesRepository> = {
     insert: jest.fn(),
     findById: jest.fn(),
     findByNameInScope: jest.fn().mockResolvedValue(null),
@@ -35,13 +30,24 @@ function makeService(overrides: {
     deleteById: jest.fn(),
     findRolePermissionKeys: jest.fn().mockResolvedValue([]),
     replaceRolePermissions: jest.fn(),
-    ...overrides.roles,
   };
-  const permissions: MockRepo = { findByKey: jest.fn(), ...overrides.permissions };
-  const apps: MockRepo = { findById: jest.fn(), ...overrides.apps };
-  const assignments: MockRepo = {
+  const permissions: Mocked<PermissionsRepository> = {
+    findByKey: jest.fn(),
+    insert: jest.fn(),
+    updateByKey: jest.fn(),
+    listByModule: jest.fn(),
+  };
+  const apps: Mocked<AppsRepository> = {
+    findById: jest.fn(),
+    findBySlug: jest.fn(),
+    listActive: jest.fn(),
+  };
+  const assignments: Mocked<AssignmentsRepository> = {
+    insert: jest.fn(),
+    delete: jest.fn(),
+    exists: jest.fn(),
     listAdminIdsByRole: jest.fn().mockResolvedValue([]),
-    ...overrides.assignments,
+    listByAdmin: jest.fn(),
   };
   const database = {
     getControlPlaneConnection: jest.fn().mockReturnValue({} as Db),
@@ -91,7 +97,7 @@ function appRow(over: Partial<AppRow> = {}): AppRow {
 
 describe("RolesService", () => {
   it("membuat role app valid beserta permission-nya", async () => {
-    const { service, roles, permissions, apps } = makeService({});
+    const { service, roles, permissions, apps } = makeService();
     apps.findById.mockResolvedValue(appRow());
     permissions.findByKey.mockResolvedValue({ id: 3 });
     roles.insert.mockResolvedValue(roleRow());
@@ -113,14 +119,14 @@ describe("RolesService", () => {
   });
 
   it("menolak role app tanpa appId", async () => {
-    const { service } = makeService({});
+    const { service } = makeService();
     await expect(
       service.create({ name: "X", scopeType: "app", permissionKeys: [] }),
     ).rejects.toThrow(BadRequestException);
   });
 
   it("menolak appId pada role global", async () => {
-    const { service } = makeService({});
+    const { service } = makeService();
     await expect(
       service.create({
         name: "X",
@@ -132,7 +138,7 @@ describe("RolesService", () => {
   });
 
   it("menolak permission sensitif pada role cakupan-app", async () => {
-    const { service, apps, permissions } = makeService({});
+    const { service, apps, permissions } = makeService();
     apps.findById.mockResolvedValue(appRow());
     permissions.findByKey.mockResolvedValue({ id: 1 });
     await expect(
@@ -146,7 +152,7 @@ describe("RolesService", () => {
   });
 
   it("menolak kunci permission tak dikenal", async () => {
-    const { service, permissions } = makeService({});
+    const { service, permissions } = makeService();
     permissions.findByKey.mockResolvedValue(null);
     await expect(
       service.create({
@@ -158,7 +164,7 @@ describe("RolesService", () => {
   });
 
   it("menolak nama duplikat dalam konteks sama", async () => {
-    const { service, roles } = makeService({});
+    const { service, roles } = makeService();
     roles.findByNameInScope.mockResolvedValue(roleRow());
     await expect(
       service.create({ name: "Editor Soal", scopeType: "global", permissionKeys: [] }),
@@ -166,7 +172,7 @@ describe("RolesService", () => {
   });
 
   it("menolak hapus role yang masih dipakai penetapan", async () => {
-    const { service, roles, assignments } = makeService({});
+    const { service, roles, assignments } = makeService();
     roles.findById.mockResolvedValue(roleRow());
     assignments.listAdminIdsByRole.mockResolvedValue([11, 12]);
     await expect(service.remove("7")).rejects.toThrow(
@@ -176,7 +182,7 @@ describe("RolesService", () => {
   });
 
   it("findById tak ada → NotFound", async () => {
-    const { service, roles } = makeService({});
+    const { service, roles } = makeService();
     roles.findById.mockResolvedValue(null);
     await expect(service.findById("99")).rejects.toThrow(NotFoundException);
   });
