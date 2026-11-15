@@ -14,9 +14,9 @@ Aplikasi baru bisa didaftarkan dan diprovisioning (database + migrasi + config a
 
 ## Lingkup Backend
 
-- [ ] CRUD registry `apps` (nama, slug unik, ikon, status, info paket/bundle, URL store, catatan)
+- [ ] Registry `apps`: provisionApp (buat+provision), baca, updateApp, transisi status, deleteApp khusus failed, retryProvisionApp (tanpa createApp terpisah — registrasi melekat pada saga, doc 13)
 - [ ] Simpan kredensial FCM terenkripsi; tidak pernah terekspos utuh ke API
-- [ ] Mutation `provisionApp`: buat DB → migrasi template (+ modul bila dipilih) → config awal → registry → audit; gagal = rollback bersih
+- [ ] Mutation `provisionApp`: validasi → registry (provisioning) → buat DB → migrasi template (+ modul: tolak bila diisi, Fase 2) → config awal → active; gagal = kompensasi saga (DROP DB yatim, registry failed + alasan); audit menyusul F06
 - [ ] Mutation `suspendApp` / `archiveApp` / aktifkan kembali
 - [ ] Seluruh operasi registry dijaga permission `platform.apps.*` (cakupan global)
 
@@ -30,7 +30,7 @@ Aplikasi baru bisa didaftarkan dan diprovisioning (database + migrasi + config a
 ## Kriteria Selesai
 
 1. Provisioning aplikasi baru selesai tanpa perintah manual; App DB terbentuk + termigrasi + config awal ada.
-2. Provisioning yang gagal di tengah tidak meninggalkan aplikasi setengah jadi (registry maupun DB).
+2. Provisioning yang gagal di tengah tidak meninggalkan aplikasi setengah jadi: tanpa DB yatim, dan registry tercatat eksplisit `failed` + alasan (bisa retry/cleanup lewat CMS).
 3. Aplikasi suspended: konteksnya ditolak API dan hilang dari switcher non-global; datanya utuh.
 4. Kredensial FCM tidak bisa dibaca utuh lewat API/CMS.
 

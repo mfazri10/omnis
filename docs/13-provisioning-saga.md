@@ -15,7 +15,7 @@ Karena tidak ada satu transaksi atomik yang bisa membungkus semua langkah, kita 
 | Step | Aksi | Kompensasi (jika gagal di step berikutnya) |
 |------|------|---------------------------------------------|
 | 1 | Validasi slug unik + input | — (belum ada side effect) |
-| 2 | Insert registry `apps` dengan status `provisioning` | `DELETE FROM apps WHERE slug = $slug` |
+| 2 | Insert registry `apps` dengan status `provisioning` | — (registry DIPERTAHANKAN sebagai jejak; ditandai `failed` + `failure_reason`, TIDAK dihapus — retry/CMS butuh barisnya) |
 | 3 | `CREATE DATABASE app_{slug}` | `DROP DATABASE app_{slug}` |
 | 4 | Jalankan migrasi template (`users`, `media`, `device_tokens`) | `DROP DATABASE app_{slug}` (migrasi parsial tidak bisa di-rollback) |
 | 5 | Jalankan migrasi modul domain (jika dipilih) | `DROP DATABASE app_{slug}` |
@@ -64,7 +64,7 @@ Kolom berikut ditambahkan ke tabel `apps` (lihat [06-database-design.md](06-data
 
 | Kolom | Tipe | Catatan |
 |-------|------|---------|
-| status | enum | Tambah nilai `provisioning` dan `failed` ke enum yang sudah ada (`active`, `suspended`, `archived`) |
+| status | enum | Tambah nilai `provisioning` dan `failed` ke enum yang sudah ada (`active`, `suspended`, `archived`). `ALTER TYPE … ADD VALUE` TIDAK bisa dalam blok transaksi — migrasi mengeksekusinya sebagai statement terpisah (satu `execute()` per statement). `down()` tak bisa menghapus nilai enum (keterbatasan Postgres) — hanya tabel/kolom yang di-drop. |
 | failure_reason | text NULL | Pesan error + step terakhir yang berhasil; NULL jika status bukan `failed` |
 | last_provisioning_at | timestamp NULL | Waktu provisioning terakhir dimulai |
 
@@ -126,21 +126,20 @@ export class ProvisioningService {
       );
     }
 
-    // Timeout: batas waktu 30 detik
-    const timeout = setTimeout(() => {
-      this.triggerCompensation(compensations, slug, dbName);
-    }, 30_000);
+    // Timeout: AbortController (§8) — timer hanya menaikkan flag;
+    // tiap step memeriksa signal sebelum mulai dan melempar
+    // RequestTimeoutException yang ditangani jalur kompensasi normal.
+    // TIDAK PERNAH memicu kompensasi langsung dari timer (balapan).
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), PROVISION_TIMEOUT_MS);
 
     try {
       // ── Step 1: Validasi ──────────────────────────────────
       await this.validateInput(slug);
 
       // ── Step 2: Insert registry ───────────────────────────
+      // (tanpa kompensasi hapus: baris dipertahankan, gagal → failed + alasan)
       const app = await this.insertRegistry(slug, input.name, dbName);
-      compensations.push({
-        step: 'registry',
-        execute: () => this.deleteRegistry(app.id),
-      });
 
       // ── Step 3: Create database ───────────────────────────
       await this.createDatabase(dbName);
@@ -167,6 +166,7 @@ export class ProvisioningService {
 
       // ── Step 7: Aktifkan ──────────────────────────────────
       await this.activateApp(app.id);
+      const fresh = await this.getAppById(app.id);
 
       // ── Step 8: Audit log (best effort) ───────────────────
       try {
@@ -182,7 +182,7 @@ export class ProvisioningService {
         // Best effort — tidak men-trigger kompensasi
       }
 
-      return app;
+      return fresh;
     } catch (error) {
       await this.handleFailure(compensations, slug, dbName, error);
       throw error;
@@ -239,7 +239,13 @@ export class ProvisioningService {
 
   // ── Langkah-langkah individual ──────────────────────────
 
-  private async validateInput(slug: string): Promise<void> {
+  private async validateInput(slug: string, modules?: string[]): Promise<void> {
+    // Format slug diketatkan KARENA dbName diturunkan darinya untuk SQL DDL.
+    if (!/^[a-z0-9]([a-z0-9-]{1,62}[a-z0-9])?$/.test(slug)) {
+      throw new BadRequestException(
+        `Slug "${slug}" tidak valid (huruf kecil/angka/strip, 3–64 karakter)`,
+      );
+    }
     const existing = await this.db.platform
       .select()
       .from(apps)
@@ -248,6 +254,13 @@ export class ProvisioningService {
 
     if (existing.length > 0) {
       throw new ConflictException(`Slug "${slug}" sudah terdaftar`);
+    }
+
+    // Fase 1 belum punya modul domain; migrasinya no-op (Fase 2 mengisi).
+    if (modules && modules.length > 0) {
+      throw new BadRequestException(
+        `Modul domain (${modules.join(", ")}) tersedia mulai Fase 2`,
+      );
     }
   }
 
@@ -269,8 +282,16 @@ export class ProvisioningService {
     return app;
   }
 
-  private async deleteRegistry(appId: bigint): Promise<void> {
-    await this.db.platform.delete(apps).where(eq(apps.id, appId));
+  private async getAppById(appId: bigint): Promise<App> {
+    const [app] = await this.db.platform
+      .select()
+      .from(apps)
+      .where(eq(apps.id, appId))
+      .limit(1);
+    if (!app) {
+      throw new NotFoundException(`Aplikasi id=${appId} tidak ditemukan`);
+    }
+    return app;
   }
 
   private async createDatabase(dbName: string): Promise<void> {
@@ -414,6 +435,8 @@ Admin           ProvisioningService       Control-Plane DB      PostgreSQL (admi
   │                     │◄─ ERROR ─────────────────────────────────────────────────────────┤
   │                     │                       │                      │                   │
   │                     │  ══ KOMPENSASI (LIFO) ══                     │                   │
+  │                     │  (registry TIDAK dihapus — dipertahankan      │                   │
+  │                     │   sebagai baris failed + alasan)              │                   │
   │                     │                       │                      │                   │
   │                     │  DELETE app_configs?  (belum ada, skip)      │                   │
   │                     │                       │                      │                   │
@@ -421,12 +444,8 @@ Admin           ProvisioningService       Control-Plane DB      PostgreSQL (admi
   │                     ├─────────────────────────────────────────────►│                   │
   │                     │◄─ OK ───────────────────────────────────────┤                   │
   │                     │                       │                      │                   │
-  │                     │  DELETE FROM apps     │                      │                   │
-  │                     ├──────────────────────►│                      │                   │
-  │                     │◄─ OK ─────────────────┤                      │                   │
-  │                     │                       │                      │                   │
   │                     │  UPDATE apps status=  │                      │                   │
-  │                     │   failed              │                      │                   │
+  │                     │   failed + reason     │                      │                   │
   │                     ├──────────────────────►│                      │                   │
   │                     │                       │                      │                   │
   │◄── error ───────────┤                       │                      │                   │
@@ -476,17 +495,16 @@ async retryProvisionApp(slug: string, adminId: bigint): Promise<App> {
     );
   }
 
-  // Bersihkan sisa provisioning sebelumnya
+  // Bersihkan sisa provisioning sebelumnya TANPA menghapus baris
+  // registry (riwayat failed dipertahankan; retry menimpa statusnya).
   const dbName = existing[0].dbName;
   await this.dropDatabaseIfExists(dbName);
   await this.deleteConfig(existing[0].id);
-  await this.deleteRegistry(existing[0].id);
+  await this.markProvisioning(existing[0].id);
 
-  // Provisioning ulang dari awal
-  return this.provisionApp(
-    { slug, name: existing[0].name },
-    adminId,
-  );
+  // Lanjutkan step 3–7 dengan baris yang sama (provisionApp inti
+  // di-refactor agar bisa dipakai ulang dengan appId eksplisit).
+  return this.runSteps(existing[0].id, slug, dbName, adminId);
 }
 
 private async dropDatabaseIfExists(dbName: string): Promise<void> {
@@ -566,11 +584,19 @@ Advisory lock dipilih karena:
 - **Tidak memblok** operasi lain di tabel `apps`.
 - **Ringan** — tidak perlu tabel lock tambahan.
 
+> WAJIB: lock diakuisisi dan dilepas pada SATU koneksi khusus yang
+> dipegang selama saga berjalan (`pool.connect()` + `release()` di
+> `finally`, pola `withMigrationConnection`). Akuisisi/lepas via pool
+> bersama BERBAHAYA karena tiap query bisa memakai koneksi berbeda
+> sehingga lock bocor. Kunci lock: `hashtext('provision:' || slug)`
+> (server-side, §9.2 — bukan hash JS).
+
 ## 10. Ringkasan Keputusan
 
 | Aspek | Keputusan | Alasan |
 |-------|-----------|--------|
 | Pola | Saga + compensation stack | `CREATE DATABASE` tidak transaksional |
+| Registry saat gagal | Dipertahankan `failed` + alasan (tidak dihapus) | Retry/CMS butuh barisnya; DB yatim yang dibuang |
 | Kompensasi migrasi | DROP seluruh database | Migrasi parsial tidak bisa di-rollback per tabel |
 | Gagal + kompensasi gagal | Status `failed` + `failure_reason` | Admin bisa diagnosa dan retry/cleanup |
 | Timeout | 30 detik default | Mencegah provisioning menggantung |

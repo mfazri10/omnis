@@ -73,10 +73,11 @@ API → verifikasi sesi (better-auth) → admin aktif?
 
 ```text
 Super Admin → mutation provisionApp(nama, slug)
-API → validasi slug unik → CREATE DATABASE app_<slug>
-    → jalankan migrasi template (users, media, device_tokens)
-    → migrasi modul domain bila dipilih → isi registry + config awal
-    → audit log. Gagal di tengah → alur kompensasi saga (DROP DB, hapus registry — lihat [13-provisioning-saga.md](13-provisioning-saga.md))
+API → validasi slug → isi registry (status provisioning)
+    → CREATE DATABASE app_<slug> → migrasi template (users, media, device_tokens)
+    → migrasi modul domain bila dipilih (Fase 2) → config awal → status active
+    → audit log (F06). Gagal di tengah → kompensasi saga (DROP DB yatim,
+    registry ditandai failed + alasan, bisa retry/cleanup — lihat [13-provisioning-saga.md](13-provisioning-saga.md))
 
 ### 4.3 Login admin
 

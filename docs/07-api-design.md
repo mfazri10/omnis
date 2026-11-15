@@ -36,11 +36,10 @@ GraphQL `errors[]` dengan `extensions.code` yang stabil untuk ditangani CMS:
 
 ```graphql
 # Aplikasi
-query apps { items totalCount }
-query app(slug: String!)
-mutation createApp(input: CreateAppInput!)        # registry saja
+query apps(status: search:) / app(slug: String!)
 mutation provisionApp(input: ProvisionAppInput!)  # registry + DB + migrasi + config
-mutation suspendApp / archiveApp / updateApp
+mutation retryProvisionApp(slug: String!)         # dari status failed
+mutation updateApp / suspendApp / unsuspendApp / archiveApp / deleteApp(failed saja)
 
 # Admin, role, permission
 query admins(skip:take:search:) / admin(id:) / currentAdmin

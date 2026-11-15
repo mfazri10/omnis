@@ -26,7 +26,9 @@ app_{slug} (tiap aplikasi — template + domain)
 | name | varchar | Nama tampil, mis. "Tes CPNS" |
 | slug | varchar UNIQUE | `tes-cpns`; dipakai di header konteks & prefix storage |
 | icon_media_url | varchar NULL | URL file di prefix `platform/` |
-| status | enum | `active`, `suspended`, `archived` |
+| status | enum | `active`, `suspended`, `archived`, `provisioning`, `failed` (dua terakhir oleh F03, lihat doc 13) |
+| failure_reason | text NULL | Terisi bila `failed` |
+| last_provisioning_at | timestamp NULL | Provisioning terakhir dimulai |
 | db_name | varchar | `app_tes_cpns` |
 | android_package | varchar NULL | Mis. `id.or.app.tescpns` |
 | ios_bundle_id | varchar NULL | |
