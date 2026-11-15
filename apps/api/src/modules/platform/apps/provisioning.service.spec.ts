@@ -61,6 +61,7 @@ function makeService(options: { timeoutMs?: number; lockAcquired?: boolean } = {
     list: jest.fn(),
     updateById: jest.fn(),
     deleteById: jest.fn(),
+    activateIfProvisioning: jest.fn().mockResolvedValue(true),
   };
   const configs: Mocked<AppConfigsRepository> = {
     insertDefault: jest.fn(),
@@ -137,9 +138,9 @@ describe("ProvisioningService", () => {
       order.push("config");
       return Promise.resolve();
     });
-    apps.updateById.mockImplementation(() => {
+    apps.activateIfProvisioning.mockImplementation(() => {
       order.push("activate");
-      return Promise.resolve();
+      return Promise.resolve(true);
     });
     appService.findBySlugDetailed.mockResolvedValue({ id: "1" });
     const result = await service.provisionApp({ name: "Uji", slug: "uji-x" });
@@ -192,6 +193,27 @@ describe("ProvisioningService", () => {
     expect(database.createDatabase).not.toHaveBeenCalled();
   });
 
+  it("slug 2 karakter ditolak (minimal 3)", async () => {
+    const { service } = makeService();
+    await expect(
+      service.provisionApp({ name: "X", slug: "ab" }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it("slug 60 karakter ditolak (dbName > 63); 59 lolos validasi", async () => {
+    const { service, apps } = makeService();
+    await expect(
+      service.provisionApp({ name: "X", slug: "a".repeat(60) }),
+    ).rejects.toThrow("terlalu panjang");
+    expect(apps.insert).not.toHaveBeenCalled();
+    apps.findBySlug.mockResolvedValue(null);
+    apps.insert.mockResolvedValue(appRow());
+    apps.activateIfProvisioning.mockResolvedValue(true);
+    await expect(
+      service.provisionApp({ name: "X", slug: "a".repeat(59) }),
+    ).resolves.toBeDefined();
+  });
+
   it("slug format salah + modules non-kosong ditolak", async () => {
     const { service } = makeService();
     await expect(
@@ -200,6 +222,14 @@ describe("ProvisioningService", () => {
     await expect(
       service.provisionApp({ name: "X", slug: "uji-x", modules: ["cbt"] }),
     ).rejects.toThrow("Fase 2");
+  });
+
+  it("retry suspended → BadRequest", async () => {
+    const { service, apps } = makeService();
+    apps.findBySlug.mockResolvedValue(appRow({ status: "suspended" }));
+    await expect(service.retryProvisionApp("uji-x")).rejects.toThrow(
+      BadRequestException,
+    );
   });
 
   it("retry active → BadRequest; retry failed jalan", async () => {
@@ -211,6 +241,22 @@ describe("ProvisioningService", () => {
     apps.findBySlug.mockResolvedValue(appRow({ status: "failed" }));
     mockMigrateUp.mockResolvedValue([]);
     await expect(service.retryProvisionApp("uji-x")).resolves.toBeDefined();
+  });
+
+  it("aktivasi kalah balapan → timeout + kompensasi", async () => {
+    const { service, apps, database } = makeService();
+    apps.findBySlug.mockResolvedValue(null);
+    apps.insert.mockResolvedValue(appRow());
+    apps.activateIfProvisioning.mockResolvedValue(false);
+    await expect(
+      service.provisionApp({ name: "X", slug: "uji-x" }),
+    ).rejects.toThrow(RequestTimeoutException);
+    expect(database.dropDatabaseIfExists).toHaveBeenCalledWith("app_uji_x");
+    expect(apps.updateById).toHaveBeenCalledWith(
+      expect.anything(),
+      1,
+      expect.objectContaining({ status: "failed" }),
+    );
   });
 
   it("timeout → RequestTimeout + failed", async () => {

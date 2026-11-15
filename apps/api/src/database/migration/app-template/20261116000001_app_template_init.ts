@@ -1,7 +1,8 @@
 import { sql } from "drizzle-orm";
 import type { MigrationContext } from "../migration-runner";
 
-// SQL hasil `drizzle-kit generate` dari entities/ template (verbatim, bukan input user).
+// SQL hasil generate, disalin mekanis dari berkas drizzle-kit
+// (verbatim, bukan input user). Jangan sunting manual.
 const UP_SQL = `CREATE TYPE "public"."device_platform" AS ENUM('android', 'ios');--> statement-breakpoint
 CREATE TABLE "device_tokens" (
 	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "device_tokens_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
@@ -35,15 +36,16 @@ CREATE TABLE "users" (
 	"avatar_url" varchar(512),
 	"is_active" boolean DEFAULT true NOT NULL,
 	"metadata" jsonb,
-	"last_login_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"last_login_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 ALTER TABLE "device_tokens" ADD CONSTRAINT "device_tokens_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "device_tokens_token_uk" ON "device_tokens" USING btree ("token");--> statement-breakpoint
 CREATE UNIQUE INDEX "users_email_uk" ON "users" USING btree ("email");--> statement-breakpoint
-CREATE UNIQUE INDEX "users_phone_uk" ON "users" USING btree ("phone");`;
-
+CREATE UNIQUE INDEX "users_phone_uk" ON "users" USING btree ("phone");
+`;
 export async function up({ db }: MigrationContext): Promise<void> {
   await db.execute(sql.raw(UP_SQL));
 }

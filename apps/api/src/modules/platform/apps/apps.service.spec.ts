@@ -1,3 +1,4 @@
+import { BadRequestException } from "@nestjs/common";
 import type { DatabaseService } from "../../../database/database.service";
 import type { AppRow } from "../entities/apps.entity";
 import type { AppConfigsRepository } from "./app-configs.repository";
@@ -22,6 +23,7 @@ function makeService(): {
     list: jest.fn(),
     updateById: jest.fn(),
     deleteById: jest.fn(),
+    activateIfProvisioning: jest.fn(),
   };
   const configs: Mocked<AppConfigsRepository> = {
     insertDefault: jest.fn(),
@@ -120,6 +122,12 @@ describe("AppsService", () => {
     );
     expect(database.dropDatabaseIfExists).not.toHaveBeenCalled();
     expect(apps.deleteById).not.toHaveBeenCalled();
+  });
+
+  it("deleteApp suspended → BadRequest", async () => {
+    const { service, apps } = makeService();
+    apps.findById.mockResolvedValue(appRow({ status: "suspended" }));
+    await expect(service.deleteApp("1")).rejects.toThrow(BadRequestException);
   });
 
   it("deleteApp failed: DROP best-effort + hapus config + hapus baris", async () => {

@@ -26,7 +26,8 @@ export interface ProvisionAppInput {
   modules?: string[];
 }
 
-const SLUG_PATTERN = /^[a-z0-9]([a-z0-9-]{1,62}[a-z0-9])?$/;
+const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/;
+const MAX_DB_NAME_LENGTH = 63;
 const DEFAULT_TIMEOUT_MS = 30000;
 
 @Injectable()
@@ -134,10 +135,12 @@ export class ProvisioningService {
       await this.configs.insertDefault(db, appId);
       compensations.push("config");
       this.assertNotAborted(signal);
-      await this.apps.updateById(db, appId, {
-        status: "active",
-        failureReason: null,
-      });
+      const activated = await this.apps.activateIfProvisioning(db, appId);
+      if (!activated) {
+        // Status berubah di tengah jalan (kompensasi timeout menang duluan,
+        // atau retry lain): perlakukan sebagai timeout agar kompensasi jalan.
+        throw new RequestTimeoutException("Provisioning timeout");
+      }
     });
   }
 
@@ -241,6 +244,11 @@ export class ProvisioningService {
     if (!SLUG_PATTERN.test(input.slug)) {
       throw new BadRequestException(
         `Slug "${input.slug}" tidak valid (huruf kecil/angka/strip, 3–64 karakter).`,
+      );
+    }
+    if (toDbName(input.slug).length > MAX_DB_NAME_LENGTH) {
+      throw new BadRequestException(
+        "Slug terlalu panjang (nama database maksimal 63 karakter).",
       );
     }
     if (input.modules && input.modules.length > 0) {

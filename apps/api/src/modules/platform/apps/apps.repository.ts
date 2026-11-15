@@ -96,6 +96,19 @@ export class AppsRepository {
     await db.update(apps).set(patch).where(eq(apps.id, id));
   }
 
+  /**
+   * Aktifkan hanya bila masih provisioning (penjaga balapan timeout:
+   * tulis telat dari percobaan yang sudah dikompensasi tidak boleh menang).
+   */
+  async activateIfProvisioning(db: Db, id: number): Promise<boolean> {
+    const rows = await db
+      .update(apps)
+      .set({ status: "active", failureReason: null })
+      .where(and(eq(apps.id, id), eq(apps.status, "provisioning")))
+      .returning({ id: apps.id });
+    return rows.length > 0;
+  }
+
   async deleteById(db: Db, id: number): Promise<void> {
     await db.delete(apps).where(eq(apps.id, id));
   }

@@ -18,7 +18,7 @@ export class ProvisionAppInput {
 
   @Field(() => String)
   @IsString()
-  @Matches(/^[a-z0-9]([a-z0-9-]{1,62}[a-z0-9])?$/)
+  @Matches(/^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/)
   slug!: string;
 
   @Field(() => String, { nullable: true })
