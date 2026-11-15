@@ -37,3 +37,6 @@ schema.gql
 .tmp/
 .bun-cache/
 .npm-cache/
+
+# Ledger eksekusi plan (superpowers, per-plan)
+.superpowers/

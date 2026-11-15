@@ -21,7 +21,7 @@ F00 → F01 → F05 → F03 → F02 → F04 → F06 → F08 → F09 → F10 → 
 | F02 | [Kerangka CMS & App Switcher](F02-kerangka-cms-app-switcher.md) | FR-PLAT-02 | 1 | Belum mulai |
 | F03 | [Registry & Provisioning Aplikasi](F03-registry-provisioning.md) | FR-PLAT-03, 04 | 1 | Belum mulai |
 | F04 | [Remote Config per Aplikasi](F04-remote-config.md) | FR-PLAT-05 | 1 | Belum mulai |
-| F05 | [RBAC Dinamis](F05-rbac-dinamis.md) | FR-PLAT-06, 07 | 1 | Belum mulai |
+| F05 | [RBAC Dinamis](F05-rbac-dinamis.md) | FR-PLAT-06, 07 | 1 | Dikerjakan |
 | F06 | [Audit Log](F06-audit-log.md) | FR-PLAT-08 | 1 | Belum mulai |
 | F07 | [Dashboard Global & per Aplikasi](F07-dashboard.md) | FR-PLAT-09, 10 | 1 | Belum mulai |
 | F08 | [Manajemen User Aplikasi](F08-user-aplikasi.md) | FR-PLAT-11 | 1 | Belum mulai |
