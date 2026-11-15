@@ -8,12 +8,16 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-/** Status aplikasi (doc 06). Penegakan suspend milik F02/F03. */
+/** Status aplikasi (doc 06 + doc 13). Nilai saga ditambah F03. */
 export const appStatus = pgEnum("app_status", [
   "active",
   "suspended",
   "archived",
+  "provisioning",
+  "failed",
 ]);
+
+export type AppStatus = (typeof appStatus.enumValues)[number];
 
 /**
  * Registry aplikasi (doc 06, R1).
@@ -36,6 +40,10 @@ export const apps = pgTable(
     storeUrlIos: varchar("store_url_ios", { length: 512 }),
     fcmCredential: text("fcm_credential"),
     notes: text("notes"),
+    failureReason: text("failure_reason"),
+    lastProvisioningAt: timestamp("last_provisioning_at", {
+      withTimezone: true,
+    }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
