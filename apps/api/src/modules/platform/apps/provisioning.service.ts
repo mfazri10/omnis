@@ -137,8 +137,11 @@ export class ProvisioningService {
       this.assertNotAborted(signal);
       const activated = await this.apps.activateIfProvisioning(db, appId);
       if (!activated) {
-        // Status berubah di tengah jalan (kompensasi timeout menang duluan,
-        // atau retry lain): perlakukan sebagai timeout agar kompensasi jalan.
+        // Status berubah di tengah jalan (kompensasi timeout menang duluan):
+        // jangan flip ke active; biarkan failed agar bisa retry.
+        // Rejeksi ini ditelan void run.catch (by design); artefak telat
+        // (DB/configs) dibersihkan oleh retry berikutnya, bukan di sini —
+        // cleanup inline berisiko menjatuhkan DB milik percobaan lain.
         throw new RequestTimeoutException("Provisioning timeout");
       }
     });
