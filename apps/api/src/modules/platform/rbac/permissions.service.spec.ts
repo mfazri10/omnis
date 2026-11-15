@@ -1,4 +1,3 @@
-import type { Db } from "../../../database/database.service";
 import type { DatabaseService } from "../../../database/database.service";
 import type { PermissionRow } from "../entities/permissions.entity";
 import { PermissionsService } from "./permissions.service";
@@ -21,11 +20,11 @@ function makeService(): {
     listByModule: jest.fn(),
   };
   const database = {
-    getControlPlaneConnection: jest.fn().mockReturnValue({} as Db),
+    getControlPlaneConnection: jest.fn().mockReturnValue({}),
   } as unknown as DatabaseService;
   const service = new PermissionsService(
     database,
-    full as unknown as PermissionsRepository,
+    full,
   );
   return { service, repo: full };
 }

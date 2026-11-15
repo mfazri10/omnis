@@ -10,6 +10,7 @@ import type { RoleRow } from "../entities/roles.entity";
 import type { Db } from "../../../database/database.service";
 import { AssignmentsRepository } from "./assignments.repository";
 import { PermissionsRepository } from "./permissions.repository";
+import { RbacService } from "./rbac.service";
 import { isSensitivePermission } from "./platform.permissions";
 import type { RoleScope } from "./roles.repository";
 import { RolesRepository } from "./roles.repository";
@@ -45,6 +46,7 @@ export class RolesService {
     private readonly permissions: PermissionsRepository,
     private readonly apps: AppsRepository,
     private readonly assignments: AssignmentsRepository,
+    private readonly rbac: RbacService,
   ) {}
 
   async create(input: CreateRoleInput): Promise<RoleDetail> {
@@ -108,6 +110,8 @@ export class RolesService {
       name: patch.name,
       description: patch.description,
     });
+    const affected = await this.assignments.listAdminIdsByRole(db, numericId);
+    await this.rbac.bumpAdminVersion(affected.map((id) => String(id)));
     const updated = await this.roles.findById(db, numericId);
     if (!updated) {
       throw new NotFoundException("Role tidak ditemukan.");
@@ -130,6 +134,7 @@ export class RolesService {
     }
     await this.roles.replaceRolePermissions(db, numericId, []);
     await this.roles.deleteById(db, numericId);
+    await this.rbac.bumpAdminVersion(adminIds.map((id) => String(id)));
   }
 
   async findById(id: string): Promise<RoleDetail> {
@@ -184,20 +189,34 @@ export class RolesService {
     scopeType: RoleScope,
     keys: string[],
   ): Promise<number[]> {
-    const ids: number[] = [];
+    const ids = new Set<number>();
+    const needsCatalog = keys.some((key) => key.includes("*"));
+    const catalogKeys = needsCatalog
+      ? (await this.permissions.listByModule(db)).map((row) => row.key)
+      : [];
     for (const key of keys) {
-      if (scopeType === "app" && isSensitivePermission(key)) {
+      const concrete = key.includes("*")
+        ? expandPattern(key, catalogKeys)
+        : [key];
+      if (concrete.length === 0) {
         throw new BadRequestException(
-          `Permission ${key} hanya untuk role global.`,
+          `Pola ${key} tidak cocok permission mana pun.`,
         );
       }
-      const row = await this.permissions.findByKey(db, key);
-      if (!row) {
-        throw new BadRequestException(`Permission tidak dikenal: ${key}.`);
+      for (const one of concrete) {
+        if (scopeType === "app" && isSensitivePermission(one)) {
+          throw new BadRequestException(
+            `Permission ${one} hanya untuk role global.`,
+          );
+        }
+        const row = await this.permissions.findByKey(db, one);
+        if (!row) {
+          throw new BadRequestException(`Permission tidak dikenal: ${one}.`);
+        }
+        ids.add(row.id);
       }
-      ids.push(row.id);
     }
-    return ids;
+    return [...ids];
   }
 
   private async toDetail(db: Db, row: RoleRow): Promise<RoleDetail> {
@@ -219,4 +238,22 @@ export class RolesService {
     }
     return numeric;
   }
+}
+
+/**
+ * Kembangkan pola `*` per segmen terhadap kunci katalog (jumlah segmen
+ * harus sama). Pola disimpan sebagai kunci konkret — evaluasi tak
+ * pernah melihat `*`, dan hak baru di katalog tak bocor otomatis.
+ */
+function expandPattern(pattern: string, catalogKeys: string[]): string[] {
+  const patternSegments = pattern.split(".");
+  return catalogKeys.filter((key) => {
+    const keySegments = key.split(".");
+    if (keySegments.length !== patternSegments.length) {
+      return false;
+    }
+    return patternSegments.every(
+      (segment, index) => segment === "*" || segment === keySegments[index],
+    );
+  });
 }

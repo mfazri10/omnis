@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { and, eq, isNull } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type { Db } from "../../../database/database.service";
 import { adminRoleAssignments } from "../entities/role-assignments.entity";
 import { roles } from "../entities/roles.entity";
@@ -65,7 +66,7 @@ export class AssignmentsRepository {
       .where(eq(adminRoleAssignments.adminId, adminId));
   }
 
-  private matchCondition(key: AssignmentKey) {
+  private matchCondition(key: AssignmentKey): SQL | undefined {
     const base = [
       eq(adminRoleAssignments.adminId, key.adminId),
       eq(adminRoleAssignments.roleId, key.roleId),

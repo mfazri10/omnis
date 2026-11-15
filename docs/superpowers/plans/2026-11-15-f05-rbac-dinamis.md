@@ -22,7 +22,7 @@
   ```powershell
   $wk = 'C:\Users\F-PC\Desktop\Project\manajemen-aplikasi-mobile'; $env:TEMP = "$wk\.tmp"; $env:TMP = "$wk\.tmp"; $env:TMPDIR = "$wk\.tmp"; $env:BUN_INSTALL_CACHE_DIR = "$wk\.bun-cache"
   ```
-- Tes API: `bun run test -- <spec>` dari `apps/api`. Gerbang penuh: `bun run typecheck && bun run lint && bun run test && bun run build` dari root.
+- Tes API: `bun run test -- <spec>` dari `apps/api`. Gerbang penuh: `bun run typecheck && bun run lint && bun run test && bun run build` dari root. Setiap perintah gerbang WAJIB memakai guard `if ($LASTEXITCODE -ne 0) { throw ... }` — output stderr PowerShell menyesatkan (exit 1 kosmetik vs gagal asli hanya bisa dibedakan via guard + isi output).
 - Tidak ada kerja di branch main/master; push oleh manusia.
 
 ## Review Focus
@@ -37,7 +37,7 @@
 
 - R1: F05 membuat tabel `apps` FULL kolom doc 06 (§`apps`) + `AppsRepository` baca-saja + `AppsModule` minimal (export repo saja). F03 memiliki semua perilaku (CRUD/provisioning/FCM/UI). Alasan: F05 butuh app nyata untuk role/assignment cakupan-app; satu CREATE menghindari ALTER churn.
 - R2: `admin_role_assignments` memakai PK surrogate `id` + dua partial unique index (`(admin_id,role_id)` saat `app_id` NULL; `(admin_id,role_id,app_id)` saat NOT NULL). Alasan: composite PK dengan kolom NULL tidak valid di Postgres (doc 06 tidak bisa diimplementasi harfiah).
-- R3: Matcher izin = exact match + ekspansi `manage` (doc 04) + wildcard `*` per segmen (jumlah segmen harus sama). Shorthand 2-segmen `*.view` TIDAK didukung di F05 (ditunda; CMS tidak menawarkannya).
+- R3: Pola `*` per segmen dikembangkan menjadi kunci konkret saat validasi role (`resolveKeys`; tak cocok katalog → `BadRequest`); evaluasi memakai exact match + ekspansi `manage` saja. Shorthand 2-segmen (`*.view`) selalu ditolak (tak cocok katalog 3-segmen). Alasan: `role_permissions` menyimpan FK konkret; hak tersimpan eksplisit (tak membesar diam-diam saat katalog bertambah).
 - R4: Cache = version-stamp via `RedisService` langsung (`rbac:ver:{adminId}`, `rbac:eff:{adminId}:{appId|global}:{ver}`, TTL 60 dtk); invalidasi sinkron di path mutasi. Alasan: `CacheService`/event-bus belum ada (doc 14 belum dibangun).
 - R5: Mutasi F05 TIDAK memanggil audit (AuditLogService lahir di F06; F06 me-retrofit).
 - R6: `createAdmin` selalu non-super (super hanya via seed; tanpa mutasi promosi). Tanpa `deleteAdmin` (nonaktifkan saja, doc 04). `updateRole` tidak bisa ubah scope/app (immutable). `deleteRole` menolak bila penetapan ada. Assign ke admin nonaktif diizinkan (akses tetap ditolak via `isActive`).
@@ -213,7 +213,7 @@ git commit -m "feat(api): F05 CRUD role + validasi cakupan"
 - Consumes: `RolesService.findById`, `AssignmentsRepository` (Task 4), `PermissionsRepository.listByModule`, `RedisService.getClient()` (`get/setex/incr/expire`).
 - Produces: `AssignmentsService.assign({ adminId, roleId, appId? }): Promise<void>`; `unassign({ adminId, roleId, appId? })`; `RbacService.hasPermission(profile: { id: string; isSuperAdmin: boolean }, key: string, appId?: string): Promise<boolean>`; `listEffectivePermissions(adminId: string, appId?: string): Promise<string[]>` (terurut, hasil ekspansi; R11); `bumpAdminVersion(adminIds: string[]): Promise<void>`.
 - Aturan assign: role app ⇒ `appId` wajib = `role.appId`; role global ⇒ `appId` null; duplikat ⇒ `ConflictException`.
-- Matcher (R3): cocok bila (a) exact, atau (b) `held == {module}.{entity}.manage` untuk required `{module}.{entity}.{aksi}`, atau (c) segmen `*` cocok per posisi (jumlah segmen sama). Ekspansi memakai daftar kunci katalog (repo permissions) agar `listEffectivePermissions` konkret.
+- Matcher (R3): `listEffectivePermissions` = union held-keys + ekspansi `held == {module}.{entity}.manage` ke semua kunci katalog `{module}.{entity}.*`; `hasPermission` = includes(required). Pola `*` tak pernah tersimpan (dikembangkan di `resolveKeys` Task 4).
 - Cache (R4): baca `rbac:ver:{adminId}` (default 0) → `rbac:eff:{adminId}:{appId|global}:{ver}` (JSON array, TTL 60); mutasi role/assignment memanggil `bumpAdminVersion(adminIds)` (`INCR` + `EXPIRE`).
 
 - [ ] **Step 1: Tulis spec gagal**: (a) assign: tolak appId-vs-global mismatch [Review Focus 1]; duplikat → Conflict [RF 4]; (b) matcher: `platform.users.manage` mengizinkan `platform.users.view`; `platform.media.*` mengizinkan `platform.media.create`; `platform.media.*` TIDAK mengizinkan `platform.users.view`; `*.view` 2-segmen TIDAK mengizinkan `platform.users.view`; (c) cakupan: role global berlaku dengan `appId` konteks; role app-A tidak berlaku untuk `appId` B; (d) super-admin selalu true; (e) app suspended TETAP true (batas F02) [RF 5]; (f) cache: panggilan kedua tanpa hit repo; setelah bump, repo dipanggil lagi.

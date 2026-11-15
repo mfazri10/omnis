@@ -3,12 +3,12 @@ import {
   ConflictException,
   NotFoundException,
 } from "@nestjs/common";
-import type { Db } from "../../../database/database.service";
 import type { DatabaseService } from "../../../database/database.service";
 import type { AppsRepository } from "../apps/apps.repository";
 import type { AppRow } from "../entities/apps.entity";
 import type { RoleRow } from "../entities/roles.entity";
 import type { PermissionsRepository } from "./permissions.repository";
+import type { RbacService } from "./rbac.service";
 import { RolesService } from "./roles.service";
 import type { AssignmentsRepository } from "./assignments.repository";
 
@@ -20,6 +20,7 @@ function makeService(): {
   permissions: Mocked<PermissionsRepository>;
   apps: Mocked<AppsRepository>;
   assignments: Mocked<AssignmentsRepository>;
+  rbac: Mocked<RbacService>;
 } {
   const roles: Mocked<import("./roles.repository").RolesRepository> = {
     insert: jest.fn(),
@@ -49,17 +50,23 @@ function makeService(): {
     listAdminIdsByRole: jest.fn().mockResolvedValue([]),
     listByAdmin: jest.fn(),
   };
+  const rbac: Mocked<RbacService> = {
+    hasPermission: jest.fn(),
+    listEffectivePermissions: jest.fn(),
+    bumpAdminVersion: jest.fn(),
+  };
   const database = {
-    getControlPlaneConnection: jest.fn().mockReturnValue({} as Db),
+    getControlPlaneConnection: jest.fn().mockReturnValue({}),
   } as unknown as DatabaseService;
   const service = new RolesService(
     database,
-    roles as unknown as import("./roles.repository").RolesRepository,
-    permissions as unknown as PermissionsRepository,
-    apps as unknown as AppsRepository,
+    roles,
+    permissions,
+    apps,
     assignments as unknown as AssignmentsRepository,
+    rbac as unknown as RbacService,
   );
-  return { service, roles, permissions, apps, assignments };
+  return { service, roles, permissions, apps, assignments, rbac };
 }
 
 function roleRow(over: Partial<RoleRow> = {}): RoleRow {
@@ -185,5 +192,68 @@ describe("RolesService", () => {
     const { service, roles } = makeService();
     roles.findById.mockResolvedValue(null);
     await expect(service.findById("99")).rejects.toThrow(NotFoundException);
+  });
+
+  it("mengembangkan pola bintang menjadi kunci konkret saat buat", async () => {
+    const { service, roles, permissions } = makeService();
+    permissions.listByModule.mockResolvedValue([
+      { key: "platform.media.view" },
+      { key: "platform.media.create" },
+      { key: "platform.media.delete" },
+      { key: "platform.users.view" },
+    ]);
+    let nextId = 0;
+    permissions.findByKey.mockImplementation(
+      (): Promise<{ id: number } | null> => {
+        nextId += 1;
+        return Promise.resolve({ id: nextId });
+      },
+    );
+    roles.insert.mockResolvedValue(roleRow({ scopeType: "global", appId: null }));
+    roles.findRolePermissionKeys.mockResolvedValue([]);
+    await service.create({
+      name: "G",
+      scopeType: "global",
+      permissionKeys: ["platform.media.*"],
+    });
+    expect(roles.replaceRolePermissions).toHaveBeenCalledWith(
+      expect.anything(),
+      7,
+      [1, 2, 3],
+    );
+    const calls = roles.replaceRolePermissions.mock.calls as Array<
+      [unknown, unknown, number[]]
+    >;
+    const ids: number[] = calls[0]?.[2] ?? [];
+    expect(ids).toHaveLength(3);
+  });
+
+  it("menolak pola bintang yang tak cocok katalog", async () => {
+    const { service, permissions } = makeService();
+    permissions.listByModule.mockResolvedValue([{ key: "platform.users.view" }]);
+    await expect(
+      service.create({
+        name: "G",
+        scopeType: "global",
+        permissionKeys: ["x.*.y"],
+      }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it("menolak pola yang mencakup permission sensitif pada role app", async () => {
+    const { service, permissions, apps } = makeService();
+    apps.findById.mockResolvedValue(appRow());
+    permissions.listByModule.mockResolvedValue([
+      { key: "platform.roles.view" },
+      { key: "platform.roles.manage" },
+    ]);
+    await expect(
+      service.create({
+        name: "X",
+        scopeType: "app",
+        appId: "1",
+        permissionKeys: ["platform.roles.*"],
+      }),
+    ).rejects.toThrow(BadRequestException);
   });
 });

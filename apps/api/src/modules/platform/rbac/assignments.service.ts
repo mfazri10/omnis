@@ -1,0 +1,109 @@
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
+import { DatabaseService } from "../../../database/database.service";
+import { AssignmentsRepository } from "./assignments.repository";
+import { RbacService } from "./rbac.service";
+import type { RoleDetail } from "./roles.service";
+import { RolesService } from "./roles.service";
+
+export interface AssignmentInput {
+  adminId: string;
+  roleId: string;
+  appId?: string;
+}
+
+@Injectable()
+export class AssignmentsService {
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly assignments: AssignmentsRepository,
+    private readonly roles: RolesService,
+    private readonly rbac: RbacService,
+  ) {}
+
+  async assign(input: AssignmentInput): Promise<void> {
+    const db = this.database.getControlPlaneConnection();
+    const adminId = this.parseId(input.adminId);
+    const role = await this.roles.findById(input.roleId);
+    const appId = this.resolveAppId(role, input.appId);
+    const roleId = Number(role.id);
+    const exists = await this.assignments.exists(db, {
+      adminId,
+      roleId,
+      appId,
+    });
+    if (exists) {
+      throw new ConflictException("Penetapan role ini sudah ada.");
+    }
+    try {
+      await this.assignments.insert(db, { adminId, roleId, appId });
+    } catch (error: unknown) {
+      if (this.isForeignKeyViolation(error)) {
+        throw new BadRequestException("Admin atau role tidak ditemukan.");
+      }
+      throw error;
+    }
+    await this.rbac.bumpAdminVersion([input.adminId]);
+  }
+
+  async unassign(input: AssignmentInput): Promise<void> {
+    const db = this.database.getControlPlaneConnection();
+    const adminId = this.parseId(input.adminId);
+    const role = await this.roles.findById(input.roleId);
+    const appId = this.resolveAppId(role, input.appId);
+    const deleted = await this.assignments.delete(db, {
+      adminId,
+      roleId: Number(role.id),
+      appId,
+    });
+    if (!deleted) {
+      throw new NotFoundException("Penetapan tidak ditemukan.");
+    }
+    await this.rbac.bumpAdminVersion([input.adminId]);
+  }
+
+  private resolveAppId(
+    role: RoleDetail,
+    appId?: string,
+  ): number | null {
+    if (role.scopeType === "global") {
+      if (appId !== undefined) {
+        throw new BadRequestException("Role global tidak memakai aplikasi.");
+      }
+      return null;
+    }
+    if (appId === undefined) {
+      throw new BadRequestException(
+        "Penetapan role aplikasi wajib menyebut aplikasi.",
+      );
+    }
+    const numeric = this.parseId(appId);
+    if (role.appId === null || Number(role.appId) !== numeric) {
+      throw new BadRequestException(
+        "Aplikasi penetapan harus sama dengan aplikasi role.",
+      );
+    }
+    return numeric;
+  }
+
+  private parseId(id: string): number {
+    const numeric = Number(id);
+    if (!Number.isInteger(numeric) || numeric <= 0) {
+      throw new BadRequestException("ID tidak valid.");
+    }
+    return numeric;
+  }
+
+  private isForeignKeyViolation(error: unknown): boolean {
+    return (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error).code === "23503"
+    );
+  }
+}
