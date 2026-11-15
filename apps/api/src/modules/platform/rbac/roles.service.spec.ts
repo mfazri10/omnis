@@ -49,6 +49,7 @@ function makeService(): {
     exists: jest.fn(),
     listAdminIdsByRole: jest.fn().mockResolvedValue([]),
     listByAdmin: jest.fn(),
+    listDetailedByAdmin: jest.fn(),
   };
   const rbac: Mocked<RbacService> = {
     hasPermission: jest.fn(),

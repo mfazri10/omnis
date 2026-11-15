@@ -90,7 +90,7 @@ export class AdminsService {
   async updateAdmin(
     id: string,
     patch: { name: string },
-  ): Promise<AdminProfile> {
+  ): Promise<AdminListItem> {
     const db = this.database.getControlPlaneConnection();
     const numericId = this.parseId(id);
     const existing = await this.admins.findById(db, numericId);
@@ -98,7 +98,16 @@ export class AdminsService {
       throw new NotFoundException("Admin tidak ditemukan.");
     }
     await this.admins.updateName(db, numericId, patch.name);
-    return toProfile({ ...existing, name: patch.name });
+    return toListItem({ ...existing, name: patch.name });
+  }
+
+  async findById(id: string): Promise<AdminListItem> {
+    const db = this.database.getControlPlaneConnection();
+    const row = await this.admins.findById(db, this.parseId(id));
+    if (!row) {
+      throw new NotFoundException("Admin tidak ditemukan.");
+    }
+    return toListItem(row);
   }
 
   async setAdminActive(id: string, active: boolean): Promise<AdminListItem> {

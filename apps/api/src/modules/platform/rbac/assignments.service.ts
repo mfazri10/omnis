@@ -16,6 +16,14 @@ export interface AssignmentInput {
   appId?: string;
 }
 
+export interface RoleAssignmentDetail {
+  roleId: string;
+  roleName: string;
+  scopeType: "global" | "app";
+  appId: string | null;
+  appSlug: string | null;
+}
+
 @Injectable()
 export class AssignmentsService {
   constructor(
@@ -64,6 +72,21 @@ export class AssignmentsService {
       throw new NotFoundException("Penetapan tidak ditemukan.");
     }
     await this.rbac.bumpAdminVersion([input.adminId]);
+  }
+
+  async listDetailedByAdmin(adminId: string): Promise<RoleAssignmentDetail[]> {
+    const db = this.database.getControlPlaneConnection();
+    const rows = await this.assignments.listDetailedByAdmin(
+      db,
+      this.parseId(adminId),
+    );
+    return rows.map((row) => ({
+      roleId: String(row.roleId),
+      roleName: row.roleName,
+      scopeType: row.scopeType,
+      appId: row.appId === null ? null : String(row.appId),
+      appSlug: row.appSlug,
+    }));
   }
 
   private resolveAppId(

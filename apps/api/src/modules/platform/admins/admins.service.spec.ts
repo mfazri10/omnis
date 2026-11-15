@@ -128,4 +128,13 @@ describe("AdminsService", () => {
       NotFoundException,
     );
   });
+
+  it("findById mengembalikan item + NotFound bila tak ada", async () => {
+    const { service, admins } = makeService();
+    admins.findById.mockResolvedValue(adminRow());
+    const found = await service.findById("11");
+    expect(found).toMatchObject({ id: "11", isActive: true });
+    admins.findById.mockResolvedValue(null);
+    await expect(service.findById("99")).rejects.toThrow(NotFoundException);
+  });
 });

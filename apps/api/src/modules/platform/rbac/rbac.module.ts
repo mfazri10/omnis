@@ -9,6 +9,7 @@ import { PermissionsService } from "./permissions.service";
 import { PLATFORM_CATALOG } from "./platform.permissions";
 import { RbacService } from "./rbac.service";
 import { RolesRepository } from "./roles.repository";
+import { RolesResolver } from "./roles.resolver";
 import { RolesService } from "./roles.service";
 
 @Module({
@@ -22,6 +23,7 @@ import { RolesService } from "./roles.service";
     AssignmentsService,
     RbacService,
     PermissionGuard,
+    RolesResolver,
   ],
   exports: [
     PermissionsRepository,

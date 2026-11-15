@@ -24,6 +24,7 @@ function makeService(): {
     exists: jest.fn(),
     listAdminIdsByRole: jest.fn(),
     listByAdmin: jest.fn(),
+    listDetailedByAdmin: jest.fn(),
   };
   const roles: Mocked<RolesService> = {
     create: jest.fn(),
@@ -130,5 +131,20 @@ describe("AssignmentsService", () => {
     await expect(
       service.assign({ adminId: "999", roleId: "6" }),
     ).rejects.toThrow(BadRequestException);
+  });
+
+  it("listDetailedByAdmin memetakan id ke string", async () => {
+    const { service, assignments } = makeService();
+    assignments.listDetailedByAdmin.mockResolvedValue([
+      { roleId: 5, roleName: "Editor", scopeType: "app", appId: 1, appSlug: "tes-cpns" },
+    ]);
+    const result = await service.listDetailedByAdmin("11");
+    expect(assignments.listDetailedByAdmin).toHaveBeenCalledWith(
+      expect.anything(),
+      11,
+    );
+    expect(result).toEqual([
+      { roleId: "5", roleName: "Editor", scopeType: "app", appId: "1", appSlug: "tes-cpns" },
+    ]);
   });
 });

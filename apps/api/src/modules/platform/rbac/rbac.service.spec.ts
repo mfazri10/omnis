@@ -46,6 +46,7 @@ function makeService(): {
     exists: jest.fn(),
     listAdminIdsByRole: jest.fn(),
     listByAdmin: jest.fn(),
+    listDetailedByAdmin: jest.fn(),
   };
   const roles: Mocked<RolesRepository> = {
     insert: jest.fn(),

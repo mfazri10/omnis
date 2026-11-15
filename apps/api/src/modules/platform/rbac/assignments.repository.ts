@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { and, eq, isNull } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { Db } from "../../../database/database.service";
+import { apps } from "../entities/apps.entity";
 import { adminRoleAssignments } from "../entities/role-assignments.entity";
 import { roles } from "../entities/roles.entity";
 
@@ -16,6 +17,14 @@ export interface AssignmentRow {
   appId: number | null;
   scopeType: "global" | "app";
   roleAppId: number | null;
+}
+
+export interface DetailedAssignmentRow {
+  roleId: number;
+  roleName: string;
+  scopeType: "global" | "app";
+  appId: number | null;
+  appSlug: string | null;
 }
 
 @Injectable()
@@ -63,6 +72,24 @@ export class AssignmentsRepository {
       })
       .from(adminRoleAssignments)
       .innerJoin(roles, eq(adminRoleAssignments.roleId, roles.id))
+      .where(eq(adminRoleAssignments.adminId, adminId));
+  }
+
+  async listDetailedByAdmin(
+    db: Db,
+    adminId: number,
+  ): Promise<DetailedAssignmentRow[]> {
+    return db
+      .select({
+        roleId: adminRoleAssignments.roleId,
+        roleName: roles.name,
+        scopeType: roles.scopeType,
+        appId: adminRoleAssignments.appId,
+        appSlug: apps.slug,
+      })
+      .from(adminRoleAssignments)
+      .innerJoin(roles, eq(adminRoleAssignments.roleId, roles.id))
+      .leftJoin(apps, eq(adminRoleAssignments.appId, apps.id))
       .where(eq(adminRoleAssignments.adminId, adminId));
   }
 
