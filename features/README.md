@@ -19,7 +19,7 @@ F00 → F01 → F05 → F03 → F02 → F04 → F06 → F08 → F09 → F10 → 
 | F00 | [Fondasi Proyek & Infrastruktur](F00-fondasi-proyek.md) | — | 0–1 | Selesai |
 | F01 | [Auth Admin](F01-auth-admin.md) | FR-PLAT-01 | 1 | Selesai |
 | F02 | [Kerangka CMS & App Switcher](F02-kerangka-cms-app-switcher.md) | FR-PLAT-02 | 1 | Belum mulai |
-| F03 | [Registry & Provisioning Aplikasi](F03-registry-provisioning.md) | FR-PLAT-03, 04 | 1 | Belum mulai |
+| F03 | [Registry & Provisioning Aplikasi](F03-registry-provisioning.md) | FR-PLAT-03, 04 | 1 | Dikerjakan |
 | F04 | [Remote Config per Aplikasi](F04-remote-config.md) | FR-PLAT-05 | 1 | Belum mulai |
 | F05 | [RBAC Dinamis](F05-rbac-dinamis.md) | FR-PLAT-06, 07 | 1 | Selesai |
 | F06 | [Audit Log](F06-audit-log.md) | FR-PLAT-08 | 1 | Belum mulai |

@@ -5,7 +5,7 @@
 | FR | FR-PLAT-03, FR-PLAT-04 |
 | Fase | 1 |
 | Prioritas | Must |
-| Status | Belum mulai |
+| Status | Dikerjakan |
 | Dependensi | F00, F05 |
 
 ## Tujuan
