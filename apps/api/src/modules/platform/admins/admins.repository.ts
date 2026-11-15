@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
-import { eq } from "drizzle-orm";
+import { and, count, eq, ilike, or } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type { Db } from "../../../database/database.service";
 import { admins } from "../entities/admins.entity";
 import type { AdminRow } from "../entities/admins.entity";
@@ -32,6 +33,60 @@ export class AdminsRepository {
       .where(eq(admins.email, email))
       .limit(1);
     return rows[0] ?? null;
+  }
+
+  async findById(db: Db, id: number): Promise<AdminRow | null> {
+    const rows = await db
+      .select()
+      .from(admins)
+      .where(eq(admins.id, id))
+      .limit(1);
+    return rows[0] ?? null;
+  }
+
+  async list(
+    db: Db,
+    query: { search?: string; skip: number; take: number },
+  ): Promise<{ rows: AdminRow[]; total: number }> {
+    const term = query.search?.trim();
+    const where: SQL | undefined =
+      term === undefined || term === ""
+        ? undefined
+        : or(
+            ilike(admins.name, `%${term}%`),
+            ilike(admins.email, `%${term}%`),
+          );
+    const rows = await db
+      .select()
+      .from(admins)
+      .where(where)
+      .orderBy(admins.id)
+      .limit(query.take)
+      .offset(query.skip);
+    const totalRows = await db
+      .select({ value: count() })
+      .from(admins)
+      .where(where);
+    return { rows, total: totalRows[0]?.value ?? 0 };
+  }
+
+  async updateName(db: Db, id: number, name: string): Promise<void> {
+    await db.update(admins).set({ name }).where(eq(admins.id, id));
+  }
+
+  async setActive(db: Db, id: number, active: boolean): Promise<void> {
+    await db
+      .update(admins)
+      .set({ isActive: active })
+      .where(eq(admins.id, id));
+  }
+
+  async countActiveSuperAdmins(db: Db): Promise<number> {
+    const rows = await db
+      .select({ value: count() })
+      .from(admins)
+      .where(and(eq(admins.isSuperAdmin, true), eq(admins.isActive, true)));
+    return rows[0]?.value ?? 0;
   }
 
   async createProfile(db: Db, input: CreateProfileInput): Promise<AdminRow> {

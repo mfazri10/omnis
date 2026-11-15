@@ -38,6 +38,6 @@ import { SessionRepository } from "./session.repository";
     AuthGuard,
     SessionRepository,
   ],
-  exports: [AUTH, AuthService, AuthGuard],
+  exports: [AUTH, AuthService, AuthGuard, SessionRepository],
 })
 export class AuthModule {}
