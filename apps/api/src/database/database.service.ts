@@ -1,10 +1,11 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import type { OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { drizzle } from "drizzle-orm/node-postgres";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql } from "drizzle-orm";
 import { Pool } from "pg";
+import type { PoolClient } from "pg";
 import {
   AppNotFoundException,
   AppSuspendedException,
@@ -68,6 +69,90 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
 
   getControlPlaneConnection(): Db {
     return this.ensureControlPlane().db;
+  }
+
+  /**
+   * Pinjam SATU koneksi control-plane untuk operasi session-level
+   * (mis. advisory lock saga). Selalu release di finally.
+   */
+  async withControlPlaneClient<T>(
+    fn: (client: PoolClient) => Promise<T>,
+  ): Promise<T> {
+    const client = await this.ensureControlPlane().pool.connect();
+    try {
+      return await fn(client);
+    } finally {
+      client.release();
+    }
+  }
+
+  /** Operasi admin database (F03). Pool ephemeral, selalu di-end. */
+  async databaseExists(dbName: string): Promise<boolean> {
+    this.assertValidDbName(dbName);
+    const pool = this.adminPool();
+    try {
+      const result = await pool.query(
+        "SELECT 1 AS one FROM pg_database WHERE datname = $1",
+        [dbName],
+      );
+      return result.rows.length > 0;
+    } finally {
+      await pool.end();
+    }
+  }
+
+  async createDatabase(dbName: string): Promise<void> {
+    this.assertValidDbName(dbName);
+    const pool = this.adminPool();
+    try {
+      await pool.query(`CREATE DATABASE "${dbName}"`);
+    } finally {
+      await pool.end();
+    }
+  }
+
+  async dropDatabaseIfExists(dbName: string): Promise<void> {
+    this.assertValidDbName(dbName);
+    const pool = this.adminPool();
+    try {
+      await pool.query(
+        "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()",
+        [dbName],
+      );
+      await pool.query(`DROP DATABASE IF EXISTS "${dbName}"`);
+    } finally {
+      await pool.end();
+    }
+  }
+
+  /** Koneksi drizzle sekali-pakai ke satu App DB (mis. migrasi template). */
+  async withAppDbConnection<T>(
+    dbName: string,
+    fn: (db: Db) => Promise<T>,
+  ): Promise<T> {
+    this.assertValidDbName(dbName);
+    const base = this.config.getOrThrow<string>("POSTGRES_BASE_URL");
+    const pool = new Pool({
+      connectionString: `${base}/${dbName}`,
+      max: 2,
+      connectionTimeoutMillis: 5_000,
+    });
+    try {
+      return await fn(drizzle(pool));
+    } finally {
+      await pool.end();
+    }
+  }
+
+  /** Tutup + buang pool cache satu aplikasi (mis. saat suspend). */
+  async closeAppPool(slug: string): Promise<boolean> {
+    const cached = this.appPools.get(slug);
+    if (!cached) {
+      return false;
+    }
+    await cached.pool.end();
+    this.appPools.delete(slug);
+    return true;
   }
 
   /**
@@ -139,6 +224,21 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       appPools: { count: this.appPools.size, pools },
       totalServerConnections,
     };
+  }
+
+  private adminPool(): Pool {
+    const base = this.config.getOrThrow<string>("POSTGRES_BASE_URL");
+    return new Pool({
+      connectionString: `${base}/postgres`,
+      max: 2,
+      connectionTimeoutMillis: 5_000,
+    });
+  }
+
+  private assertValidDbName(dbName: string): void {
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(dbName)) {
+      throw new BadRequestException("Nama database tidak valid.");
+    }
   }
 
   private async evictIdlePools(): Promise<void> {
