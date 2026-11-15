@@ -36,3 +36,4 @@ schema.gql
 # Scratch lokal (temp/cache tooling)
 .tmp/
 .bun-cache/
+.npm-cache/
