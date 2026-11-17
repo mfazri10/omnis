@@ -16,6 +16,13 @@ export interface AssignmentInput {
   appId?: string;
 }
 
+export interface AssignmentResult {
+  adminId: string;
+  roleId: string;
+  roleName: string;
+  appId: string | null;
+}
+
 export interface RoleAssignmentDetail {
   roleId: string;
   roleName: string;
@@ -33,7 +40,7 @@ export class AssignmentsService {
     private readonly rbac: RbacService,
   ) {}
 
-  async assign(input: AssignmentInput): Promise<void> {
+  async assign(input: AssignmentInput): Promise<AssignmentResult> {
     const db = this.database.getControlPlaneConnection();
     const adminId = this.parseId(input.adminId);
     const role = await this.roles.findById(input.roleId);
@@ -59,9 +66,15 @@ export class AssignmentsService {
       throw error;
     }
     await this.rbac.bumpAdminVersion([input.adminId]);
+    return {
+      adminId: input.adminId,
+      roleId: role.id,
+      roleName: role.name,
+      appId: appId === null ? null : String(appId),
+    };
   }
 
-  async unassign(input: AssignmentInput): Promise<void> {
+  async unassign(input: AssignmentInput): Promise<AssignmentResult> {
     const db = this.database.getControlPlaneConnection();
     const adminId = this.parseId(input.adminId);
     const role = await this.roles.findById(input.roleId);
@@ -75,6 +88,12 @@ export class AssignmentsService {
       throw new NotFoundException("Penetapan tidak ditemukan.");
     }
     await this.rbac.bumpAdminVersion([input.adminId]);
+    return {
+      adminId: input.adminId,
+      roleId: role.id,
+      roleName: role.name,
+      appId: appId === null ? null : String(appId),
+    };
   }
 
   async listDetailedByAdmin(adminId: string): Promise<RoleAssignmentDetail[]> {

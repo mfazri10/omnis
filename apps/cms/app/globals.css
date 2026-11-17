@@ -1,1 +1,14 @@
 @import "tailwindcss";
+
+@layer base {
+  a[href],
+  button:not(:disabled),
+  select:not(:disabled),
+  label[for] {
+    cursor: pointer;
+  }
+  button:disabled,
+  select:disabled {
+    cursor: not-allowed;
+  }
+}

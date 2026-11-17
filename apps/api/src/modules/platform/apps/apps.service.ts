@@ -212,7 +212,7 @@ export class AppsService {
     return toDetail({ ...existing, status: "archived" });
   }
 
-  async deleteApp(id: string): Promise<void> {
+  async deleteApp(id: string): Promise<{ id: string; name: string }> {
     const db = this.database.getControlPlaneConnection();
     const existing = await this.mustFind(db, id);
     if (existing.status !== "failed") {
@@ -225,9 +225,13 @@ export class AppsService {
     }
     await this.configs.deleteByAppId(db, existing.id);
     await this.apps.deleteById(db, existing.id);
+    return { id: String(existing.id), name: existing.name };
   }
 
-  async setFcmCredential(id: string, jsonString: string): Promise<void> {
+  async setFcmCredential(
+    id: string,
+    jsonString: string,
+  ): Promise<{ id: string; name: string }> {
     const db = this.database.getControlPlaneConnection();
     const existing = await this.mustFind(db, id);
     let parsed: unknown;
@@ -243,6 +247,7 @@ export class AppsService {
     }
     const cipher = this.fcm.encrypt(jsonString);
     await this.apps.updateById(db, existing.id, { fcmCredential: cipher });
+    return { id: String(existing.id), name: existing.name };
   }
 
   private async transition(

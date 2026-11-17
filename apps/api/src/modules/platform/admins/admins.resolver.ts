@@ -1,11 +1,13 @@
 import { UseGuards } from "@nestjs/common";
 import { Args, ID, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { AuthService } from "../../../auth/auth.service";
+import { ClientIp } from "../../../common/decorators/client-ip.decorator";
 import { CurrentAdmin } from "../../../common/decorators/current-admin.decorator";
 import { RequirePermissions } from "../../../common/decorators/require-permissions.decorator";
 import { AuthGuard } from "../../../common/guards/auth.guard";
 import { PermissionGuard } from "../../../common/guards/permission.guard";
 import { PaginationArgs } from "../../../common/types/pagination";
+import { ActivityLogService } from "../activity-logs/activity-log.service";
 import { AssignmentsService } from "../rbac/assignments.service";
 import { RbacService } from "../rbac/rbac.service";
 import { RoleAssignmentType } from "../rbac/types/assignment.type";
@@ -34,6 +36,7 @@ export class AdminsResolver {
     private readonly auth: AuthService,
     private readonly rbac: RbacService,
     private readonly assignments: AssignmentsService,
+    private readonly activityLog: ActivityLogService,
   ) {}
 
   @Query(() => AdminConnection)
@@ -99,12 +102,23 @@ export class AdminsResolver {
   @RequirePermissions("platform.admins.manage")
   async createAdmin(
     @Args("input", { type: () => CreateAdminInput }) input: CreateAdminInput,
+    @CurrentAdmin() actor: AdminProfile,
+    @ClientIp() ip: string | null,
   ): Promise<AdminType> {
     const profile = await this.auth.createAdminAccount({
       name: input.name,
       email: input.email,
       password: input.password,
       isSuperAdmin: false,
+    });
+    await this.activityLog.record({
+      adminId: actor.id,
+      appId: null,
+      action: "create",
+      entityType: "admin",
+      entityId: profile.id,
+      summary: `Membuat admin ${profile.name} (${profile.email})`,
+      ip,
     });
     return toAdminType(profile);
   }
@@ -114,8 +128,20 @@ export class AdminsResolver {
   async updateAdmin(
     @Args("id", { type: () => ID }) id: string,
     @Args("input", { type: () => UpdateAdminInput }) input: UpdateAdminInput,
+    @CurrentAdmin() actor: AdminProfile,
+    @ClientIp() ip: string | null,
   ): Promise<AdminType> {
-    return toAdminType(await this.adminsService.updateAdmin(id, input));
+    const updated = await this.adminsService.updateAdmin(id, input);
+    await this.activityLog.record({
+      adminId: actor.id,
+      appId: null,
+      action: "update",
+      entityType: "admin",
+      entityId: updated.id,
+      summary: `Mengubah admin ${updated.name}`,
+      ip,
+    });
+    return toAdminType(updated);
   }
 
   @Mutation(() => AdminType)
@@ -123,7 +149,21 @@ export class AdminsResolver {
   async setAdminActive(
     @Args("id", { type: () => ID }) id: string,
     @Args("active", { type: () => Boolean }) active: boolean,
+    @CurrentAdmin() actor: AdminProfile,
+    @ClientIp() ip: string | null,
   ): Promise<AdminType> {
-    return toAdminType(await this.adminsService.setAdminActive(id, active));
+    const updated = await this.adminsService.setAdminActive(id, active);
+    await this.activityLog.record({
+      adminId: actor.id,
+      appId: null,
+      action: active ? "activate" : "deactivate",
+      entityType: "admin",
+      entityId: updated.id,
+      summary: active
+        ? `Mengaktifkan admin ${updated.name}`
+        : `Menonaktifkan admin ${updated.name}`,
+      ip,
+    });
+    return toAdminType(updated);
   }
 }

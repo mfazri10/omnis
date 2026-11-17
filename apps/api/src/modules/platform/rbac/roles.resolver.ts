@@ -1,8 +1,13 @@
 import { BadRequestException, UseGuards } from "@nestjs/common";
 import { Args, ID, Mutation, Query, Resolver } from "@nestjs/graphql";
+import { ClientIp } from "../../../common/decorators/client-ip.decorator";
+import { CurrentAdmin } from "../../../common/decorators/current-admin.decorator";
 import { RequirePermissions } from "../../../common/decorators/require-permissions.decorator";
 import { AuthGuard } from "../../../common/guards/auth.guard";
 import { PermissionGuard } from "../../../common/guards/permission.guard";
+import { ActivityLogService } from "../activity-logs/activity-log.service";
+import type { AdminProfile } from "../admins/admins.service";
+import type { AssignmentResult } from "./assignments.service";
 import { AssignmentsService } from "./assignments.service";
 import { CreateRoleInput, UpdateRoleInput } from "./dto/role.input";
 import { PermissionsService } from "./permissions.service";
@@ -12,6 +17,16 @@ import { RolesService } from "./roles.service";
 import { PermissionType } from "./types/permission.type";
 import { RoleType } from "./types/role.type";
 
+function assignmentSummary(
+  verb: "Menetapkan" | "Mencabut",
+  preposition: "ke" | "dari",
+  result: AssignmentResult,
+): string {
+  const appSuffix =
+    result.appId === null ? "" : ` untuk aplikasi #${result.appId}`;
+  return `${verb} role ${result.roleName} ${preposition} admin #${result.adminId}${appSuffix}`;
+}
+
 @Resolver()
 @UseGuards(AuthGuard, PermissionGuard)
 export class RolesResolver {
@@ -19,6 +34,7 @@ export class RolesResolver {
     private readonly rolesService: RolesService,
     private readonly permissionsService: PermissionsService,
     private readonly assignments: AssignmentsService,
+    private readonly activityLog: ActivityLogService,
   ) {}
 
   @Query(() => [RoleType])
@@ -57,8 +73,19 @@ export class RolesResolver {
   @RequirePermissions("platform.roles.manage")
   async createRole(
     @Args("input", { type: () => CreateRoleInput }) input: CreateRoleInput,
+    @CurrentAdmin() admin: AdminProfile,
+    @ClientIp() ip: string | null,
   ): Promise<RoleType> {
     const detail = await this.rolesService.create(input);
+    await this.activityLog.record({
+      adminId: admin.id,
+      appId: null,
+      action: "create",
+      entityType: "role",
+      entityId: detail.id,
+      summary: `Membuat role ${detail.name}`,
+      ip,
+    });
     return { ...detail };
   }
 
@@ -67,8 +94,19 @@ export class RolesResolver {
   async updateRole(
     @Args("id", { type: () => ID }) id: string,
     @Args("input", { type: () => UpdateRoleInput }) input: UpdateRoleInput,
+    @CurrentAdmin() admin: AdminProfile,
+    @ClientIp() ip: string | null,
   ): Promise<RoleType> {
     const detail = await this.rolesService.update(id, input);
+    await this.activityLog.record({
+      adminId: admin.id,
+      appId: null,
+      action: "update",
+      entityType: "role",
+      entityId: detail.id,
+      summary: `Mengubah role ${detail.name}`,
+      ip,
+    });
     return { ...detail };
   }
 
@@ -76,30 +114,63 @@ export class RolesResolver {
   @RequirePermissions("platform.roles.manage")
   async deleteRole(
     @Args("id", { type: () => ID }) id: string,
+    @CurrentAdmin() admin: AdminProfile,
+    @ClientIp() ip: string | null,
   ): Promise<boolean> {
-    await this.rolesService.remove(id);
+    const deleted = await this.rolesService.remove(id);
+    await this.activityLog.record({
+      adminId: admin.id,
+      appId: null,
+      action: "delete",
+      entityType: "role",
+      entityId: deleted.id,
+      summary: `Menghapus role ${deleted.name}`,
+      ip,
+    });
     return true;
   }
 
   @Mutation(() => Boolean)
   @RequirePermissions("platform.roles.manage")
   async assignRole(
+    @CurrentAdmin() actor: AdminProfile,
+    @ClientIp() ip: string | null,
     @Args("adminId", { type: () => ID }) adminId: string,
     @Args("roleId", { type: () => ID }) roleId: string,
     @Args("appId", { type: () => ID, nullable: true }) appId?: string,
   ): Promise<boolean> {
-    await this.assignments.assign({ adminId, roleId, appId });
+    const result = await this.assignments.assign({ adminId, roleId, appId });
+    await this.activityLog.record({
+      adminId: actor.id,
+      appId: result.appId,
+      action: "assign",
+      entityType: "role_assignment",
+      entityId: result.roleId,
+      summary: assignmentSummary("Menetapkan", "ke", result),
+      ip,
+    });
     return true;
   }
 
   @Mutation(() => Boolean)
   @RequirePermissions("platform.roles.manage")
   async unassignRole(
+    @CurrentAdmin() actor: AdminProfile,
+    @ClientIp() ip: string | null,
     @Args("adminId", { type: () => ID }) adminId: string,
     @Args("roleId", { type: () => ID }) roleId: string,
     @Args("appId", { type: () => ID, nullable: true }) appId?: string,
   ): Promise<boolean> {
-    await this.assignments.unassign({ adminId, roleId, appId });
+    const result = await this.assignments.unassign({ adminId, roleId, appId });
+    await this.activityLog.record({
+      adminId: actor.id,
+      appId: result.appId,
+      action: "unassign",
+      entityType: "role_assignment",
+      entityId: result.roleId,
+      summary: assignmentSummary("Mencabut", "dari", result),
+      ip,
+    });
     return true;
   }
 

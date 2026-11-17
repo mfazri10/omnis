@@ -131,7 +131,7 @@ export class RolesService {
     return this.toDetail(db, updated);
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string): Promise<RoleDetail> {
     const db = this.database.getControlPlaneConnection();
     const numericId = this.parseId(id);
     const existing = await this.roles.findById(db, numericId);
@@ -144,9 +144,11 @@ export class RolesService {
         `Role masih dipakai ${adminIds.length} penetapan. Cabut dulu sebelum menghapus.`,
       );
     }
+    const deleted = await this.toDetail(db, existing);
     await this.roles.replaceRolePermissions(db, numericId, []);
     await this.roles.deleteById(db, numericId);
     await this.rbac.bumpAdminVersion(adminIds.map((id) => String(id)));
+    return deleted;
   }
 
   async findById(id: string): Promise<RoleDetail> {

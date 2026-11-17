@@ -17,6 +17,11 @@ export type EmailSender = (
   text: string,
 ) => Promise<void>;
 
+export interface AdminSignedInEvent {
+  authUserId: string;
+  ip: string | null;
+}
+
 export interface CreateAuthOptions {
   db: NodePgDatabase;
   secret: string;
@@ -24,6 +29,8 @@ export interface CreateAuthOptions {
   trustedOrigins: string[];
   cmsOrigin: string;
   sendEmail: EmailSender;
+  /** Dipanggil sekali tiap login email berhasil (F06). Tak boleh melempar. */
+  onAdminSignedIn?: (event: AdminSignedInEvent) => Promise<void>;
 }
 
 /**
@@ -58,6 +65,27 @@ export function createAuth(options: CreateAuthOptions) {
           `<p>Klik tautan berikut untuk mengatur ulang kata sandi Anda. Tautan kedaluwarsa dalam 1 jam.</p><p><a href="${url}">Atur ulang kata sandi</a></p>`,
           `Buka tautan berikut untuk mengatur ulang kata sandi Anda (kedaluwarsa 1 jam): ${url}`,
         );
+      },
+    },
+    databaseHooks: {
+      session: {
+        create: {
+          after: async (session, context) => {
+            // Hanya login nyata: pembuatan user (sign-up) membuat sesi juga
+            // tetapi bukan login dan tidak boleh tercatat sebagai login.
+            if (context?.path !== "/sign-in/email") {
+              return;
+            }
+            const forwarded =
+              context.request?.headers.get("x-forwarded-for") ??
+              context.request?.headers.get("x-real-ip");
+            const ip = forwarded?.split(",")[0]?.trim() || null;
+            await options.onAdminSignedIn?.({
+              authUserId: session.userId,
+              ip,
+            });
+          },
+        },
       },
     },
   });

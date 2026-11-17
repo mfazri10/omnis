@@ -2,6 +2,7 @@ import { Global, Module } from "@nestjs/common";
 import type { OnModuleInit } from "@nestjs/common";
 import { AppContextGuard } from "../../../common/guards/app-context.guard";
 import { PermissionGuard } from "../../../common/guards/permission.guard";
+import { ActivityLogsModule } from "../activity-logs/activity-logs.module";
 import { AppsModule } from "../apps/apps.module";
 import { AssignmentsRepository } from "./assignments.repository";
 import { AssignmentsService } from "./assignments.service";
@@ -16,7 +17,7 @@ import { RolesService } from "./roles.service";
 // Global: guard dipakai semua modul domain (preseden AuthModule F01).
 @Global()
 @Module({
-  imports: [AppsModule],
+  imports: [ActivityLogsModule, AppsModule],
   providers: [
     PermissionsRepository,
     PermissionsService,

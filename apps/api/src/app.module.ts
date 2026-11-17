@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { validateEnv } from "./config/env.validation";
 import { AuthModule } from "./auth/auth.module";
 import { AppsModule } from "./modules/platform/apps/apps.module";
+import { ActivityLogsModule } from "./modules/platform/activity-logs/activity-logs.module";
 import { AppConfigModule } from "./modules/platform/app-config/app-config.module";
 import { AdminsModule } from "./modules/platform/admins/admins.module";
 import { DatabaseModule } from "./database/database.module";
@@ -27,6 +28,7 @@ import { GraphqlExceptionFilter } from "./common/filters/graphql-exception.filte
       introspection: process.env.NODE_ENV !== "production",
     }),
     DatabaseModule,
+    ActivityLogsModule,
     AppsModule,
     AppConfigModule,
     AdminsModule,

@@ -5,7 +5,7 @@
 | FR | FR-PLAT-05 |
 | Fase | 1 |
 | Prioritas | Must |
-| Status | Dikerjakan |
+| Status | Selesai |
 | Dependensi | F03, F05 |
 
 ## Tujuan
@@ -17,7 +17,7 @@ Setiap aplikasi punya saklar operasional jarak jauh (maintenance, versi minimum,
 - [x] Tabel `app_configs` (satu baris per aplikasi) + query `appConfig` (app-scoped)
 - [x] Mutation `updateAppConfig` (permission `platform.app-config.manage` dalam cakupan)
 - [x] Validasi: format versi, URL store, kode warna hex
-- [ ] Perubahan config menulis audit log (menunggu F06)
+- [x] Perubahan config menulis audit log (dibuktikan `app-config-audit.spec.ts`)
 
 ## Lingkup CMS UI
 
@@ -33,7 +33,7 @@ Setiap aplikasi punya saklar operasional jarak jauh (maintenance, versi minimum,
 
 ## Catatan
 
-- Kriteria 4 (audit log perubahan config) menunggu F06 yang memiliki tabel `activity_logs`.
+- Kriteria 4 (audit log perubahan config) terpenuhi: `app-config-audit.spec.ts` membuktikan `updateAppConfig` memanggil `activityLog.record` dengan `app_id`, `admin_id`, dan `action: "update"` yang benar, dan tidak mencatat saat update gagal.
 
 ## Referensi
 

@@ -33,9 +33,9 @@ export const GLOBAL_MENU: MenuItem[] = [
   {
     key: "audit-log",
     label: "Audit Log",
-    href: null,
+    href: "/platform/audit",
     requires: "platform.audit.view",
-    status: "soon",
+    status: "live",
   },
 ];
 
