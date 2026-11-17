@@ -1,5 +1,7 @@
 import { Reflector } from "@nestjs/core";
+import { APP_SCOPED_KEY } from "../../../common/decorators/app-scoped.decorator";
 import { AuthGuard } from "../../../common/guards/auth.guard";
+import { AppContextGuard } from "../../../common/guards/app-context.guard";
 import { PermissionGuard } from "../../../common/guards/permission.guard";
 import { PERMISSIONS_KEY } from "../../../common/decorators/require-permissions.decorator";
 import { AdminsResolver } from "../admins/admins.resolver";
@@ -18,6 +20,14 @@ function permsOf(target: object, method: string): string[] | undefined {
 
 function guardsOf(target: object): unknown[] {
   return (Reflect.getMetadata("__guards__", target) as unknown[]) ?? [];
+}
+
+function scopedOf(target: object, method: string): boolean | undefined {
+  const fn = (target as Record<string, (...args: never[]) => unknown>)[method];
+  if (typeof fn !== "function") {
+    throw new Error(`Method tak ada: ${method}`);
+  }
+  return reflector.get<boolean>(APP_SCOPED_KEY, fn);
 }
 
 describe("RBAC resolver metadata", () => {
@@ -61,10 +71,9 @@ describe("RBAC resolver metadata", () => {
     expect(permsOf(AdminsResolver.prototype, "currentAdmin")).toBeUndefined();
   });
 
-  it("AppsResolver dikunci AuthGuard + PermissionGuard", () => {
+  it("AppsResolver dikunci AuthGuard + AppContextGuard + PermissionGuard urut", () => {
     const guards = guardsOf(AppsResolver);
-    expect(guards).toContain(AuthGuard);
-    expect(guards).toContain(PermissionGuard);
+    expect(guards).toEqual([AuthGuard, AppContextGuard, PermissionGuard]);
   });
 
   it("AppsResolver.apps → platform.apps.view", () => {
@@ -92,5 +101,45 @@ describe("RBAC resolver metadata", () => {
     expect(permsOf(AppsResolver.prototype, method)).toEqual([
       "platform.apps.manage",
     ]);
+  });
+
+  it.each([
+    "apps",
+    "app",
+    "provisionApp",
+    "retryProvisionApp",
+    "updateApp",
+    "suspendApp",
+    "unsuspendApp",
+    "archiveApp",
+    "deleteApp",
+    "setFcmCredential",
+  ])("AppsResolver.%s bukan app-scoped", (method: string) => {
+    expect(scopedOf(AppsResolver.prototype, method)).toBeUndefined();
+  });
+
+  it.each([
+    "admins",
+    "admin",
+    "currentAdmin",
+    "effectivePermissions",
+    "adminAssignments",
+    "createAdmin",
+    "updateAdmin",
+    "setAdminActive",
+  ])("AdminsResolver.%s bukan app-scoped", (method: string) => {
+    expect(scopedOf(AdminsResolver.prototype, method)).toBeUndefined();
+  });
+
+  it.each([
+    "roles",
+    "permissions",
+    "createRole",
+    "updateRole",
+    "deleteRole",
+    "assignRole",
+    "unassignRole",
+  ])("RolesResolver.%s bukan app-scoped", (method: string) => {
+    expect(scopedOf(RolesResolver.prototype, method)).toBeUndefined();
   });
 });

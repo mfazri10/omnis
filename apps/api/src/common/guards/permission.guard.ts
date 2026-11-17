@@ -8,6 +8,7 @@ import { Reflector } from "@nestjs/core";
 import { GqlExecutionContext } from "@nestjs/graphql";
 import { RbacService } from "../../modules/platform/rbac/rbac.service";
 import type { GraphqlContext } from "../types/request-context";
+import { APP_CONTEXT_KEY } from "../types/request-context";
 import { PERMISSIONS_KEY } from "../decorators/require-permissions.decorator";
 import { ADMIN_KEY } from "./auth.guard";
 
@@ -18,8 +19,9 @@ interface AdminProfileLike {
 
 /**
  * Menegakkan @RequirePermissions (doc 04 §5). Berjalan setelah AuthGuard
- * yang menulis profil ke req[ADMIN_KEY]. Konteks app (F02) belum ada —
- * semua operasi F05 global sehingga appId tak diteruskan.
+ * (profil di req[ADMIN_KEY]) dan AppContextGuard (konteks app di
+ * req[APP_CONTEXT_KEY] untuk operasi @AppScoped); appId konteks
+ * diteruskan ke RbacService, undefined untuk operasi global.
  */
 @Injectable()
 export class PermissionGuard implements CanActivate {
@@ -42,10 +44,12 @@ export class PermissionGuard implements CanActivate {
         "Sesi tidak valid atau sudah berakhir. Silakan masuk kembali.",
       );
     }
+    const appId = this.readAppId(context);
     for (const key of required) {
       const allowed = await this.rbac.hasPermission(
         { id: admin.id, isSuperAdmin: admin.isSuperAdmin },
         key,
+        appId,
       );
       if (!allowed) {
         throw new ForbiddenException({
@@ -57,14 +61,25 @@ export class PermissionGuard implements CanActivate {
     return true;
   }
 
-  private readAdmin(context: ExecutionContext): AdminProfileLike | null {
-    let req: Record<string, unknown>;
-    if (context.getType<string>() === "graphql") {
-      req = GqlExecutionContext.create(context).getContext<GraphqlContext>()
-        .req;
-    } else {
-      req = context.switchToHttp().getRequest<Record<string, unknown>>();
+  private readAppId(context: ExecutionContext): string | undefined {
+    const ctx: unknown = this.readRequest(context)[APP_CONTEXT_KEY];
+    if (typeof ctx !== "object" || ctx === null || !("appId" in ctx)) {
+      return undefined;
     }
+    const appId: unknown = ctx.appId;
+    return typeof appId === "string" ? appId : undefined;
+  }
+
+  private readRequest(context: ExecutionContext): Record<string, unknown> {
+    if (context.getType<string>() === "graphql") {
+      return GqlExecutionContext.create(context).getContext<GraphqlContext>()
+        .req;
+    }
+    return context.switchToHttp().getRequest<Record<string, unknown>>();
+  }
+
+  private readAdmin(context: ExecutionContext): AdminProfileLike | null {
+    const req = this.readRequest(context);
     const admin: unknown = req[ADMIN_KEY];
     if (
       typeof admin !== "object" ||

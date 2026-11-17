@@ -7,6 +7,7 @@ import { Reflector } from "@nestjs/core";
 import { Test } from "@nestjs/testing";
 import { RbacService } from "../../modules/platform/rbac/rbac.service";
 import { RequirePermissions } from "../decorators/require-permissions.decorator";
+import { APP_CONTEXT_KEY } from "../types/request-context";
 import { ADMIN_KEY } from "./auth.guard";
 import { PermissionGuard } from "./permission.guard";
 
@@ -80,6 +81,7 @@ describe("PermissionGuard (HTTP)", () => {
     expect(hasPermission).toHaveBeenCalledWith(
       { id: "11", isSuperAdmin: true },
       "platform.roles.manage",
+      undefined,
     );
   });
 
@@ -94,6 +96,7 @@ describe("PermissionGuard (HTTP)", () => {
     expect(hasPermission).toHaveBeenCalledWith(
       { id: "11", isSuperAdmin: false },
       "platform.roles.manage",
+      undefined,
     );
   });
 
@@ -124,6 +127,39 @@ describe("PermissionGuard (HTTP)", () => {
     const context = mockContext({}, LockedController.prototype.locked);
     await expect(guard.canActivate(context)).rejects.toBeInstanceOf(
       UnauthorizedException,
+    );
+  });
+
+  it("meneruskan appId konteks ke service", async () => {
+    const { guard, hasPermission } = await makeGuard();
+    hasPermission.mockResolvedValue(true);
+    const context = mockContext(
+      {
+        [ADMIN_KEY]: ADMIN,
+        [APP_CONTEXT_KEY]: { appId: "7", slug: "tes-cpns" },
+      },
+      LockedController.prototype.locked,
+    );
+    await expect(guard.canActivate(context)).resolves.toBe(true);
+    expect(hasPermission).toHaveBeenCalledWith(
+      { id: "11", isSuperAdmin: false },
+      "platform.roles.manage",
+      "7",
+    );
+  });
+
+  it("tanpa konteks → appId undefined", async () => {
+    const { guard, hasPermission } = await makeGuard();
+    hasPermission.mockResolvedValue(true);
+    const context = mockContext(
+      { [ADMIN_KEY]: ADMIN },
+      LockedController.prototype.locked,
+    );
+    await expect(guard.canActivate(context)).resolves.toBe(true);
+    expect(hasPermission).toHaveBeenCalledWith(
+      { id: "11", isSuperAdmin: false },
+      "platform.roles.manage",
+      undefined,
     );
   });
 });

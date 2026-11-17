@@ -1,6 +1,7 @@
 import { UseGuards } from "@nestjs/common";
 import { Args, ID, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { RequirePermissions } from "../../../common/decorators/require-permissions.decorator";
+import { AppContextGuard } from "../../../common/guards/app-context.guard";
 import { AuthGuard } from "../../../common/guards/auth.guard";
 import { PermissionGuard } from "../../../common/guards/permission.guard";
 import { AppsService } from "./apps.service";
@@ -9,7 +10,7 @@ import { ProvisioningService } from "./provisioning.service";
 import { AppType } from "./types/app.type";
 
 @Resolver()
-@UseGuards(AuthGuard, PermissionGuard)
+@UseGuards(AuthGuard, AppContextGuard, PermissionGuard)
 export class AppsResolver {
   constructor(
     private readonly appsService: AppsService,

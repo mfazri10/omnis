@@ -1,5 +1,6 @@
 import { Global, Module } from "@nestjs/common";
 import type { OnModuleInit } from "@nestjs/common";
+import { AppContextGuard } from "../../../common/guards/app-context.guard";
 import { PermissionGuard } from "../../../common/guards/permission.guard";
 import { AppsModule } from "../apps/apps.module";
 import { AssignmentsRepository } from "./assignments.repository";
@@ -12,7 +13,7 @@ import { RolesRepository } from "./roles.repository";
 import { RolesResolver } from "./roles.resolver";
 import { RolesService } from "./roles.service";
 
-// Global: PermissionGuard dipakai semua modul domain (preseden AuthModule F01).
+// Global: guard dipakai semua modul domain (preseden AuthModule F01).
 @Global()
 @Module({
   imports: [AppsModule],
@@ -25,6 +26,7 @@ import { RolesService } from "./roles.service";
     AssignmentsService,
     RbacService,
     PermissionGuard,
+    AppContextGuard,
     RolesResolver,
   ],
   exports: [
@@ -36,6 +38,7 @@ import { RolesService } from "./roles.service";
     AssignmentsService,
     RbacService,
     PermissionGuard,
+    AppContextGuard,
   ],
 })
 export class RbacModule implements OnModuleInit {

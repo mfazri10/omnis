@@ -8,13 +8,14 @@ import { GqlExecutionContext } from "@nestjs/graphql";
 import type { Observable } from "rxjs";
 import { DatabaseService } from "../../database/database.service";
 import type { GraphqlContext } from "../types/request-context";
+import { APP_CONTEXT_KEY } from "../types/request-context";
 
 export const APP_DB_KEY = "appDb";
-const APP_SLUG_HEADER = "x-app-slug";
 
 /**
- * Resolve koneksi App DB dari header X-App-Slug (doc 11).
- * Guard otorisasi (F01/F05) menyusul; interceptor ini hanya menyiapkan koneksi.
+ * Resolve koneksi App DB dari konteks tervalidasi AppContextGuard (doc 11).
+ * Header mentah tidak pernah dibaca: operasi global (tanpa konteks)
+ * dilewati apa adanya.
  */
 @Injectable()
 export class AppDatabaseInterceptor implements NestInterceptor {
@@ -29,13 +30,21 @@ export class AppDatabaseInterceptor implements NestInterceptor {
     }
     const gqlCtx = GqlExecutionContext.create(context);
     const req = gqlCtx.getContext<GraphqlContext>().req;
-    const rawSlug = req.headers?.[APP_SLUG_HEADER];
+    const slug = this.readSlug(req);
 
-    if (typeof rawSlug === "string" && rawSlug.length > 0) {
-      req[APP_DB_KEY] =
-        await this.databaseService.getAppConnection(rawSlug);
+    if (slug !== null) {
+      req[APP_DB_KEY] = await this.databaseService.getAppConnection(slug);
     }
 
     return next.handle();
+  }
+
+  private readSlug(req: GraphqlContext["req"]): string | null {
+    const ctx: unknown = req[APP_CONTEXT_KEY];
+    if (typeof ctx !== "object" || ctx === null || !("slug" in ctx)) {
+      return null;
+    }
+    const slug: unknown = ctx.slug;
+    return typeof slug === "string" && slug.length > 0 ? slug : null;
   }
 }
