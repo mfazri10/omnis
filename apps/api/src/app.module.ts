@@ -9,6 +9,7 @@ import { AuthModule } from "./auth/auth.module";
 import { AppsModule } from "./modules/platform/apps/apps.module";
 import { ActivityLogsModule } from "./modules/platform/activity-logs/activity-logs.module";
 import { AppConfigModule } from "./modules/platform/app-config/app-config.module";
+import { AppUsersModule } from "./modules/platform/app-users/app-users.module";
 import { AdminsModule } from "./modules/platform/admins/admins.module";
 import { DatabaseModule } from "./database/database.module";
 import { RedisModule } from "./redis/redis.module";
@@ -31,6 +32,7 @@ import { GraphqlExceptionFilter } from "./common/filters/graphql-exception.filte
     ActivityLogsModule,
     AppsModule,
     AppConfigModule,
+    AppUsersModule,
     AdminsModule,
     RedisModule,
     HealthModule,

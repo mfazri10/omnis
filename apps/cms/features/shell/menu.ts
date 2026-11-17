@@ -51,9 +51,9 @@ export function appMenu(slug: string): MenuItem[] {
     {
       key: "users",
       label: "Pengguna",
-      href: null,
+      href: `/${slug}/users`,
       requires: "platform.users.view",
-      status: "soon",
+      status: "live",
     },
     {
       key: "media",

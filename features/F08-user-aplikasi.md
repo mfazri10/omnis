@@ -5,7 +5,7 @@
 | FR | FR-PLAT-11 |
 | Fase | 1 |
 | Prioritas | Must |
-| Status | Belum mulai |
+| Status | Selesai sebagian |
 | Dependensi | F03, F05 |
 
 ## Tujuan
@@ -14,16 +14,16 @@ Admin bisa melihat, mencari, dan menonaktifkan user aplikasinya (data terisolasi
 
 ## Lingkup Backend
 
-- [ ] Tabel `users` template di tiap App DB (nama, email/HP unik, avatar, status, metadata, login terakhir)
-- [ ] Query `appUsers` (pencarian + filter status + pagination) pada koneksi App DB konteks
-- [ ] Mutation `setAppUserActive` (permission `platform.users.manage` dalam cakupan)
-- [ ] Mutation tambah/ubah user dari CMS (untuk pengisian awal sebelum registrasi mobile ada)
+- [x] Tabel `users` template di tiap App DB (nama, email/HP unik, avatar, status, metadata, login terakhir)
+- [x] Query `appUsers` (pencarian + filter status + pagination) pada koneksi App DB konteks
+- [x] Mutation `setAppUserActive` (permission `platform.users.manage` dalam cakupan)
+- [x] Mutation tambah/ubah user dari CMS (untuk pengisian awal sebelum registrasi mobile ada)
 
 ## Lingkup CMS UI
 
-- [ ] Daftar user per aplikasi + pencarian + filter status
+- [x] Daftar user per aplikasi + pencarian + filter status
 - [ ] Detail user + riwayat ringkas (aktivitas terkait bila modulnya sudah ada)
-- [ ] Aksi aktif/nonaktifkan dengan konfirmasi
+- [x] Aksi aktif/nonaktifkan dengan konfirmasi
 
 ## Kriteria Selesai
 
