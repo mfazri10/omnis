@@ -1,12 +1,18 @@
 import { UseGuards } from "@nestjs/common";
 import { Args, ID, Mutation, Query, Resolver } from "@nestjs/graphql";
+import { AppContext } from "../../../common/decorators/app-context.decorator";
+import type { AppContext as AppContextData } from "../../../common/types/request-context";
+import { AppScoped } from "../../../common/decorators/app-scoped.decorator";
+import { CurrentAdmin } from "../../../common/decorators/current-admin.decorator";
 import { RequirePermissions } from "../../../common/decorators/require-permissions.decorator";
 import { AppContextGuard } from "../../../common/guards/app-context.guard";
 import { AuthGuard } from "../../../common/guards/auth.guard";
 import { PermissionGuard } from "../../../common/guards/permission.guard";
+import type { AdminProfile } from "../admins/admins.service";
 import { AppsService } from "./apps.service";
 import { ProvisionAppInput, UpdateAppInput } from "./dto/app.input";
 import { ProvisioningService } from "./provisioning.service";
+import { AppContextType } from "./types/app-context.type";
 import { AppType } from "./types/app.type";
 
 @Resolver()
@@ -37,6 +43,25 @@ export class AppsResolver {
   ): Promise<AppType> {
     const detail = await this.appsService.findBySlugDetailed(slug);
     return { ...detail };
+  }
+
+  @Query(() => [AppType])
+  async myApps(
+    @CurrentAdmin() admin: AdminProfile,
+  ): Promise<AppType[]> {
+    const list = await this.appsService.listAccessibleApps(admin);
+    return list.map((detail) => ({ ...detail }));
+  }
+
+  @Query(() => AppContextType)
+  @AppScoped()
+  appContext(@AppContext() ctx: AppContextData): AppContextType {
+    return {
+      id: ctx.appId,
+      slug: ctx.slug,
+      name: ctx.name,
+      status: ctx.status,
+    };
   }
 
   @Mutation(() => AppType)

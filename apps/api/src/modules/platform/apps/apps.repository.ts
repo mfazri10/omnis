@@ -58,6 +58,14 @@ export class AppsRepository {
     return db.select().from(apps).where(eq(apps.status, "active"));
   }
 
+  async findByIds(db: Db, ids: number[]): Promise<AppRow[]> {
+    return db
+      .select()
+      .from(apps)
+      .where(inArray(apps.id, ids))
+      .orderBy(apps.name);
+  }
+
   async insert(db: Db, row: CreateAppRow): Promise<AppRow> {
     const rows = await db.insert(apps).values(row).returning();
     const created = rows[0];

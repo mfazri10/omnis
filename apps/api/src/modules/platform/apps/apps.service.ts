@@ -10,6 +10,7 @@ import { AppConfigsRepository } from "./app-configs.repository";
 import { AppsRepository } from "./apps.repository";
 import type { UpdateAppRow } from "./apps.repository";
 import { FcmCredentialService } from "./fcm-credential.service";
+import { AssignmentsRepository } from "../rbac/assignments.repository";
 
 export interface AppDetail {
   id: string;
@@ -92,7 +93,44 @@ export class AppsService {
     private readonly apps: AppsRepository,
     private readonly configs: AppConfigsRepository,
     private readonly fcm: FcmCredentialService,
+    private readonly assignments: AssignmentsRepository,
   ) {}
+
+  async listAccessibleApps(profile: {
+    id: string;
+    isSuperAdmin: boolean;
+  }): Promise<AppDetail[]> {
+    const db = this.database.getControlPlaneConnection();
+    if (profile.isSuperAdmin) {
+      const rows = await this.apps.list(db, {
+        statuses: ["active", "suspended"],
+      });
+      return rows.map(toDetail);
+    }
+    const adminId = Number(profile.id);
+    if (!Number.isInteger(adminId) || adminId <= 0) {
+      throw new BadRequestException("ID tidak valid.");
+    }
+    const grants = await this.assignments.listByAdmin(db, adminId);
+    if (grants.some((grant) => grant.scopeType === "global")) {
+      const rows = await this.apps.listActive(db);
+      return rows.map(toDetail);
+    }
+    const ids = [
+      ...new Set(
+        grants
+          .map((grant) => grant.appId)
+          .filter((appId): appId is number => appId !== null),
+      ),
+    ];
+    if (ids.length === 0) {
+      return [];
+    }
+    const rows = await this.apps.findByIds(db, ids);
+    return rows
+      .filter((row) => row.status === "active")
+      .map(toDetail);
+  }
 
   async listApps(query: {
     status?: string;

@@ -42,6 +42,7 @@ function makeService(): {
     findById: jest.fn(),
     findBySlug: jest.fn(),
     listActive: jest.fn(),
+    findByIds: jest.fn(),
     insert: jest.fn(),
     list: jest.fn(),
     updateById: jest.fn(),

@@ -57,6 +57,7 @@ function makeService(options: { timeoutMs?: number; lockAcquired?: boolean } = {
     findById: jest.fn(),
     findBySlug: jest.fn(),
     listActive: jest.fn(),
+    findByIds: jest.fn(),
     insert: jest.fn(),
     list: jest.fn(),
     updateById: jest.fn(),
@@ -68,6 +69,7 @@ function makeService(options: { timeoutMs?: number; lockAcquired?: boolean } = {
     deleteByAppId: jest.fn(),
   };
   const appService: Mocked<AppsService> = {
+    listAccessibleApps: jest.fn(),
     listApps: jest.fn(),
     findBySlugDetailed: jest.fn().mockResolvedValue({ id: "1" }),
     updateApp: jest.fn(),

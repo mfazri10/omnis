@@ -1,8 +1,16 @@
-import { NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  NotFoundException,
+} from "@nestjs/common";
 import type { DatabaseService } from "../../../database/database.service";
 import type { SessionRepository } from "../../../auth/session.repository";
+import type { AppRow } from "../entities/apps.entity";
 import type { AdminRow } from "../entities/admins.entity";
 import type { RbacService } from "../rbac/rbac.service";
+import type { AppsRepository } from "../apps/apps.repository";
+import {
+  AppSuspendedException,
+} from "../../../common/exceptions/app.exceptions";
 import { AdminsService } from "./admins.service";
 import type { AdminsRepository } from "./admins.repository";
 
@@ -13,6 +21,7 @@ function makeService(): {
   admins: Mocked<AdminsRepository>;
   sessions: Mocked<SessionRepository>;
   rbac: Mocked<RbacService>;
+  apps: Mocked<AppsRepository>;
 } {
   const admins: Mocked<AdminsRepository> = {
     findByAuthUserId: jest.fn(),
@@ -35,13 +44,25 @@ function makeService(): {
   const database = {
     getControlPlaneConnection: jest.fn().mockReturnValue({}),
   } as unknown as DatabaseService;
+  const apps: Mocked<AppsRepository> = {
+    findById: jest.fn(),
+    findBySlug: jest.fn(),
+    listActive: jest.fn(),
+    findByIds: jest.fn(),
+    insert: jest.fn(),
+    list: jest.fn(),
+    updateById: jest.fn(),
+    deleteById: jest.fn(),
+    activateIfProvisioning: jest.fn(),
+  };
   const service = new AdminsService(
     database,
     admins,
     sessions,
     rbac as unknown as RbacService,
+    apps,
   );
-  return { service, admins, sessions, rbac };
+  return { service, admins, sessions, rbac, apps };
 }
 
 function adminRow(over: Partial<AdminRow> = {}): AdminRow {
@@ -137,4 +158,72 @@ describe("AdminsService", () => {
     admins.findById.mockResolvedValue(null);
     await expect(service.findById("99")).rejects.toThrow(NotFoundException);
   });
+
+  it("listOwnPermissions tanpa appId → teruskan global", async () => {
+    const { service, rbac } = makeService();
+    rbac.listEffectivePermissions.mockResolvedValue(["platform.apps.view"]);
+    const result = await service.listOwnPermissions({
+      id: "11",
+      isSuperAdmin: false,
+    });
+    expect(rbac.listEffectivePermissions).toHaveBeenCalledWith("11", undefined);
+    expect(result).toEqual(["platform.apps.view"]);
+  });
+
+  it("listOwnPermissions appId fiktif → NotFound", async () => {
+    const { service, apps } = makeService();
+    apps.findById.mockResolvedValue(null);
+    await expect(
+      service.listOwnPermissions({ id: "11", isSuperAdmin: false }, "99"),
+    ).rejects.toThrow(NotFoundException);
+  });
+
+  it("listOwnPermissions appId korup → BadRequest", async () => {
+    const { service } = makeService();
+    await expect(
+      service.listOwnPermissions({ id: "11", isSuperAdmin: false }, "x"),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it("listOwnPermissions non-super + suspended → AppSuspended", async () => {
+    const { service, apps } = makeService();
+    apps.findById.mockResolvedValue(appRow({ status: "suspended" }));
+    await expect(
+      service.listOwnPermissions({ id: "11", isSuperAdmin: false }, "7"),
+    ).rejects.toBeInstanceOf(AppSuspendedException);
+  });
+
+  it("listOwnPermissions super + suspended → teruskan", async () => {
+    const { service, apps, rbac } = makeService();
+    apps.findById.mockResolvedValue(appRow({ status: "suspended" }));
+    rbac.listEffectivePermissions.mockResolvedValue([]);
+    const result = await service.listOwnPermissions(
+      { id: "11", isSuperAdmin: true },
+      "7",
+    );
+    expect(rbac.listEffectivePermissions).toHaveBeenCalledWith("11", "7");
+    expect(result).toEqual([]);
+  });
 });
+
+function appRow(over: Partial<AppRow> = {}): AppRow {
+  return {
+    id: 7,
+    name: "Tes CPNS",
+    slug: "tes-cpns",
+    iconMediaUrl: null,
+    status: "active",
+    dbName: "app_tes_cpns",
+    androidPackage: null,
+    iosBundleId: null,
+    storeUrlAndroid: null,
+    storeUrlIos: null,
+    fcmCredential: null,
+    notes: null,
+    failureReason: null,
+    lastProvisioningAt: null,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+    ...over,
+  };
+}

@@ -71,6 +71,32 @@ describe("RBAC resolver metadata", () => {
     expect(permsOf(AdminsResolver.prototype, "currentAdmin")).toBeUndefined();
   });
 
+  it.each(["myApps", "appContext"])(
+    "AppsResolver.%s tanpa metadata permission (AuthGuard saja)",
+    (method: string) => {
+      expect(
+        permsOf(AppsResolver.prototype, method),
+      ).toBeUndefined();
+    },
+  );
+
+  it("AdminsResolver.myPermissions tanpa metadata permission (AuthGuard saja)", () => {
+    expect(permsOf(AdminsResolver.prototype, "myPermissions")).toBeUndefined();
+  });
+
+  it("AppsResolver.appContext bertanda @AppScoped", () => {
+    expect(scopedOf(AppsResolver.prototype, "appContext")).toBe(true);
+  });
+
+  it.each(["myApps", "myPermissions"])(
+    "%s bukan app-scoped",
+    (method: string) => {
+      const target =
+        method === "myApps" ? AppsResolver.prototype : AdminsResolver.prototype;
+      expect(scopedOf(target, method)).toBeUndefined();
+    },
+  );
+
   it("AppsResolver dikunci AuthGuard + AppContextGuard + PermissionGuard urut", () => {
     const guards = guardsOf(AppsResolver);
     expect(guards).toEqual([AuthGuard, AppContextGuard, PermissionGuard]);

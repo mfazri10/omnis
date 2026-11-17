@@ -1,6 +1,7 @@
 import { BadRequestException } from "@nestjs/common";
 import type { DatabaseService } from "../../../database/database.service";
 import type { AppRow } from "../entities/apps.entity";
+import type { AssignmentsRepository } from "../rbac/assignments.repository";
 import type { AppConfigsRepository } from "./app-configs.repository";
 import { AppsService } from "./apps.service";
 import type { AppsRepository } from "./apps.repository";
@@ -14,11 +15,13 @@ function makeService(): {
   configs: Mocked<AppConfigsRepository>;
   fcm: Mocked<FcmCredentialService>;
   database: Mocked<DatabaseService>;
+  assignments: Mocked<AssignmentsRepository>;
 } {
   const apps: Mocked<AppsRepository> = {
     findById: jest.fn(),
     findBySlug: jest.fn(),
     listActive: jest.fn(),
+    findByIds: jest.fn(),
     insert: jest.fn(),
     list: jest.fn(),
     updateById: jest.fn(),
@@ -46,13 +49,22 @@ function makeService(): {
     getAppConnection: jest.fn(),
     getPoolMetrics: jest.fn(),
   };
+  const assignments: Mocked<AssignmentsRepository> = {
+    insert: jest.fn(),
+    delete: jest.fn(),
+    exists: jest.fn(),
+    listAdminIdsByRole: jest.fn(),
+    listByAdmin: jest.fn(),
+    listDetailedByAdmin: jest.fn(),
+  };
   const service = new AppsService(
     database as unknown as DatabaseService,
     apps,
     configs,
     fcm as unknown as FcmCredentialService,
+    assignments as unknown as AssignmentsRepository,
   );
-  return { service, apps, configs, fcm, database };
+  return { service, apps, configs, fcm, database, assignments };
 }
 
 function appRow(over: Partial<AppRow> = {}): AppRow {
@@ -154,5 +166,74 @@ describe("AppsService", () => {
     await expect(
       service.setFcmCredential("1", JSON.stringify({ project_id: "x" })),
     ).rejects.toThrow("tidak lengkap");
+  });
+
+  it("listAccessibleApps super → active + suspended tanpa archived", async () => {
+    const { service, apps, assignments } = makeService();
+    apps.list.mockResolvedValue([
+      appRow({ id: 1, status: "active" }),
+      appRow({ id: 2, slug: "warung", status: "suspended" }),
+    ]);
+    const result = await service.listAccessibleApps({
+      id: "11",
+      isSuperAdmin: true,
+    });
+    expect(apps.list).toHaveBeenCalledWith(expect.anything(), {
+      statuses: ["active", "suspended"],
+    });
+    expect(assignments.listByAdmin).not.toHaveBeenCalled();
+    expect(result.map((app) => app.slug)).toEqual(["tes-cpns", "warung"]);
+  });
+
+  it("listAccessibleApps grant global → semua active", async () => {
+    const { service, apps, assignments } = makeService();
+    assignments.listByAdmin.mockResolvedValue([
+      { roleId: 3, appId: null, scopeType: "global", roleAppId: null },
+    ]);
+    apps.listActive.mockResolvedValue([appRow()]);
+    const result = await service.listAccessibleApps({
+      id: "11",
+      isSuperAdmin: false,
+    });
+    expect(assignments.listByAdmin).toHaveBeenCalledWith(
+      expect.anything(),
+      11,
+    );
+    expect(result.map((app) => app.slug)).toEqual(["tes-cpns"]);
+  });
+
+  it("listAccessibleApps grant 1 app → hanya app itu", async () => {
+    const { service, apps, assignments } = makeService();
+    assignments.listByAdmin.mockResolvedValue([
+      { roleId: 3, appId: 1, scopeType: "app", roleAppId: 1 },
+    ]);
+    apps.findByIds.mockResolvedValue([
+      appRow(),
+      appRow({ id: 2, slug: "warung", status: "suspended" }),
+    ]);
+    const result = await service.listAccessibleApps({
+      id: "11",
+      isSuperAdmin: false,
+    });
+    expect(apps.findByIds).toHaveBeenCalledWith(expect.anything(), [1]);
+    expect(result.map((app) => app.slug)).toEqual(["tes-cpns"]);
+  });
+
+  it("listAccessibleApps tanpa grant → []", async () => {
+    const { service, apps, assignments } = makeService();
+    assignments.listByAdmin.mockResolvedValue([]);
+    const result = await service.listAccessibleApps({
+      id: "11",
+      isSuperAdmin: false,
+    });
+    expect(apps.findByIds).not.toHaveBeenCalled();
+    expect(result).toEqual([]);
+  });
+
+  it("listAccessibleApps id korup → BadRequest", async () => {
+    const { service } = makeService();
+    await expect(
+      service.listAccessibleApps({ id: "bukan-angka", isSuperAdmin: false }),
+    ).rejects.toThrow(BadRequestException);
   });
 });

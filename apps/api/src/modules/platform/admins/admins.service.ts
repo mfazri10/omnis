@@ -5,7 +5,9 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { SessionRepository } from "../../../auth/session.repository";
+import { AppSuspendedException } from "../../../common/exceptions/app.exceptions";
 import { DatabaseService } from "../../../database/database.service";
+import { AppsRepository } from "../apps/apps.repository";
 import { RbacService } from "../rbac/rbac.service";
 import { AdminsRepository } from "./admins.repository";
 import type { CreateProfileInput } from "./admins.repository";
@@ -44,7 +46,26 @@ export class AdminsService {
     private readonly admins: AdminsRepository,
     private readonly sessions: SessionRepository,
     private readonly rbac: RbacService,
+    private readonly apps: AppsRepository,
   ) {}
+
+  async listOwnPermissions(
+    profile: { id: string; isSuperAdmin: boolean },
+    appId?: string,
+  ): Promise<string[]> {
+    if (appId === undefined) {
+      return this.rbac.listEffectivePermissions(profile.id, undefined);
+    }
+    const db = this.database.getControlPlaneConnection();
+    const row = await this.apps.findById(db, this.parseId(appId));
+    if (!row) {
+      throw new NotFoundException("Aplikasi tidak ditemukan.");
+    }
+    if (row.status !== "active" && !profile.isSuperAdmin) {
+      throw new AppSuspendedException(row.slug, row.status);
+    }
+    return this.rbac.listEffectivePermissions(profile.id, appId);
+  }
 
   async findActiveByAuthUserId(
     authUserId: string,

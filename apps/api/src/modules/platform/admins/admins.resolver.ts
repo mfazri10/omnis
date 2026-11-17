@@ -78,6 +78,14 @@ export class AdminsResolver {
     return this.rbac.listEffectivePermissions(adminId, appId ?? undefined);
   }
 
+  @Query(() => [String])
+  async myPermissions(
+    @CurrentAdmin() admin: AdminProfile,
+    @Args("appId", { type: () => ID, nullable: true }) appId?: string,
+  ): Promise<string[]> {
+    return this.adminsService.listOwnPermissions(admin, appId ?? undefined);
+  }
+
   @Query(() => [RoleAssignmentType])
   @RequirePermissions("platform.admins.view")
   async adminAssignments(
