@@ -5,7 +5,7 @@
 | FR | FR-PLAT-02 |
 | Fase | 1 |
 | Prioritas | Must |
-| Status | Belum mulai |
+| Status | Selesai |
 | Dependensi | F01, F03, F05 |
 
 ## Tujuan
@@ -14,17 +14,17 @@ Shell CMS (sidebar, header, app switcher) menjadi rangka semua layar; menu dan k
 
 ## Lingkup Backend
 
-- [ ] Query daftar aplikasi yang boleh diakses admin login (untuk switcher)
-- [ ] Query permission efektif admin per aplikasi (untuk render menu)
-- [ ] Konteks request: validasi `X-App-Slug` → tolak slug fiktif / suspended / di luar hak (`APP_NOT_FOUND`, `APP_SUSPENDED`, `FORBIDDEN`)
+- [x] Query daftar aplikasi yang boleh diakses admin login (untuk switcher)
+- [x] Query permission efektif admin per aplikasi (untuk render menu)
+- [x] Konteks request: validasi `X-App-Slug` → tolak slug fiktif / suspended / di luar hak (`APP_NOT_FOUND`, `APP_SUSPENDED`, `FORBIDDEN`)
 
 ## Lingkup CMS UI
 
-- [ ] Layout shell: sidebar menu, header (app switcher + profil), area konten
-- [ ] App switcher: daftar aplikasi yang boleh diakses; pilihan tersimpan antar sesi
-- [ ] Menu global vs menu konteks aplikasi; item tanpa hak tidak ditampilkan
-- [ ] Seluruh request GraphQL app-scoped otomatis membawa slug aplikasi aktif
-- [ ] Penanganan error global: sesi habis, tidak punya akses, aplikasi di-suspend
+- [x] Layout shell: sidebar menu, header (app switcher + profil), area konten
+- [x] App switcher: daftar aplikasi yang boleh diakses; pilihan tersimpan antar sesi
+- [x] Menu global vs menu konteks aplikasi; item tanpa hak tidak ditampilkan
+- [x] Seluruh request GraphQL app-scoped otomatis membawa slug aplikasi aktif
+- [x] Penanganan error global: sesi habis, tidak punya akses, aplikasi di-suspend
 
 ## Kriteria Selesai
 
