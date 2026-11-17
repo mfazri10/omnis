@@ -5,7 +5,7 @@
 | FR | FR-PLAT-09, FR-PLAT-10 |
 | Fase | 1 |
 | Prioritas | Must |
-| Status | Belum mulai |
+| Status | Selesai (implementasi + uji mock; uji runtime oleh reviewer) |
 | Dependensi | F03, F08, F10 |
 
 ## Tujuan
@@ -14,16 +14,16 @@ Super Admin melihat kesehatan seluruh platform sekilas; admin aplikasi melihat r
 
 ## Lingkup Backend
 
-- [ ] Query `platformDashboard`: kartu per aplikasi (status, jumlah user, aktivitas 7 hari), aktivitas platform terakhir, status antrian notifikasi
-- [ ] Query `appDashboard`: statistik modul aplikasi itu + aktivitas terakhir dalam cakupannya
-- [ ] Pola kontribusi statistik oleh modul domain (agar modul baru otomatis muncul di dashboard)
-- [ ] Agregat dihitung efisien (tanpa N+1; cache singkat bila perlu)
+- [x] Query `platformDashboard`: kartu per aplikasi (status, jumlah user, aktivitas 7 hari), aktivitas platform terakhir, status antrian notifikasi
+- [x] Query `appDashboard`: statistik modul aplikasi itu + aktivitas terakhir dalam cakupannya
+- [x] Pola kontribusi statistik oleh modul domain (agar modul baru otomatis muncul di dashboard)
+- [x] Agregat dihitung efisien (tanpa N+1; cache singkat bila perlu)
 
 ## Lingkup CMS UI
 
-- [ ] Halaman dashboard global (menu global): kartu aplikasi + aktivitas + status antrian
-- [ ] Halaman dashboard per aplikasi (menu konteks): kartu statistik modul + aktivitas terakhir
-- [ ] Kartu yang datanya kosong tampil jujur (nol/belum ada data), bukan error
+- [x] Halaman dashboard global (menu global): kartu aplikasi + aktivitas + status antrian
+- [x] Halaman dashboard per aplikasi (menu konteks): kartu statistik modul + aktivitas terakhir
+- [x] Kartu yang datanya kosong tampil jujur (nol/belum ada data), bukan error
 
 ## Kriteria Selesai
 

@@ -10,6 +10,13 @@ export interface MenuItem {
 
 export const GLOBAL_MENU: MenuItem[] = [
   {
+    key: "dashboard",
+    label: "Dasbor",
+    href: "/platform/dashboard",
+    requires: "platform.apps.view",
+    status: "live",
+  },
+  {
     key: "apps",
     label: "Aplikasi",
     href: "/platform/apps",
