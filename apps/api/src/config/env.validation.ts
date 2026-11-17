@@ -10,6 +10,10 @@ export interface EnvVars {
   CMS_ORIGIN: string;
   FCM_CREDENTIAL_KEY?: string;
   PROVISION_TIMEOUT_MS: number;
+  STORAGE_LOCAL_ROOT: string;
+  STORAGE_PUBLIC_BASE_URL: string;
+  UPLOAD_MAX_BYTES: number;
+  UPLOAD_ALLOWED_MIME: string;
 }
 
 const REQUIRED_KEYS = [
@@ -44,6 +48,10 @@ export function validateEnv(config: Record<string, unknown>): EnvVars {
   if (!Number.isInteger(provisionTimeout) || provisionTimeout <= 0) {
     throw new Error("PROVISION_TIMEOUT_MS must be a positive integer");
   }
+  const uploadMaxBytes = Number(config.UPLOAD_MAX_BYTES ?? 5242880);
+  if (!Number.isInteger(uploadMaxBytes) || uploadMaxBytes <= 0) {
+    throw new Error("UPLOAD_MAX_BYTES must be a positive integer");
+  }
   return {
     CONTROL_PLANE_DB_URL: config.CONTROL_PLANE_DB_URL as string,
     POSTGRES_BASE_URL: config.POSTGRES_BASE_URL as string,
@@ -67,5 +75,17 @@ export function validateEnv(config: Record<string, unknown>): EnvVars {
         ? config.FCM_CREDENTIAL_KEY
         : undefined,
     PROVISION_TIMEOUT_MS: provisionTimeout,
+    STORAGE_LOCAL_ROOT: isNonEmptyString(config.STORAGE_LOCAL_ROOT)
+      ? config.STORAGE_LOCAL_ROOT
+      : "./storage/media",
+    STORAGE_PUBLIC_BASE_URL: isNonEmptyString(
+      config.STORAGE_PUBLIC_BASE_URL,
+    )
+      ? config.STORAGE_PUBLIC_BASE_URL
+      : "http://localhost:3000/media",
+    UPLOAD_MAX_BYTES: uploadMaxBytes,
+    UPLOAD_ALLOWED_MIME: isNonEmptyString(config.UPLOAD_ALLOWED_MIME)
+      ? config.UPLOAD_ALLOWED_MIME
+      : "image/jpeg,image/png,image/webp,application/pdf",
   };
 }

@@ -58,9 +58,9 @@ export function appMenu(slug: string): MenuItem[] {
     {
       key: "media",
       label: "Media",
-      href: null,
+      href: `/${slug}/media`,
       requires: "platform.media.view",
-      status: "soon",
+      status: "live",
     },
     {
       key: "campaigns",

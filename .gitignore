@@ -33,6 +33,10 @@ Thumbs.db
 # Generated (dibuat ulang otomatis)
 schema.gql
 
+# Berkas unggahan driver storage lokal (F09, dev only)
+# JANGKAR: hanya direktori runtime di apps/api, bukan kode src/storage.
+/apps/api/storage/
+
 # Scratch lokal (temp/cache tooling)
 .tmp/
 .bun-cache/
