@@ -176,14 +176,23 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     return { pool: this.controlPlanePool, db: this.controlPlaneDb };
   }
 
-  async getAppConnection(slug: string): Promise<Db> {
+  /**
+   * Pool App DB per slug. Keputusan AKSES (status + hak) milik
+   * AppContextGuard; pemanggil yang membawa konteks tervalidasi
+   * (interceptor) memakai allowNonActive. Jalur lain tetap ditolak
+   * untuk aplikasi non-active.
+   */
+  async getAppConnection(
+    slug: string,
+    options: { allowNonActive?: boolean } = {},
+  ): Promise<Db> {
     const existing = this.appPools.get(slug);
     if (existing) {
       existing.lastAccessedAt = Date.now();
       return existing.db;
     }
 
-    await this.validateSlug(slug);
+    await this.validateSlug(slug, options.allowNonActive ?? false);
 
     const dbName = `app_${slug.replace(/-/g, "_")}`;
     const base = this.config.getOrThrow<string>("POSTGRES_BASE_URL");
@@ -251,7 +260,10 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async validateSlug(slug: string): Promise<void> {
+  private async validateSlug(
+    slug: string,
+    allowNonActive: boolean,
+  ): Promise<void> {
     const result = await this.getControlPlaneConnection().execute(
       sql`SELECT id, status FROM apps WHERE slug = ${slug} LIMIT 1`,
     );
@@ -260,7 +272,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     if (!app) {
       throw new AppNotFoundException(slug);
     }
-    if (app.status !== "active") {
+    if (!allowNonActive && app.status !== "active") {
       throw new AppSuspendedException(slug, app.status);
     }
   }

@@ -33,7 +33,10 @@ export class AppDatabaseInterceptor implements NestInterceptor {
     const slug = this.readSlug(req);
 
     if (slug !== null) {
-      req[APP_DB_KEY] = await this.databaseService.getAppConnection(slug);
+      // Konteks sudah divalidasi guard (termasuk suspended untuk super).
+      req[APP_DB_KEY] = await this.databaseService.getAppConnection(slug, {
+        allowNonActive: true,
+      });
     }
 
     return next.handle();

@@ -56,7 +56,9 @@ describe("AppDatabaseInterceptor", () => {
       [APP_CONTEXT_KEY]: { appId: "7", slug: "tes-cpns" },
     };
     await interceptor.intercept(mockGqlContext(req), mockHandler());
-    expect(getAppConnection).toHaveBeenCalledWith("tes-cpns");
+    expect(getAppConnection).toHaveBeenCalledWith("tes-cpns", {
+      allowNonActive: true,
+    });
     expect(req[APP_DB_KEY]).toBe(pool);
   });
 
