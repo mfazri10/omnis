@@ -14,6 +14,9 @@ export interface EnvVars {
   STORAGE_PUBLIC_BASE_URL: string;
   UPLOAD_MAX_BYTES: number;
   UPLOAD_ALLOWED_MIME: string;
+  PUSH_DRIVER: string;
+  CAMPAIGN_RUNNER: string;
+  CAMPAIGN_RUNNER_INTERVAL_MS: number;
 }
 
 const REQUIRED_KEYS = [
@@ -52,6 +55,10 @@ export function validateEnv(config: Record<string, unknown>): EnvVars {
   if (!Number.isInteger(uploadMaxBytes) || uploadMaxBytes <= 0) {
     throw new Error("UPLOAD_MAX_BYTES must be a positive integer");
   }
+  const runnerInterval = Number(config.CAMPAIGN_RUNNER_INTERVAL_MS ?? 30000);
+  if (!Number.isInteger(runnerInterval) || runnerInterval <= 0) {
+    throw new Error("CAMPAIGN_RUNNER_INTERVAL_MS must be a positive integer");
+  }
   return {
     CONTROL_PLANE_DB_URL: config.CONTROL_PLANE_DB_URL as string,
     POSTGRES_BASE_URL: config.POSTGRES_BASE_URL as string,
@@ -87,5 +94,12 @@ export function validateEnv(config: Record<string, unknown>): EnvVars {
     UPLOAD_ALLOWED_MIME: isNonEmptyString(config.UPLOAD_ALLOWED_MIME)
       ? config.UPLOAD_ALLOWED_MIME
       : "image/jpeg,image/png,image/webp,application/pdf",
+    PUSH_DRIVER: isNonEmptyString(config.PUSH_DRIVER)
+      ? config.PUSH_DRIVER
+      : "noop",
+    CAMPAIGN_RUNNER: isNonEmptyString(config.CAMPAIGN_RUNNER)
+      ? config.CAMPAIGN_RUNNER
+      : "on",
+    CAMPAIGN_RUNNER_INTERVAL_MS: runnerInterval,
   };
 }

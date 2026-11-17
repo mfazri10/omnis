@@ -11,6 +11,7 @@ import { ActivityLogsModule } from "./modules/platform/activity-logs/activity-lo
 import { AppConfigModule } from "./modules/platform/app-config/app-config.module";
 import { AppUsersModule } from "./modules/platform/app-users/app-users.module";
 import { MediaModule } from "./modules/platform/media/media.module";
+import { NotificationsModule } from "./modules/platform/notifications/notifications.module";
 import { AdminsModule } from "./modules/platform/admins/admins.module";
 import { DatabaseModule } from "./database/database.module";
 import { RedisModule } from "./redis/redis.module";
@@ -35,6 +36,7 @@ import { GraphqlExceptionFilter } from "./common/filters/graphql-exception.filte
     AppConfigModule,
     AppUsersModule,
     MediaModule,
+    NotificationsModule,
     AdminsModule,
     RedisModule,
     HealthModule,

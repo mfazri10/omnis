@@ -36,8 +36,13 @@ Tiap aplikasi punya perpustakaan media sendiri: unggah sekali, pakai ulang di mo
 Status `Dikerjakan`, bukan `Selesai`: kriteria 1–2 terpenuhi di kode
 dan diuji (unit mock + runtime manual), tetapi kriteria 3 belum —
 komponen `MediaPicker` (`apps/cms/components/shared/media-picker.tsx`)
-siap pakai (`open` + `onSelect({id,url,altText})`) namun belum dipakai
-form modul mana pun karena form modul pertama baru ada di F12.
+siap pakai (`open` + `onSelect({id,url,altText})`).
+
+Pemakaian pertama (F10, 18 Nov 2026): form kampanye notifikasi
+(`apps/cms/app/(shell)/[appSlug]/notifications/page.tsx`) memakai
+`MediaPicker` untuk kolom gambar. Kriteria 3 terpenuhi sebagian
+(satu form platform); bukti penuh dari form modul domain tetap
+menunggu F12, sehingga Status tetap `Dikerjakan`.
 
 Keputusan Fase 1:
 

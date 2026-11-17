@@ -63,11 +63,11 @@ export function appMenu(slug: string): MenuItem[] {
       status: "live",
     },
     {
-      key: "campaigns",
-      label: "Kampanye",
-      href: null,
+      key: "notifications",
+      label: "Notifikasi",
+      href: `/${slug}/notifications`,
       requires: "platform.notifications.view",
-      status: "soon",
+      status: "live",
     },
     {
       key: "settings",
