@@ -163,7 +163,7 @@ export default function NewRolePage(): JSX.Element {
                           {p.label}
                           <span className="text-slate-600"> ({p.key})</span>
                           {p.globalOnly && (
-                            <span className="text-slate-600"> — global</span>
+                            <span className="text-slate-600"> (global)</span>
                           )}
                         </span>
                       </label>

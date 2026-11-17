@@ -90,7 +90,7 @@ export default function NewAppPage(): JSX.Element {
         </label>
         {provisioning && (
           <p className="text-sm text-slate-600">
-            Memprovisioning — membuat database dan menjalankan migrasi…
+            Memprovisioning: membuat database dan menjalankan migrasi…
           </p>
         )}
         {error && <p className="text-sm text-red-700">{error}</p>}

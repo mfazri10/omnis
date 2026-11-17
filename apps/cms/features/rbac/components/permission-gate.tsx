@@ -1,11 +1,7 @@
 "use client";
 
-import { useQuery } from "@apollo/client/react";
 import type { JSX, ReactNode } from "react";
-import {
-  CURRENT_ADMIN_QUERY,
-  EFFECTIVE_PERMISSIONS_QUERY,
-} from "../graphql/admins.graphql";
+import { useSessionStore } from "../../../stores/use-session-store";
 
 interface PermissionGateProps {
   requires: string;
@@ -13,33 +9,20 @@ interface PermissionGateProps {
   children: ReactNode;
 }
 
-// NOTE(F02): otorisasi terpusat pindah ke session store shell;
-// gate per-halaman ini cukup untuk F05.
+/** Gerbang otorisasi UI dari store sesi (menu + gate satu sumber). */
 export function PermissionGate({
   requires,
   fallback = null,
   children,
 }: PermissionGateProps): JSX.Element | null {
-  const { data: adminData, loading: adminLoading } =
-    useQuery(CURRENT_ADMIN_QUERY);
-  const adminId = adminData?.currentAdmin.id;
-  const { data: permsData, loading: permsLoading } = useQuery(
-    EFFECTIVE_PERMISSIONS_QUERY,
-    {
-      variables: { adminId: adminId ?? "", appId: null },
-      skip: adminId === undefined,
-    },
-  );
-  if (adminLoading || permsLoading) {
+  const ready = useSessionStore((state) => state.ready);
+  const admin = useSessionStore((state) => state.admin);
+  const permissions = useSessionStore((state) => state.permissions);
+  if (!ready || !admin) {
     return null;
-  }
-  const admin = adminData?.currentAdmin;
-  if (!admin) {
-    return <>{fallback}</>;
   }
   if (admin.isSuperAdmin) {
     return <>{children}</>;
   }
-  const keys = permsData?.effectivePermissions ?? [];
-  return keys.includes(requires) ? <>{children}</> : <>{fallback}</>;
+  return permissions.includes(requires) ? <>{children}</> : <>{fallback}</>;
 }

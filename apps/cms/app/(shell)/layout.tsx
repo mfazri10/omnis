@@ -9,6 +9,8 @@ import {
   MY_APPS_QUERY,
   MY_PERMISSIONS_QUERY,
 } from "../../features/shell/graphql/session.graphql";
+import { ShellHeader } from "../../components/shared/shell-header";
+import { Sidebar } from "../../components/shared/sidebar";
 import { useToastStore } from "../../stores/use-toast-store";
 import { useSessionStore } from "../../stores/use-session-store";
 
@@ -99,5 +101,15 @@ export default function ShellLayout({
       </main>
     );
   }
-  return <>{children}</>;
+  return (
+    <div className="mx-auto max-w-5xl px-4 py-6 font-sans md:px-6">
+      <ShellHeader />
+      <div className="mt-6 flex flex-col gap-6 md:flex-row md:gap-8">
+        <aside className="w-full md:w-56 md:shrink-0">
+          <Sidebar />
+        </aside>
+        <div className="min-w-0 flex-1 overflow-x-auto">{children}</div>
+      </div>
+    </div>
+  );
 }

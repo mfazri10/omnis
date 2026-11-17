@@ -76,7 +76,7 @@ function RoleForm({ role }: { role: RoleData }): JSX.Element {
     >
       <p className="text-sm text-slate-600">
         Cakupan: {role.scopeType}
-        {role.appId ? ` (app ${role.appId})` : ""} — cakupan tak bisa diubah.
+        {role.appId ? ` (app ${role.appId})` : ""}. Cakupan tak bisa diubah.
       </p>
       <label className="flex flex-col gap-1 text-sm">
         <span className="text-slate-900">Nama</span>
