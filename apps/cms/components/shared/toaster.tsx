@@ -1,11 +1,25 @@
 "use client";
 
+import { useEffect } from "react";
 import type { JSX } from "react";
 import { useToastStore } from "../../stores/use-toast-store";
 
 export function Toaster(): JSX.Element {
   const toasts = useToastStore((state) => state.toasts);
   const dismiss = useToastStore((state) => state.dismiss);
+  useEffect(() => {
+    if (toasts.length === 0) {
+      return;
+    }
+    // Toast menutup sendiri agar tak menutupi aksi header selamanya.
+    const timer = setTimeout(() => {
+      const oldest = useToastStore.getState().toasts[0];
+      if (oldest) {
+        useToastStore.getState().dismiss(oldest.id);
+      }
+    }, 6000);
+    return () => clearTimeout(timer);
+  }, [toasts]);
   if (toasts.length === 0) {
     return <></>;
   }
