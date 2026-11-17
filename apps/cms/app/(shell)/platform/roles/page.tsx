@@ -3,12 +3,12 @@
 import { useMutation, useQuery } from "@apollo/client/react";
 import { useState } from "react";
 import type { JSX } from "react";
-import { PermissionGate } from "../../../features/rbac/components/permission-gate";
-import { graphQLErrorMessage } from "../../../features/rbac/graphql/errors";
+import { PermissionGate } from "../../../../features/rbac/components/permission-gate";
+import { graphQLErrorMessage } from "../../../../features/rbac/graphql/errors";
 import {
   DELETE_ROLE_MUTATION,
   ROLES_QUERY,
-} from "../../../features/rbac/graphql/roles.graphql";
+} from "../../../../features/rbac/graphql/roles.graphql";
 
 export default function RolesPage(): JSX.Element {
   const { data, loading, error } = useQuery(ROLES_QUERY);

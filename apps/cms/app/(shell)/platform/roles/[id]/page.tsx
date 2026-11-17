@@ -4,14 +4,14 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import type { FormEvent, JSX } from "react";
-import { graphQLErrorMessage } from "../../../../features/rbac/graphql/errors";
-import { PERMISSIONS_QUERY } from "../../../../features/rbac/graphql/permissions.graphql";
-import type { RoleData } from "../../../../features/rbac/graphql/roles.graphql";
+import { graphQLErrorMessage } from "../../../../../features/rbac/graphql/errors";
+import { PERMISSIONS_QUERY } from "../../../../../features/rbac/graphql/permissions.graphql";
+import type { RoleData } from "../../../../../features/rbac/graphql/roles.graphql";
 import {
   DELETE_ROLE_MUTATION,
   ROLES_QUERY,
   UPDATE_ROLE_MUTATION,
-} from "../../../../features/rbac/graphql/roles.graphql";
+} from "../../../../../features/rbac/graphql/roles.graphql";
 
 const inputClass = "border border-slate-300 px-3 py-2 text-slate-900";
 

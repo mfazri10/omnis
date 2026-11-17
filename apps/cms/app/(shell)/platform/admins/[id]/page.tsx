@@ -4,21 +4,21 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import type { FormEvent, JSX } from "react";
-import { PermissionGate } from "../../../../features/rbac/components/permission-gate";
-import { graphQLErrorMessage } from "../../../../features/rbac/graphql/errors";
+import { PermissionGate } from "../../../../../features/rbac/components/permission-gate";
+import { graphQLErrorMessage } from "../../../../../features/rbac/graphql/errors";
 import {
   ADMIN_ASSIGNMENTS_QUERY,
   ADMIN_QUERY,
   SET_ADMIN_ACTIVE_MUTATION,
   UPDATE_ADMIN_MUTATION,
-} from "../../../../features/rbac/graphql/admins.graphql";
-import { APPS_QUERY } from "../../../../features/rbac/graphql/permissions.graphql";
+} from "../../../../../features/rbac/graphql/admins.graphql";
+import { APPS_QUERY } from "../../../../../features/rbac/graphql/permissions.graphql";
 import {
   ASSIGN_ROLE_MUTATION,
   ROLES_QUERY,
   UNASSIGN_ROLE_MUTATION,
-} from "../../../../features/rbac/graphql/roles.graphql";
-import { useEffectivePermissions } from "../../../../features/rbac/hooks/use-effective-permissions";
+} from "../../../../../features/rbac/graphql/roles.graphql";
+import { useEffectivePermissions } from "../../../../../features/rbac/hooks/use-effective-permissions";
 
 const inputClass = "border border-slate-300 px-3 py-2 text-slate-900";
 

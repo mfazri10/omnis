@@ -4,18 +4,17 @@ import { useMutation } from "@apollo/client/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { FormEvent, JSX } from "react";
-import { graphQLErrorMessage } from "../../../../features/rbac/graphql/errors";
-import { PROVISION_APP_MUTATION } from "../../../../features/apps/graphql/apps.graphql";
+import { graphQLErrorMessage } from "../../../../../features/rbac/graphql/errors";
+import { CREATE_ADMIN_MUTATION } from "../../../../../features/rbac/graphql/admins.graphql";
 
 const inputClass = "border border-slate-300 px-3 py-2 text-slate-900";
 
-export default function NewAppPage(): JSX.Element {
+export default function NewAdminPage(): JSX.Element {
   const router = useRouter();
-  const [provisionApp, { loading: provisioning }] =
-    useMutation(PROVISION_APP_MUTATION);
+  const [createAdmin, { loading: saving }] = useMutation(CREATE_ADMIN_MUTATION);
   const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
-  const [notes, setNotes] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(
@@ -24,21 +23,13 @@ export default function NewAppPage(): JSX.Element {
     event.preventDefault();
     setError(null);
     try {
-      const result = await provisionApp({
-        variables: {
-          input: {
-            name,
-            slug,
-            notes: notes === "" ? null : notes,
-          },
-        },
+      const result = await createAdmin({
+        variables: { input: { name, email, password } },
       });
-      const created = result.data?.provisionApp;
-      router.push(
-        created ? `/platform/apps/${created.slug}` : "/platform/apps",
-      );
+      const id = result.data?.createAdmin.id;
+      router.push(id ? `/platform/admins/${id}` : "/platform/admins");
     } catch (err: unknown) {
-      setError(graphQLErrorMessage(err, "Gagal memprovisioning aplikasi."));
+      setError(graphQLErrorMessage(err, "Gagal membuat admin."));
     }
   }
 
@@ -46,12 +37,8 @@ export default function NewAppPage(): JSX.Element {
     <main className="mx-auto max-w-3xl px-6 py-8 font-sans">
       <p className="text-sm text-slate-600">Platform CMS Multi-Aplikasi</p>
       <h1 className="mt-2 text-2xl font-bold text-slate-900">
-        Tambah aplikasi
+        Tambah admin
       </h1>
-      <p className="mt-2 text-sm text-slate-600">
-        Menyimpan formulir ini langsung memprovisioning: database dibuat,
-        dimigrasi, dan diisi config awal.
-      </p>
       <form
         className="mt-6 flex flex-col gap-4"
         onSubmit={(e) => void handleSubmit(e)}
@@ -67,42 +54,38 @@ export default function NewAppPage(): JSX.Element {
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-slate-900">
-            Slug (huruf kecil/angka/strip, 3–64 karakter)
-          </span>
+          <span className="text-slate-900">Email</span>
           <input
-            type="text"
+            type="email"
             required
-            pattern="[a-z0-9][a-z0-9-]{1,62}[a-z0-9]"
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
+            autoComplete="username"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             className={inputClass}
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-slate-900">Catatan (opsional)</span>
+          <span className="text-slate-900">Kata sandi awal (min. 8 karakter)</span>
           <input
-            type="text"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
+            type="password"
+            required
+            minLength={8}
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             className={inputClass}
           />
         </label>
-        {provisioning && (
-          <p className="text-sm text-slate-600">
-            Memprovisioning — membuat database dan menjalankan migrasi…
-          </p>
-        )}
         {error && <p className="text-sm text-red-700">{error}</p>}
         <div className="flex gap-4">
           <button
             type="submit"
-            disabled={provisioning}
+            disabled={saving}
             className="bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
-            {provisioning ? "Memprovisioning…" : "Buat + Provisioning"}
+            {saving ? "Menyimpan…" : "Simpan"}
           </button>
-          <a className="px-4 py-2 text-sm underline" href="/platform/apps">
+          <a className="px-4 py-2 text-sm underline" href="/platform/admins">
             Batal
           </a>
         </div>

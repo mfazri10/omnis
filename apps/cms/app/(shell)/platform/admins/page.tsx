@@ -3,9 +3,9 @@
 import { useQuery } from "@apollo/client/react";
 import { useState } from "react";
 import type { FormEvent, JSX } from "react";
-import { PermissionGate } from "../../../features/rbac/components/permission-gate";
-import { graphQLErrorMessage } from "../../../features/rbac/graphql/errors";
-import { ADMINS_QUERY } from "../../../features/rbac/graphql/admins.graphql";
+import { PermissionGate } from "../../../../features/rbac/components/permission-gate";
+import { graphQLErrorMessage } from "../../../../features/rbac/graphql/errors";
+import { ADMINS_QUERY } from "../../../../features/rbac/graphql/admins.graphql";
 
 const TAKE = 20;
 

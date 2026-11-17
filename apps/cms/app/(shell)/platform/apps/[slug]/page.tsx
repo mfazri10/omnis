@@ -4,9 +4,9 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import type { FormEvent, JSX } from "react";
-import { PermissionGate } from "../../../../features/rbac/components/permission-gate";
-import { graphQLErrorMessage } from "../../../../features/rbac/graphql/errors";
-import type { AppDetailData } from "../../../../features/apps/graphql/apps.graphql";
+import { PermissionGate } from "../../../../../features/rbac/components/permission-gate";
+import { graphQLErrorMessage } from "../../../../../features/rbac/graphql/errors";
+import type { AppDetailData } from "../../../../../features/apps/graphql/apps.graphql";
 import {
   APP_QUERY,
   ARCHIVE_APP_MUTATION,
@@ -16,7 +16,7 @@ import {
   SUSPEND_APP_MUTATION,
   UNSUSPEND_APP_MUTATION,
   UPDATE_APP_MUTATION,
-} from "../../../../features/apps/graphql/apps.graphql";
+} from "../../../../../features/apps/graphql/apps.graphql";
 
 const inputClass = "border border-slate-300 px-3 py-2 text-slate-900";
 

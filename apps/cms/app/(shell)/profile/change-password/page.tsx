@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { FormEvent, JSX } from "react";
-import { authClient } from "../../../lib/auth-client";
+import { authClient } from "../../../../lib/auth-client";
 
 export default function ChangePasswordPage(): JSX.Element {
   const [current, setCurrent] = useState("");

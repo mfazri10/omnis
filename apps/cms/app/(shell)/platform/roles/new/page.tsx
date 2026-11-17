@@ -4,12 +4,12 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { FormEvent, JSX } from "react";
-import { graphQLErrorMessage } from "../../../../features/rbac/graphql/errors";
+import { graphQLErrorMessage } from "../../../../../features/rbac/graphql/errors";
 import {
   APPS_QUERY,
   PERMISSIONS_QUERY,
-} from "../../../../features/rbac/graphql/permissions.graphql";
-import { CREATE_ROLE_MUTATION } from "../../../../features/rbac/graphql/roles.graphql";
+} from "../../../../../features/rbac/graphql/permissions.graphql";
+import { CREATE_ROLE_MUTATION } from "../../../../../features/rbac/graphql/roles.graphql";
 
 type Scope = "global" | "app";
 

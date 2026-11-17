@@ -3,9 +3,9 @@
 import { useQuery } from "@apollo/client/react";
 import { useState } from "react";
 import type { FormEvent, JSX } from "react";
-import { PermissionGate } from "../../../features/rbac/components/permission-gate";
-import { graphQLErrorMessage } from "../../../features/rbac/graphql/errors";
-import { APPS_LIST_QUERY } from "../../../features/apps/graphql/apps.graphql";
+import { PermissionGate } from "../../../../features/rbac/components/permission-gate";
+import { graphQLErrorMessage } from "../../../../features/rbac/graphql/errors";
+import { APPS_LIST_QUERY } from "../../../../features/apps/graphql/apps.graphql";
 
 const STATUSES = ["all", "active", "suspended", "archived", "provisioning", "failed"];
 
