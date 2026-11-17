@@ -22,10 +22,17 @@ export default function AppSlugLayout({
   const pushToast = useToastStore((state) => state.push);
 
   useEffect(() => {
-    if (ready) {
+    if (!ready) {
+      return;
+    }
+    // Hanya slug dikenal yang menjadi konteks; slug asing/tak berhak
+    // dirender 403 inline oleh cabang di bawah tanpa menyentuh store
+    // (satu pemilik untuk kasus tak dikenal: layout ini, bukan efek shell).
+    const known = apps.some((app) => app.slug === appSlug);
+    if (known) {
       setActiveSlug(appSlug);
     }
-  }, [ready, appSlug, setActiveSlug]);
+  }, [ready, appSlug, apps, setActiveSlug]);
 
   if (!ready) {
     return (

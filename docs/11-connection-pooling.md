@@ -66,28 +66,28 @@ DatabaseModule (@Global)
 - Mengembalikan instance Drizzle yang terikat ke pool control-plane.
 - Tidak pernah di-evict.
 
-#### `getAppConnection(slug: string): Promise<DrizzleInstance>`
+#### `getAppConnection(slug: string, options?: { allowNonActive?: boolean }): Promise<DrizzleInstance>`
 
 1. Cek `appPools.has(slug)` — jika ada, perbarui `lastAccessedAt`, kembalikan instance.
-2. Jika tidak ada: validasi slug terhadap registry `apps` di control-plane (status `active`).
+2. Jika tidak ada: validasi slug terhadap registry `apps` di control-plane (harus ada; status `active` kecuali `allowNonActive`).
 3. Buat pool baru dengan connection string `postgresql://…/app_{normalized_slug}`.
 4. Inisialisasi Drizzle instance di atas pool tersebut.
 5. Simpan ke `appPools` dengan `lastAccessedAt = Date.now()`.
 6. Kembalikan instance.
 
-Validasi slug mencegah pembuatan pool ke database yang tidak ada atau suspended.
+Validasi eksistensi mencegah pembuatan pool ke database yang tidak ada. Keputusan AKSES (status + hak admin) milik `AppContextGuard` (F02), bukan lapisan pool: interceptor selalu memanggil dengan `allowNonActive: true` karena konteksnya sudah tervalidasi guard (termasuk suspended untuk Super Admin); jalur langsung lain tetap ditolak untuk aplikasi non-active.
 
 ### 3.3 Interceptor `AppDatabaseInterceptor`
 
-Interceptor global yang otomatis resolve koneksi App DB dari header `X-App-Slug` dan inject ke request context, sehingga resolver/service tidak perlu memanggil `getAppConnection()` secara manual.
+Interceptor global yang otomatis resolve koneksi App DB dari konteks tervalidasi `AppContextGuard` dan inject ke request context, sehingga resolver/service tidak perlu memanggil `getAppConnection()` secara manual. Header mentah tidak pernah dibaca di sini.
 
 ```text
-Request masuk
-  → AppDatabaseInterceptor membaca header X-App-Slug
-  → Jika ada slug:
-      → panggil DatabaseService.getAppConnection(slug)
+Request masuk (guard sudah jalan: Auth → AppContext → Permission)
+  → AppDatabaseInterceptor membaca req[APP_CONTEXT_KEY]
+  → Jika ada konteks tervalidasi:
+      → panggil DatabaseService.getAppConnection(slug, { allowNonActive: true })
       → simpan DrizzleInstance ke GqlExecutionContext / request object
-  → Jika tidak ada slug: skip (request platform-only)
+  → Jika tidak ada konteks: skip (operasi global)
   → Handler / resolver mengambil koneksi dari context
 ```
 

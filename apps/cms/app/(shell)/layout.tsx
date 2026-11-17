@@ -26,7 +26,6 @@ export default function ShellLayout({
   const setPermissions = useSessionStore((state) => state.setPermissions);
   const setReady = useSessionStore((state) => state.setReady);
   const ready = useSessionStore((state) => state.ready);
-  const reset = useSessionStore((state) => state.reset);
   const pushToast = useToastStore((state) => state.push);
 
   const adminQuery = useQuery(CURRENT_ADMIN_QUERY);
@@ -38,7 +37,9 @@ export default function ShellLayout({
     }
   }, [adminQuery.data, appsQuery.data, setSession]);
 
-  useEffect(() => reset, [reset]);
+  // Catatan: tanpa reset-on-unmount. Logout mereset eksplisit; sesi
+  // habis me-reload penuh. Reset saat unmount menghapus activeSlug
+  // persisten (StrictMode dev me-mount dua kali).
 
   const sessionLoaded =
     adminQuery.data !== undefined && appsQuery.data !== undefined;
