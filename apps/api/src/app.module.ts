@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { validateEnv } from "./config/env.validation";
 import { AuthModule } from "./auth/auth.module";
 import { AppsModule } from "./modules/platform/apps/apps.module";
+import { AppConfigModule } from "./modules/platform/app-config/app-config.module";
 import { AdminsModule } from "./modules/platform/admins/admins.module";
 import { DatabaseModule } from "./database/database.module";
 import { RedisModule } from "./redis/redis.module";
@@ -27,6 +28,7 @@ import { GraphqlExceptionFilter } from "./common/filters/graphql-exception.filte
     }),
     DatabaseModule,
     AppsModule,
+    AppConfigModule,
     AdminsModule,
     RedisModule,
     HealthModule,

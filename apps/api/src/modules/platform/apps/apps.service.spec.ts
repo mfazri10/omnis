@@ -31,6 +31,9 @@ function makeService(): {
   const configs: Mocked<AppConfigsRepository> = {
     insertDefault: jest.fn(),
     deleteByAppId: jest.fn(),
+    findByAppId: jest.fn(),
+    insertDefaultIfMissing: jest.fn(),
+    updateByAppId: jest.fn(),
   };
   const fcm: Mocked<FcmCredentialService> = {
     encrypt: jest.fn(),

@@ -67,6 +67,9 @@ function makeService(options: { timeoutMs?: number; lockAcquired?: boolean } = {
   const configs: Mocked<AppConfigsRepository> = {
     insertDefault: jest.fn(),
     deleteByAppId: jest.fn(),
+    findByAppId: jest.fn(),
+    insertDefaultIfMissing: jest.fn(),
+    updateByAppId: jest.fn(),
   };
   const appService: Mocked<AppsService> = {
     listAccessibleApps: jest.fn(),

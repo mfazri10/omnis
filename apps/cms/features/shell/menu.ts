@@ -72,9 +72,9 @@ export function appMenu(slug: string): MenuItem[] {
     {
       key: "settings",
       label: "Pengaturan",
-      href: null,
+      href: `/${slug}/settings`,
       requires: "platform.app-config.view",
-      status: "soon",
+      status: "live",
     },
   ];
 }
