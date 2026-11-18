@@ -39,7 +39,9 @@ async function bootstrap(): Promise<void> {
   );
 
   const port = Number(process.env.API_PORT ?? 3000);
-  await app.listen(port);
+  // Di produksi API hanya diakses lewat reverse proxy lokal (Caddy).
+  const host = process.env.API_HOST ?? "127.0.0.1";
+  await app.listen(port, host);
 }
 
 void bootstrap();

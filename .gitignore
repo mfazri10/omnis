@@ -13,6 +13,8 @@ out/
 .env
 .env.*.local
 .env.local
+# Env produksi berisi kredensial DB + BETTER_AUTH_SECRET.
+.env.production
 
 # Logs & coverage
 *.log
