@@ -55,4 +55,51 @@ describe("validateEnv", () => {
       validateEnv({ ...base, PROVISION_TIMEOUT_MS: "-5" }),
     ).toThrow("PROVISION_TIMEOUT_MS");
   });
+
+  it("EXPORT_RUNNER default on", () => {
+    expect(validateEnv({ ...base }).EXPORT_RUNNER).toBe("on");
+    expect(validateEnv({ ...base, EXPORT_RUNNER: "off" }).EXPORT_RUNNER).toBe(
+      "off",
+    );
+  });
+
+  it("EXPORT_RUNNER_INTERVAL_MS default 5000 dan harus positif", () => {
+    expect(validateEnv({ ...base }).EXPORT_RUNNER_INTERVAL_MS).toBe(5000);
+    expect(() =>
+      validateEnv({ ...base, EXPORT_RUNNER_INTERVAL_MS: "0" }),
+    ).toThrow("EXPORT_RUNNER_INTERVAL_MS");
+    expect(() =>
+      validateEnv({ ...base, EXPORT_RUNNER_INTERVAL_MS: "cepat" }),
+    ).toThrow("EXPORT_RUNNER_INTERVAL_MS");
+  });
+
+  it("EXPORT_MAX_ROWS default 50000 dan harus positif", () => {
+    expect(validateEnv({ ...base }).EXPORT_MAX_ROWS).toBe(50000);
+    expect(
+      validateEnv({ ...base, EXPORT_MAX_ROWS: "1000" }).EXPORT_MAX_ROWS,
+    ).toBe(1000);
+    expect(() => validateEnv({ ...base, EXPORT_MAX_ROWS: "-5" })).toThrow(
+      "EXPORT_MAX_ROWS",
+    );
+  });
+
+  it("EXPORT_TTL_HOURS default 24 dan harus positif", () => {
+    expect(validateEnv({ ...base }).EXPORT_TTL_HOURS).toBe(24);
+    expect(() => validateEnv({ ...base, EXPORT_TTL_HOURS: "0" })).toThrow(
+      "EXPORT_TTL_HOURS",
+    );
+  });
+
+  it("EXPORT_STORAGE_ROOT default ./storage/exports dan tak boleh kosong", () => {
+    expect(validateEnv({ ...base }).EXPORT_STORAGE_ROOT).toBe(
+      "./storage/exports",
+    );
+    expect(
+      validateEnv({ ...base, EXPORT_STORAGE_ROOT: "/data/ekspor" })
+        .EXPORT_STORAGE_ROOT,
+    ).toBe("/data/ekspor");
+    expect(() =>
+      validateEnv({ ...base, EXPORT_STORAGE_ROOT: "" }),
+    ).toThrow("EXPORT_STORAGE_ROOT");
+  });
 });

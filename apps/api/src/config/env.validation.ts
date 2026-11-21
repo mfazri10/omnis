@@ -17,6 +17,11 @@ export interface EnvVars {
   PUSH_DRIVER: string;
   CAMPAIGN_RUNNER: string;
   CAMPAIGN_RUNNER_INTERVAL_MS: number;
+  EXPORT_RUNNER: string;
+  EXPORT_RUNNER_INTERVAL_MS: number;
+  EXPORT_MAX_ROWS: number;
+  EXPORT_TTL_HOURS: number;
+  EXPORT_STORAGE_ROOT: string;
 }
 
 const REQUIRED_KEYS = [
@@ -58,6 +63,24 @@ export function validateEnv(config: Record<string, unknown>): EnvVars {
   const runnerInterval = Number(config.CAMPAIGN_RUNNER_INTERVAL_MS ?? 30000);
   if (!Number.isInteger(runnerInterval) || runnerInterval <= 0) {
     throw new Error("CAMPAIGN_RUNNER_INTERVAL_MS must be a positive integer");
+  }
+  const exportRunnerInterval = Number(config.EXPORT_RUNNER_INTERVAL_MS ?? 5000);
+  if (!Number.isInteger(exportRunnerInterval) || exportRunnerInterval <= 0) {
+    throw new Error("EXPORT_RUNNER_INTERVAL_MS must be a positive integer");
+  }
+  const exportMaxRows = Number(config.EXPORT_MAX_ROWS ?? 50000);
+  if (!Number.isInteger(exportMaxRows) || exportMaxRows <= 0) {
+    throw new Error("EXPORT_MAX_ROWS must be a positive integer");
+  }
+  const exportTtlHours = Number(config.EXPORT_TTL_HOURS ?? 24);
+  if (!Number.isInteger(exportTtlHours) || exportTtlHours <= 0) {
+    throw new Error("EXPORT_TTL_HOURS must be a positive integer");
+  }
+  if (
+    config.EXPORT_STORAGE_ROOT !== undefined &&
+    !isNonEmptyString(config.EXPORT_STORAGE_ROOT)
+  ) {
+    throw new Error("EXPORT_STORAGE_ROOT must be a non-empty string");
   }
   return {
     CONTROL_PLANE_DB_URL: config.CONTROL_PLANE_DB_URL as string,
@@ -101,5 +124,14 @@ export function validateEnv(config: Record<string, unknown>): EnvVars {
       ? config.CAMPAIGN_RUNNER
       : "on",
     CAMPAIGN_RUNNER_INTERVAL_MS: runnerInterval,
+    EXPORT_RUNNER: isNonEmptyString(config.EXPORT_RUNNER)
+      ? config.EXPORT_RUNNER
+      : "on",
+    EXPORT_RUNNER_INTERVAL_MS: exportRunnerInterval,
+    EXPORT_MAX_ROWS: exportMaxRows,
+    EXPORT_TTL_HOURS: exportTtlHours,
+    EXPORT_STORAGE_ROOT: isNonEmptyString(config.EXPORT_STORAGE_ROOT)
+      ? config.EXPORT_STORAGE_ROOT
+      : "./storage/exports",
   };
 }

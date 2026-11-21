@@ -5,6 +5,6 @@ import { ActivityLogsRepository } from "./activity-logs.repository";
 
 @Module({
   providers: [ActivityLogsRepository, ActivityLogService, ActivityLogResolver],
-  exports: [ActivityLogService],
+  exports: [ActivityLogService, ActivityLogsRepository],
 })
 export class ActivityLogsModule {}

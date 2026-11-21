@@ -16,6 +16,8 @@ import type {
   CreateAppUserInput,
   UpdateAppUserInput,
 } from "../../../../features/app-users/graphql/app-users.graphql";
+import { ExportButton } from "../../../../features/exports/components/export-button";
+import { EXPORT_APP_USERS_MUTATION } from "../../../../features/exports/graphql/exports.graphql";
 import { useSessionStore } from "../../../../stores/use-session-store";
 
 const PER_PAGE = 20;
@@ -393,6 +395,11 @@ export default function AppUsersPage({
                     Tambah user
                   </button>
                 )}
+                <ExportButton
+                  requestMutation={EXPORT_APP_USERS_MUTATION}
+                  filter={toFilterInput(applied)}
+                  labelSumber="user aplikasi"
+                />
               </form>
 
               {status && (

@@ -9,5 +9,6 @@ import { AppUsersService } from "./app-users.service";
   // AppContextGuard di resolver ini membutuhkan AppsRepository milik AppsModule.
   imports: [ActivityLogsModule, AppsModule],
   providers: [AppUsersRepository, AppUsersService, AppUsersResolver],
+  exports: [AppUsersRepository],
 })
 export class AppUsersModule {}

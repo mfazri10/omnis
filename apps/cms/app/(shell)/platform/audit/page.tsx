@@ -8,6 +8,8 @@ import {
   ACTIVITY_LOGS_QUERY,
   type ActivityLogsFilter,
 } from "../../../../features/audit/graphql/audit.graphql";
+import { ExportButton } from "../../../../features/exports/components/export-button";
+import { EXPORT_ACTIVITY_LOGS_MUTATION } from "../../../../features/exports/graphql/exports.graphql";
 import { useSessionStore } from "../../../../stores/use-session-store";
 
 const PER_PAGE = 20;
@@ -239,6 +241,11 @@ export default function AuditPage(): JSX.Element {
                 Atur ulang
               </button>
             </div>
+            <ExportButton
+              requestMutation={EXPORT_ACTIVITY_LOGS_MUTATION}
+              filter={toFilterInput(applied)}
+              labelSumber="log audit"
+            />
           </form>
           {loading && <p className="mt-6 text-slate-900">Memuat…</p>}
           {error && (
