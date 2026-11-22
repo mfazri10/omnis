@@ -10,6 +10,7 @@ import {
   AppNotFoundException,
   AppSuspendedException,
 } from "../../../common/exceptions/app.exceptions";
+import { httpExceptionMessage } from "../../../common/filters/http-exception-message";
 
 const STATUS_CODES: Record<number, string> = {
   [HttpStatus.BAD_REQUEST]: "BAD_USER_INPUT",
@@ -52,7 +53,9 @@ export class UploadExceptionFilter implements ExceptionFilter {
           ? extra.requiredPermission
           : undefined;
       const message =
-        status >= 500 ? "Terjadi kesalahan pada server." : exception.message;
+        status >= 500
+          ? "Terjadi kesalahan pada server."
+          : httpExceptionMessage(exception);
       this.send(res, status, message, code, requiredPermission);
       return;
     }

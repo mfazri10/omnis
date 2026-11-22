@@ -7,6 +7,7 @@ import {
   AppNotFoundException,
   AppSuspendedException,
 } from "../exceptions/app.exceptions";
+import { httpExceptionMessage } from "./http-exception-message";
 
 const STATUS_CODES: Record<number, string> = {
   [HttpStatus.UNAUTHORIZED]: "UNAUTHENTICATED",
@@ -50,7 +51,7 @@ export class GraphqlExceptionFilter implements GqlExceptionFilter {
         error: _error,
         ...rest
       } = extra;
-      return this.toError(exception.message, code, rest);
+      return this.toError(httpExceptionMessage(exception), code, rest);
     }
     console.error(
       "[graphql] unhandled:",
@@ -80,7 +81,7 @@ export class GraphqlExceptionFilter implements GqlExceptionFilter {
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
       res.status(status).json({
-        message: exception.message,
+        message: httpExceptionMessage(exception),
         code: this.codeFromStatus(status),
       });
       return;

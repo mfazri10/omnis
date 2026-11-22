@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   NotFoundException,
@@ -43,6 +44,37 @@ describe("GraphqlExceptionFilter", () => {
       new ConflictException("Penetapan role ini sudah ada."),
     );
     expect(error.extensions).toEqual({ code: "CONFLICT" });
+  });
+
+  /**
+   * Regresi: ValidationPipe melempar BadRequestException dengan objek
+   * respons, sehingga exception.message hanya "Bad Request Exception".
+   * Pesan pelanggaran yang sesungguhnya ada di response.message.
+   */
+  it("pesan validasi ValidationPipe diteruskan, bukan 'Bad Request Exception'", () => {
+    const filter = new GraphqlExceptionFilter();
+    const error = catchGraphql(
+      filter,
+      new BadRequestException({
+        message: ["twk must not be less than 0"],
+        error: "Bad Request",
+        statusCode: 400,
+      }),
+    );
+    expect(error.message).toBe("twk must not be less than 0");
+    expect(error.extensions).toEqual({ code: "BAD_USER_INPUT" });
+  });
+
+  it("pesan Indonesia pada ForbiddenException berobjek ikut terkirim", () => {
+    const filter = new GraphqlExceptionFilter();
+    const error = catchGraphql(
+      filter,
+      new ForbiddenException({
+        message: "Anda tidak memiliki akses untuk tindakan ini.",
+        requiredPermission: "platform.roles.manage",
+      }),
+    );
+    expect(error.message).toBe("Anda tidak memiliki akses untuk tindakan ini.");
   });
 });
 
