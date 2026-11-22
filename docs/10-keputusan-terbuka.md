@@ -13,20 +13,21 @@
 | 7 | Urutan kerja | **CMS/platform dulu**; aplikasi mobile menyusul | 2026-11-08 |
 | 8 | Frontend CMS | **Next.js + Apollo + Tailwind** (dikunci via setup Full F00) | 2026-11-08 |
 | 9 | Package manager & monorepo | **Bun + Turborepo** (Node.js sebagai runtime apps) | 2026-11-08 |
+| 10 | Modul pilot pertama (Q1) | **A — Tes CPNS (CBT)**, dibangun sebagai F12 | 2026-11-22 |
 
 ## 2. Sisa Pertanyaan
 
-### Q1. Modul pilot pertama — mana yang dibangun di Fase 2? (PENTING)
+### Q1. Modul pilot pertama — TERJAWAB
 
-Fase 1 (platform) tidak tergantung jawaban ini, tetapi Fase 2 tidak bisa mulai tanpanya.
+Diputuskan: **A — Tes CPNS (CBT)**, dibangun sebagai [F12](../features/F12-modul-pilot.md) (bank soal, paket ujian, sesi simulasi, hasil & analitik). Alasannya seperti tabel di bawah: domain paling mandiri (tanpa pembayaran, hardware, atau realtime) dan melatih pola modul baku secara lengkap — master data, transaksional, dan penilaian.
 
 | Pilihan | Pertimbangan |
 |---|---|
-| **A — Tes CPNS (disarankan)** | Domain paling mandiri (tanpa pembayaran/hardware/realtime); melatih pola modul baku lengkap: master data + transaksional + penilaian |
+| **A — Tes CPNS (dipilih)** | Domain paling mandiri (tanpa pembayaran/hardware/realtime); melatih pola modul baku lengkap: master data + transaksional + penilaian |
 | B — Ngewarung | Masuk akal bila kebutuhan kasir paling mendesak; perlu keputusan outlet & metode bayar saat modulnya dibangun |
 | C — Debat | Domain paling ringan; tetapi pola moderasi + voting kurang mewakili modul transaksional lain |
 
-Cara jawab: cukup `Q1: A`.
+Pola modul baku yang disahkan F12 (scope migrasi per modul, katalog permission, kartu dasbor, gating menu) dipakai modul berikutnya tanpa mengubah platform.
 
 ### Q2. Frontend CMS — TERJAWAB
 

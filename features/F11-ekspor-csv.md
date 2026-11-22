@@ -16,7 +16,7 @@ Daftar data utama bisa diunduh sebagai CSV untuk pelaporan dan arsip, tanpa memb
 
 - [x] Pola ekspor generik: filter yang sama dengan tampilan daftar → job latar → file CSV → tautan unduh kedaluwarsa
 - [x] Batas wajar (maks baris per ekspor, satu job per admin dalam satu waktu)
-- [ ] Prioritas tabel: user aplikasi, transaksi (POS), hasil ujian (CBT), audit log (baru user aplikasi dan audit log; POS/CBT menunggu F12)
+- [ ] Prioritas tabel: user aplikasi, transaksi (POS), hasil ujian (CBT), audit log (baru user aplikasi dan audit log; modul CBT sudah ada sejak F12 tetapi sumber ekspornya belum didaftarkan; POS belum ada modulnya)
 - [x] Permission mengikuti permission `view` tabel sumbernya
 
 ## Lingkup CMS UI
@@ -34,7 +34,7 @@ Verifikasi tambahan: 41 suite / 413 test hijau; `turbo typecheck lint test build
 
 ## Catatan implementasi
 
-Keputusan: batas 50000 baris per ekspor (`EXPORT_MAX_ROWS`), satu job aktif per admin lintas sumber, TTL tautan 24 jam (`EXPORT_TTL_HOURS`), runner in-process pola F10 (interval 5 detik, klaim maks 5 job, tanpa BullMQ), berkas di root storage terpisah (`EXPORT_STORAGE_ROOT`, default `./storage/exports`) sehingga tak tersaji lewat endpoint publik `/media`. Sumber ekspor generik lewat registry `export-sources.ts` yang memakai ulang repository daftar; transaksi POS dan hasil ujian CBT belum ada modulnya (F12 belum mulai) dan tinggal didaftarkan ke registry setelah modulnya ada.
+Keputusan: batas 50000 baris per ekspor (`EXPORT_MAX_ROWS`), satu job aktif per admin lintas sumber, TTL tautan 24 jam (`EXPORT_TTL_HOURS`), runner in-process pola F10 (interval 5 detik, klaim maks 5 job, tanpa BullMQ), berkas di root storage terpisah (`EXPORT_STORAGE_ROOT`, default `./storage/exports`) sehingga tak tersaji lewat endpoint publik `/media`. Sumber ekspor generik lewat registry `export-sources.ts` yang memakai ulang repository daftar; transaksi POS belum ada modulnya dan hasil ujian CBT sudah ada modulnya (F12), jadi keduanya tinggal didaftarkan ke registry saat sumbernya siap.
 
 ## Referensi
 

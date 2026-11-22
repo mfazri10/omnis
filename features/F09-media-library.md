@@ -40,9 +40,12 @@ siap pakai (`open` + `onSelect({id,url,altText})`).
 
 Pemakaian pertama (F10, 18 Nov 2026): form kampanye notifikasi
 (`apps/cms/app/(shell)/[appSlug]/notifications/page.tsx`) memakai
-`MediaPicker` untuk kolom gambar. Kriteria 3 terpenuhi sebagian
-(satu form platform); bukti penuh dari form modul domain tetap
-menunggu F12, sehingga Status tetap `Dikerjakan`.
+`MediaPicker` untuk kolom gambar. Bukti dari form modul domain menyusul
+di F12: form bank soal CBT
+(`apps/cms/app/(shell)/[appSlug]/cbt/soal/page.tsx`) memakai
+`MediaPicker` yang sama untuk gambar soal. Kriteria 3 kini punya bukti
+di kode dan lulus build, tetapi form itu belum diuji klik di browser,
+sehingga Status tetap `Dikerjakan`.
 
 Keputusan Fase 1:
 

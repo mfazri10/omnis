@@ -2,7 +2,7 @@
 
 Peta kerja Fase 1 (CMS/platform). Satu file per fitur berisi tujuan, lingkup backend + CMS UI, dan kriteria selesai. Status tiap fitur diubah di file-nya masing-masing saat dikerjakan.
 
-Status yang dipakai: `Belum mulai` · `Dikerjakan` · `Selesai` · `Ditunda`.
+Status yang dipakai: `Belum mulai` · `Dikerjakan` · `Selesai sebagian` · `Selesai` · `Ditunda`. Status di tabel ini mengikuti header tiap file; kalau berbeda, file fiturnya yang berlaku.
 
 ## Urutan Bangun yang Disarankan
 
@@ -20,14 +20,15 @@ F00 → F01 → F05 → F03 → F02 → F04 → F06 → F08 → F09 → F10 → 
 | F01 | [Auth Admin](F01-auth-admin.md) | FR-PLAT-01 | 1 | Selesai |
 | F02 | [Kerangka CMS & App Switcher](F02-kerangka-cms-app-switcher.md) | FR-PLAT-02 | 1 | Selesai |
 | F03 | [Registry & Provisioning Aplikasi](F03-registry-provisioning.md) | FR-PLAT-03, 04 | 1 | Selesai |
-| F04 | [Remote Config per Aplikasi](F04-remote-config.md) | FR-PLAT-05 | 1 | Belum mulai |
+| F04 | [Remote Config per Aplikasi](F04-remote-config.md) | FR-PLAT-05 | 1 | Selesai |
 | F05 | [RBAC Dinamis](F05-rbac-dinamis.md) | FR-PLAT-06, 07 | 1 | Selesai |
-| F06 | [Audit Log](F06-audit-log.md) | FR-PLAT-08 | 1 | Belum mulai |
-| F07 | [Dashboard Global & per Aplikasi](F07-dashboard.md) | FR-PLAT-09, 10 | 1 | Belum mulai |
-| F08 | [Manajemen User Aplikasi](F08-user-aplikasi.md) | FR-PLAT-11 | 1 | Belum mulai |
-| F09 | [Media Library](F09-media-library.md) | FR-PLAT-12 | 1 | Belum mulai |
-| F10 | [Notifikasi Push](F10-notifikasi-push.md) | FR-PLAT-13, 14 | 1 | Belum mulai |
-| F11 | [Ekspor CSV](F11-ekspor-csv.md) | FR-PLAT-15 (Should) | 1–2 | Belum mulai |
-| F12 | [Modul Pilot](F12-modul-pilot.md) | FR-CBT/POS/DEB | 2 | Belum mulai — menunggu Q1 |
+| F06 | [Audit Log](F06-audit-log.md) | FR-PLAT-08 | 1 | Selesai |
+| F07 | [Dashboard Global & per Aplikasi](F07-dashboard.md) | FR-PLAT-09, 10 | 1 | Selesai |
+| F08 | [Manajemen User Aplikasi](F08-user-aplikasi.md) | FR-PLAT-11 | 1 | Selesai sebagian |
+| F09 | [Media Library](F09-media-library.md) | FR-PLAT-12 | 1 | Dikerjakan |
+| F10 | [Notifikasi Push](F10-notifikasi-push.md) | FR-PLAT-13, 14 | 1 | Dikerjakan |
+| F11 | [Ekspor CSV](F11-ekspor-csv.md) | FR-PLAT-15 (Should) | 1–2 | Selesai sebagian |
+| F12 | [Modul Pilot: CBT](F12-modul-pilot.md) | FR-CBT-01… | 2 | Selesai sebagian |
+| F13 | [Generator Aplikasi Mobile](F13-generator-aplikasi-mobile.md) | — | 3 | Belum mulai |
 
 Referensi kebutuhan: [docs/02-prd.md](../docs/02-prd.md). Arsitektur: [docs/05-arsitektur-sistem.md](../docs/05-arsitektur-sistem.md).

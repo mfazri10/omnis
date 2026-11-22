@@ -70,7 +70,7 @@ ID fitur merujuk ke PRD ([02-prd.md](02-prd.md)). Dokumen ini merinci modul **pl
 
 | Modul | Entitas inti | Layar CMS inti | Rincian |
 |---|---|---|---|
-| Tes CPNS (CBT) | Bank soal, paket, sesi, hasil | Soal, paket, hasil & analitik, peserta | Menyusul di fasenya |
+| Tes CPNS (CBT) | Bank soal, paket, sesi, hasil | Soal, paket, hasil & analitik, peserta | Ada ([F12](../features/F12-modul-pilot.md), selesai sebagian) |
 | Ngewarung (POS) | Outlet, produk, stok, transaksi | Produk, stok, transaksi, laporan | Menyusul di fasenya |
 | Debat | Mosi, argumen, voting | Mosi, moderasi, laporan pengguna | Menyusul di fasenya |
 

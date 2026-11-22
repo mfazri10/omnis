@@ -4,7 +4,7 @@ Scope Fase 1 = **CMS/platform dulu**; mobile menyusul. Estimasi kasar untuk tim 
 
 ## Fase 0 — Penguncian & Fondasi (Minggu 1)
 
-- Kunci modul pilot pertama (usulan: Tes CPNS — lihat [10-keputusan-terbuka.md](10-keputusan-terbuka.md)).
+- Modul pilot pertama terkunci: **Tes CPNS (CBT)** — lihat [10-keputusan-terbuka.md](10-keputusan-terbuka.md) Q1 dan [F12](../features/F12-modul-pilot.md).
 - Desain UI CMS: shell + app switcher, layar platform, layar modul pilot.
 - Repositori, Docker Compose dev (Postgres, Redis, API, web, worker), CI dasar.
 - Akun email transaksional, bucket storage, proyek Firebase.
@@ -23,7 +23,7 @@ Control-plane + CMS:
 
 ## Fase 2 — Modul Pilot (Minggu 6–8)
 
-- Bangun modul domain pertama + layarnya mengikuti **pola modul baku** (entities, migrasi App DB, resolver + permission, statistik dashboard, mini-PRD final).
+- Bangun modul domain pertama + layarnya mengikuti **pola modul baku** (entities, migrasi App DB, resolver + permission, statistik dashboard, mini-PRD final). Dikerjakan sebagai CBT di [F12](../features/F12-modul-pilot.md) — status `Selesai sebagian`: kode dan uji runtime API lolos, halaman CMS belum diuji klik di browser.
 - Kriteria penerimaan 3 terbukti; pola modul didokumentasikan sebagai template modul berikutnya.
 - **Hasil:** satu aplikasi bisa dioperasikan penuh dari CMS.
 
