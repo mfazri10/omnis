@@ -29,6 +29,10 @@ export interface ProvisionAppInput {
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/;
 const MAX_DB_NAME_LENGTH = 63;
 const DEFAULT_TIMEOUT_MS = 30000;
+/** Modul domain yang bisa dipilih saat provisioning (F12: CBT dulu). */
+const KNOWN_MODULES = ["cbt"];
+/** Scope migrasi App DB per modul domain. */
+const MODULE_MIGRATION_SCOPES: Record<string, string> = { cbt: "app-cbt" };
 
 @Injectable()
 export class ProvisioningService {
@@ -62,11 +66,18 @@ export class ProvisioningService {
         storeUrlAndroid: input.storeUrlAndroid ?? null,
         storeUrlIos: input.storeUrlIos ?? null,
         notes: input.notes ?? null,
+        modules: input.modules ?? [],
         lastProvisioningAt: new Date(),
       });
       const compensations: string[] = [];
       try {
-        await this.runStepsWithTimeout(db, created.id, dbName, compensations);
+        await this.runStepsWithTimeout(
+          db,
+          created.id,
+          dbName,
+          compensations,
+          created.modules,
+        );
       } catch (error: unknown) {
         await this.compensate(db, created.id, dbName, compensations, error);
         throw error;
@@ -98,7 +109,13 @@ export class ProvisioningService {
       });
       const compensations: string[] = [];
       try {
-        await this.runStepsWithTimeout(db, existing.id, existing.dbName, compensations);
+        await this.runStepsWithTimeout(
+          db,
+          existing.id,
+          existing.dbName,
+          compensations,
+          existing.modules,
+        );
       } catch (error: unknown) {
         await this.compensate(
           db,
@@ -118,6 +135,7 @@ export class ProvisioningService {
     appId: number,
     dbName: string,
     compensations: string[],
+    modules: string[],
   ): Promise<void> {
     const timeoutMs = this.config.get<number>(
       "PROVISION_TIMEOUT_MS",
@@ -132,6 +150,17 @@ export class ProvisioningService {
         migrateUp("app-template", appDb),
       );
       this.assertNotAborted(signal);
+      // Migrasi modul domain terpilih (F12): scope per modul, urutan
+      // stabil agar retry menghasilkan App DB yang sama.
+      for (const mod of modules) {
+        const scope = MODULE_MIGRATION_SCOPES[mod];
+        if (scope) {
+          await this.database.withAppDbConnection(dbName, (appDb) =>
+            migrateUp(scope, appDb),
+          );
+          this.assertNotAborted(signal);
+        }
+      }
       await this.configs.insertDefault(db, appId);
       compensations.push("config");
       this.assertNotAborted(signal);
@@ -255,9 +284,14 @@ export class ProvisioningService {
       );
     }
     if (input.modules && input.modules.length > 0) {
-      throw new BadRequestException(
-        `Modul domain (${input.modules.join(", ")}) tersedia mulai Fase 2.`,
+      const unknown = input.modules.filter(
+        (mod) => !KNOWN_MODULES.includes(mod),
       );
+      if (unknown.length > 0) {
+        throw new BadRequestException(
+          `Modul domain (${unknown.join(", ")}) belum tersedia. Modul yang dikenal: ${KNOWN_MODULES.join(", ")}.`,
+        );
+      }
     }
   }
 }

@@ -46,8 +46,8 @@ export const GLOBAL_MENU: MenuItem[] = [
   },
 ];
 
-export function appMenu(slug: string): MenuItem[] {
-  return [
+export function appMenu(slug: string, modules: string[] = []): MenuItem[] {
+  const items: MenuItem[] = [
     {
       key: "dashboard",
       label: "Dasbor",
@@ -84,4 +84,39 @@ export function appMenu(slug: string): MenuItem[] {
       status: "live",
     },
   ];
+  // Menu modul domain hanya untuk aplikasi yang memasang modulnya
+  // (F12: CBT). Permission tetap menyaring per admin.
+  if (modules.includes("cbt")) {
+    items.push(
+      {
+        key: "cbt-soal",
+        label: "Soal CBT",
+        href: `/${slug}/cbt/soal`,
+        requires: "cbt.questions.view",
+        status: "live",
+      },
+      {
+        key: "cbt-paket",
+        label: "Paket CBT",
+        href: `/${slug}/cbt/paket`,
+        requires: "cbt.packages.view",
+        status: "live",
+      },
+      {
+        key: "cbt-sesi",
+        label: "Sesi CBT",
+        href: `/${slug}/cbt/sesi`,
+        requires: "cbt.sessions.view",
+        status: "live",
+      },
+      {
+        key: "cbt-hasil",
+        label: "Hasil CBT",
+        href: `/${slug}/cbt/hasil`,
+        requires: "cbt.results.view",
+        status: "live",
+      },
+    );
+  }
+  return items;
 }

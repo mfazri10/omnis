@@ -24,6 +24,7 @@ export interface AppDetail {
   storeUrlAndroid: string | null;
   storeUrlIos: string | null;
   notes: string | null;
+  modules: string[];
   failureReason: string | null;
   lastProvisioningAt: Date | null;
   createdAt: Date;
@@ -62,6 +63,7 @@ function toDetail(row: AppRow): AppDetail {
     storeUrlAndroid: row.storeUrlAndroid,
     storeUrlIos: row.storeUrlIos,
     notes: row.notes,
+    modules: row.modules,
     failureReason: row.failureReason,
     lastProvisioningAt: row.lastProvisioningAt,
     createdAt: row.createdAt,

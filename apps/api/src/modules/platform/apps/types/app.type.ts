@@ -35,6 +35,9 @@ export class AppType {
   @Field(() => String, { nullable: true })
   notes!: string | null;
 
+  @Field(() => [String], { description: "Modul domain terpilih (F12: cbt)." })
+  modules!: string[];
+
   @Field(() => String, { nullable: true })
   failureReason!: string | null;
 

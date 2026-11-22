@@ -1,4 +1,6 @@
 import { Module } from "@nestjs/common";
+import { CbtDashboardSection } from "../../cbt/cbt-dashboard.section";
+import { CbtModule } from "../../cbt/cbt.module";
 import { ActivityLogsModule } from "../activity-logs/activity-logs.module";
 import { AppUsersRepository } from "../app-users/app-users.repository";
 import { AppsModule } from "../apps/apps.module";
@@ -13,7 +15,8 @@ import { UsersDashboardSection } from "./sections/users-dashboard.section";
 
 @Module({
   // AppContextGuard di resolver ini membutuhkan AppsRepository milik AppsModule.
-  imports: [ActivityLogsModule, AppsModule],
+  // CbtModule menyumbang kartu "Soal CBT" (F12) lewat DashboardSection.
+  imports: [ActivityLogsModule, AppsModule, CbtModule],
   providers: [
     AppUsersRepository,
     MediaRepository,
@@ -39,8 +42,9 @@ import { UsersDashboardSection } from "./sections/users-dashboard.section";
       useFactory: (
         users: UsersDashboardSection,
         media: MediaDashboardSection,
-      ): DashboardSection[] => [users, media],
-      inject: [UsersDashboardSection, MediaDashboardSection],
+        cbt: CbtDashboardSection,
+      ): DashboardSection[] => [users, media, cbt],
+      inject: [UsersDashboardSection, MediaDashboardSection, CbtDashboardSection],
     },
     DashboardService,
     DashboardResolver,

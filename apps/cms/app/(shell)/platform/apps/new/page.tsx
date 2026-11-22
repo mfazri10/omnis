@@ -16,6 +16,7 @@ export default function NewAppPage(): JSX.Element {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [notes, setNotes] = useState("");
+  const [cbtModule, setCbtModule] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(
@@ -30,6 +31,7 @@ export default function NewAppPage(): JSX.Element {
             name,
             slug,
             notes: notes === "" ? null : notes,
+            modules: cbtModule ? ["cbt"] : [],
           },
         },
       });
@@ -88,6 +90,24 @@ export default function NewAppPage(): JSX.Element {
             className={inputClass}
           />
         </label>
+        <fieldset className="border border-slate-200 p-3">
+          <legend className="px-1 text-sm font-semibold text-slate-900">
+            Modul domain
+          </legend>
+          <label className="flex min-h-[44px] items-center gap-2 text-sm text-slate-900">
+            <input
+              type="checkbox"
+              checked={cbtModule}
+              onChange={(e) => setCbtModule(e.target.checked)}
+              className="h-4 w-4"
+            />
+            CBT (Tes CPNS): bank soal, paket, sesi, hasil &amp; analitik
+          </label>
+          <p className="text-xs text-slate-600">
+            Modul yang dipilih ikut dimigrasi ke database aplikasi saat
+            provisioning.
+          </p>
+        </fieldset>
         {provisioning && (
           <p className="text-sm text-slate-600">
             Memprovisioning: membuat database dan menjalankan migrasi…

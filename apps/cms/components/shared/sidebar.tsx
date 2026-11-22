@@ -53,7 +53,7 @@ export function Sidebar(): JSX.Element {
   const contextItems =
     activeSlug === null
       ? []
-      : appMenu(activeSlug).filter((item) =>
+      : appMenu(activeSlug, activeApp?.modules ?? []).filter((item) =>
           isVisible(item, isSuperAdmin, permissions),
         );
   return (

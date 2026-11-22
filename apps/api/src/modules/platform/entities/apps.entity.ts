@@ -1,5 +1,6 @@
 import {
   bigint,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -40,6 +41,8 @@ export const apps = pgTable(
     storeUrlIos: varchar("store_url_ios", { length: 512 }),
     fcmCredential: text("fcm_credential"),
     notes: text("notes"),
+    /** Modul domain terpilih saat provisioning (F12: "cbt"). */
+    modules: jsonb("modules").$type<string[]>().notNull().default([]),
     failureReason: text("failure_reason"),
     lastProvisioningAt: timestamp("last_provisioning_at", {
       withTimezone: true,

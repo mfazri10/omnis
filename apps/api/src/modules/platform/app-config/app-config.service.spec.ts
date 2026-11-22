@@ -52,6 +52,7 @@ function appRow(over: Partial<AppRow> = {}): AppRow {
     storeUrlIos: null,
     fcmCredential: null,
     notes: null,
+    modules: [],
     failureReason: null,
     lastProvisioningAt: null,
     createdAt: new Date("2026-01-01T00:00:00.000Z"),

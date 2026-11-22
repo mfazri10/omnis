@@ -109,6 +109,7 @@ function appRow(over: Record<string, unknown> = {}): AppRow {
     storeUrlIos: null,
     fcmCredential: null,
     notes: null,
+    modules: [],
     failureReason: null,
     lastProvisioningAt: null,
     createdAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -219,14 +220,41 @@ describe("ProvisioningService", () => {
     ).resolves.toBeDefined();
   });
 
-  it("slug format salah + modules non-kosong ditolak", async () => {
+  it("slug format salah + modul tak dikenal ditolak", async () => {
     const { service } = makeService();
     await expect(
       service.provisionApp({ name: "X", slug: "Slug Salah!" }),
     ).rejects.toThrow(BadRequestException);
     await expect(
-      service.provisionApp({ name: "X", slug: "uji-x", modules: ["cbt"] }),
-    ).rejects.toThrow("Fase 2");
+      service.provisionApp({ name: "X", slug: "uji-x", modules: ["pos"] }),
+    ).rejects.toThrow("belum tersedia");
+  });
+
+  it("modul cbt diterapkan: migrasi app-template lalu app-cbt (F12)", async () => {
+    const { service, apps } = makeService();
+    apps.findBySlug.mockResolvedValue(null);
+    apps.insert.mockResolvedValue(appRow({ modules: ["cbt"] }));
+    apps.activateIfProvisioning.mockResolvedValue(true);
+    await service.provisionApp({ name: "X", slug: "uji-x", modules: ["cbt"] });
+    expect(apps.insert).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ modules: ["cbt"] }),
+    );
+    expect(mockMigrateUp.mock.calls.map((call: unknown[]) => call[0])).toEqual([
+      "app-template",
+      "app-cbt",
+    ]);
+  });
+
+  it("retry memakai modul tersimpan di registry", async () => {
+    const { service, apps } = makeService();
+    apps.findBySlug.mockResolvedValue(appRow({ status: "failed", modules: ["cbt"] }));
+    apps.activateIfProvisioning.mockResolvedValue(true);
+    await service.retryProvisionApp("uji-x");
+    expect(mockMigrateUp.mock.calls.map((call: unknown[]) => call[0])).toEqual([
+      "app-template",
+      "app-cbt",
+    ]);
   });
 
   it("retry suspended → BadRequest", async () => {

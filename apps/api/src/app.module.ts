@@ -6,6 +6,7 @@ import { APP_FILTER } from "@nestjs/core";
 import { join } from "node:path";
 import { validateEnv } from "./config/env.validation";
 import { AuthModule } from "./auth/auth.module";
+import { CbtModule } from "./modules/cbt/cbt.module";
 import { AppsModule } from "./modules/platform/apps/apps.module";
 import { DashboardModule } from "./modules/platform/dashboard/dashboard.module";
 import { ActivityLogsModule } from "./modules/platform/activity-logs/activity-logs.module";
@@ -38,6 +39,7 @@ import { GraphqlExceptionFilter } from "./common/filters/graphql-exception.filte
     DashboardModule,
     AppConfigModule,
     AppUsersModule,
+    CbtModule,
     ExportsModule,
     MediaModule,
     NotificationsModule,

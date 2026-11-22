@@ -38,6 +38,7 @@ export interface AppDetailData {
   storeUrlAndroid: string | null;
   storeUrlIos: string | null;
   notes: string | null;
+  modules: string[];
   failureReason: string | null;
   lastProvisioningAt: string | null;
   createdAt: string;
@@ -56,6 +57,7 @@ const APP_DETAIL_FIELDS = `
   storeUrlAndroid
   storeUrlIos
   notes
+  modules
   failureReason
   lastProvisioningAt
   createdAt
@@ -82,6 +84,7 @@ export interface ProvisionAppInput {
   storeUrlAndroid?: string | null;
   storeUrlIos?: string | null;
   notes?: string | null;
+  modules?: string[] | null;
 }
 
 export const PROVISION_APP_MUTATION: TypedDocumentNode<

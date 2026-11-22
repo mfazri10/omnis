@@ -9,6 +9,7 @@ export interface AccessibleAppData {
   name: string;
   status: string;
   iconMediaUrl: string | null;
+  modules: string[];
 }
 
 export const MY_APPS_QUERY: TypedDocumentNode<
@@ -22,6 +23,7 @@ export const MY_APPS_QUERY: TypedDocumentNode<
       name
       status
       iconMediaUrl
+      modules
     }
   }
 `;

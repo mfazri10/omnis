@@ -18,6 +18,8 @@ export interface MigrationModule {
 export interface AppliedMigration {
   name: string;
   checksum: string;
+  /** Scope migrasi (platform/app-template/app-cbt); null = baris lama. */
+  scope: string | null;
 }
 
 const MIGRATION_LOCK_ID = 7364291;
@@ -25,7 +27,10 @@ const MIGRATIONS_ROOT = resolve(__dirname, "..", "..", "..", "migrations");
 // Scope app-template tinggal di src agar terkompilasi ke dist:
 // saga provisioning menjalankannya IN-PROCESS baik via bun (src/.ts)
 // maupun node (dist/.js). Scope platform hanya via CLI bun.
+// Scope app-cbt (F12) ikut di src dengan alasan yang sama: migrasi
+// modul domain diterapkan per App DB lewat CLI/in-process.
 const APP_TEMPLATE_DIR = resolve(__dirname, "app-template");
+const APP_CBT_DIR = resolve(__dirname, "app-cbt");
 const FILE_PATTERN = /^\d{14}_.+\.(ts|js)$/;
 
 function requireEnv(key: string): string {
@@ -43,6 +48,9 @@ function isValidDbName(name: string): boolean {
 function scopeDir(scope: string): string {
   if (scope === "app-template") {
     return APP_TEMPLATE_DIR;
+  }
+  if (scope === "app-cbt") {
+    return APP_CBT_DIR;
   }
   return join(MIGRATIONS_ROOT, scope);
 }
@@ -97,6 +105,19 @@ export async function ensureRegistryTable(db: Db): Promise<void> {
       executed_at timestamptz NOT NULL DEFAULT now()
     )
   `);
+  // F12: satu App DB bisa menerima lebih dari satu scope (app-template
+  // lalu app-cbt). Kolom scope membedakan riwayat per scope; baris lama
+  // di-backfill dari pola namanya (konvensi penamaan migrasi repo).
+  await db.execute(sql`
+    ALTER TABLE schema_migrations ADD COLUMN IF NOT EXISTS scope varchar(64)
+  `);
+  await db.execute(sql`
+    UPDATE schema_migrations SET scope = CASE
+      WHEN name LIKE '%app_template%' THEN 'app-template'
+      WHEN name LIKE '%app_cbt%' THEN 'app-cbt'
+      ELSE 'platform'
+    END WHERE scope IS NULL
+  `);
 }
 
 export async function listMigrationFiles(scope: string): Promise<string[]> {
@@ -118,7 +139,7 @@ export async function checksumFile(scope: string, file: string): Promise<string>
 
 export async function getApplied(db: Db): Promise<AppliedMigration[]> {
   const result = await db.execute(
-    sql`SELECT name, checksum FROM schema_migrations ORDER BY name ASC`,
+    sql`SELECT name, checksum, scope FROM schema_migrations ORDER BY name ASC`,
   );
   return result.rows as unknown as AppliedMigration[];
 }
@@ -136,13 +157,16 @@ function loadModule(scope: string, file: string): MigrationModule {
   return { up: mod.up, down: mod.down };
 }
 
-/** Validasi checksum + larangan sisip retroaktif (doc 12 §8). */
+/** Validasi checksum + larangan sisip retroaktif (doc 12 §8), per scope. */
 export async function validateHistory(
   scope: string,
   applied: AppliedMigration[],
   files: string[],
 ): Promise<void> {
-  for (const row of applied) {
+  // Riwayat scope lain (mis. app-template saat menjalankan app-cbt)
+  // bukan milik scope ini: jangan dianggap "file hilang".
+  const own = applied.filter((row) => row.scope === scope);
+  for (const row of own) {
     if (!files.includes(row.name)) {
       throw new Error(
         `Migrasi "${row.name}" sudah diterapkan tetapi filenya hilang.`,
@@ -156,9 +180,9 @@ export async function validateHistory(
       );
     }
   }
-  const lastApplied = applied.map((a) => a.name).sort().pop();
+  const lastApplied = own.map((a) => a.name).sort().pop();
   if (lastApplied) {
-    const appliedSet = new Set(applied.map((a) => a.name));
+    const appliedSet = new Set(own.map((a) => a.name));
     for (const file of files) {
       if (file < lastApplied && !appliedSet.has(file)) {
         throw new Error(
@@ -181,7 +205,7 @@ export async function migrateUp(scope: string, db: Db): Promise<string[]> {
     const mod = loadModule(scope, file);
     await mod.up({ db });
     await db.execute(
-      sql`INSERT INTO schema_migrations (name, checksum) VALUES (${file}, ${await checksumFile(scope, file)})`,
+      sql`INSERT INTO schema_migrations (name, checksum, scope) VALUES (${file}, ${await checksumFile(scope, file)}, ${scope})`,
     );
     done.push(file);
   }
@@ -198,6 +222,7 @@ export async function migrateDown(
   const applied = await getApplied(db);
   await validateHistory(scope, applied, files);
   const targets = [...applied]
+    .filter((row) => row.scope === scope)
     .sort((a, b) => (a.name < b.name ? 1 : -1))
     .slice(0, steps);
   const done: string[] = [];

@@ -16,6 +16,7 @@ export interface CreateAppRow {
   storeUrlAndroid?: string | null;
   storeUrlIos?: string | null;
   notes?: string | null;
+  modules?: string[];
   failureReason?: string | null;
   lastProvisioningAt?: Date | null;
 }
