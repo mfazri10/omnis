@@ -39,7 +39,7 @@ import { CbtSessionsService } from "./sessions.service";
     CbtTablesInterceptor,
     CbtDashboardSection,
   ],
-  exports: [CbtDashboardSection],
+  exports: [CbtDashboardSection, CbtSessionsRepository],
 })
 export class CbtModule implements OnModuleInit {
   constructor(private readonly permissions: PermissionsService) {}

@@ -10,6 +10,7 @@ import {
 export enum ExportSource {
   APP_USERS = "APP_USERS",
   ACTIVITY_LOGS = "ACTIVITY_LOGS",
+  CBT_RESULTS = "CBT_RESULTS",
 }
 
 export enum ExportJobStatus {

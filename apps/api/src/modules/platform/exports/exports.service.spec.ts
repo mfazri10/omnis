@@ -17,6 +17,9 @@ import type { ActivityLogsRepository } from "../activity-logs/activity-logs.repo
 import type { AppUserRow } from "../app-users/app-users.entity";
 import type { AppUserFilters } from "../app-users/app-users.repository";
 import type { AppUsersRepository } from "../app-users/app-users.repository";
+import type { CbtSessionsRepository } from "../../cbt/sessions.repository";
+import type { CbtResultListItem } from "../../cbt/sessions.repository";
+import type { CbtResultFilters } from "./export-sources";
 import type { AppRow } from "../entities/apps.entity";
 import type { AppsRepository } from "../apps/apps.repository";
 import type { ExportJobRow } from "../entities/export-jobs.entity";
@@ -90,6 +93,26 @@ function auditRow(over: Partial<ActivityLogListItem> = {}): ActivityLogListItem 
   };
 }
 
+function cbtResult(
+  over: Partial<CbtResultListItem> = {},
+): CbtResultListItem {
+  return {
+    id: 1,
+    sessionId: 11,
+    participantName: "Peserta Uji",
+    packageId: 5,
+    packageTitle: "Paket SKD",
+    twkScore: 5,
+    tiuScore: 5,
+    tkpScore: 5,
+    totalScore: 15,
+    passed: true,
+    computedAt: new Date("2026-11-22T02:00:00.000Z"),
+    finishedAt: new Date("2026-11-22T02:00:00.000Z"),
+    ...over,
+  };
+}
+
 function app(over: Partial<AppRow> = {}): AppRow {
   return {
     id: 3,
@@ -124,6 +147,7 @@ async function loadService(
   apps: Mocked<AppsRepository>;
   activityLog: Mocked<ActivityLogService>;
   store: Mocked<ExportFileStore>;
+  cbtSessions: Mocked<CbtSessionsRepository>;
 }> {
   const { ExportsService: Service } = await import("./exports.service");
   const database = {
@@ -149,6 +173,10 @@ async function loadService(
     count: jest.fn(),
     list: jest.fn(),
   } as unknown as Mocked<ActivityLogsRepository>;
+  const cbtSessions = {
+    countResults: jest.fn(),
+    listResults: jest.fn(),
+  } as unknown as Mocked<CbtSessionsRepository>;
   const apps = {
     findBySlug: jest.fn(),
   } as unknown as Mocked<AppsRepository>;
@@ -169,6 +197,7 @@ async function loadService(
     jobs,
     appUsers,
     activityLogs,
+    cbtSessions,
     apps,
     activityLog as unknown as ActivityLogService,
     store as unknown as ExportFileStore,
@@ -179,6 +208,7 @@ async function loadService(
     jobs,
     appUsers,
     activityLogs,
+    cbtSessions,
     apps,
     activityLog,
     store,
@@ -279,6 +309,70 @@ describe("ExportsService.request", () => {
     expect(item.source).toBe(ExportSource.APP_USERS);
     expect(item.status).toBe(ExportJobStatus.QUEUED);
     expect(item.downloadPath).toBeNull();
+  });
+
+  it("ekspor hasil CBT memakai App DB, filter paket, dan audit konteks aplikasi", async () => {
+    const { service, cbtSessions, jobs, activityLog, database } =
+      await loadService();
+    cbtSessions.countResults.mockResolvedValue(2);
+    jobs.findActiveByAdmin.mockResolvedValue(null);
+    jobs.insert.mockResolvedValue(
+      job({ id: 12, source: "cbt_results", status: "queued" }),
+    );
+
+    const item = await service.request(
+      "cbt_results",
+      { packageId: "5", passed: true },
+      ADMIN,
+      { appId: "3", slug: "tes-cpns" },
+      null,
+    );
+
+    expect(database.getAppConnection).toHaveBeenCalledWith("tes-cpns", {
+      allowNonActive: true,
+    });
+    expect(cbtSessions.countResults).toHaveBeenCalledWith(APP_DB, {
+      packageId: 5,
+      passed: true,
+    } satisfies CbtResultFilters);
+    expect(jobs.insert).toHaveBeenCalledWith(CONTROL_DB, {
+      requestedBy: 7,
+      source: "cbt_results",
+      appSlug: "tes-cpns",
+      filter: { packageId: 5, passed: true },
+    });
+    expect(activityLog.record).toHaveBeenCalledWith({
+      adminId: "7",
+      appId: "3",
+      action: "export",
+      entityType: "export_job",
+      entityId: "12",
+      summary: "Mengekspor hasil CBT (2 baris) ke CSV",
+      ip: null,
+    });
+    expect(item.source).toBe(ExportSource.CBT_RESULTS);
+    expect(item.status).toBe(ExportJobStatus.QUEUED);
+  });
+
+  it("ekspor hasil CBT di aplikasi tanpa modul dijawab pesan modul, bukan error server", async () => {
+    const { service, cbtSessions } = await loadService();
+    const undefinedTable = Object.assign(new Error("relation does not exist"), {
+      cause: { code: "42P01" },
+    });
+    cbtSessions.countResults.mockRejectedValue(undefinedTable);
+
+    const error = await service
+      .request(
+        "cbt_results",
+        {},
+        ADMIN,
+        { appId: "3", slug: "tes-cpns" },
+        null,
+      )
+      .catch((err: unknown) => err);
+
+    expect(error).toBeInstanceOf(BadRequestException);
+    expect((error as Error).message).toContain("belum terpasang");
   });
 
   it("ekspor audit memakai control-plane dan menyimpan tanggal ISO", async () => {
@@ -437,6 +531,41 @@ describe("ExportsService.executeClaimed", () => {
     expect(patch.fileSizeBytes).toBe(buffer.length);
     expect(patch.expiresAt.getTime()).toBeGreaterThan(
       before + 23 * 60 * 60 * 1000,
+    );
+  });
+
+  it("menulis CSV hasil CBT sesuai kolom sumbernya", async () => {
+    const { service, jobs, cbtSessions, store } = await loadService();
+    jobs.findById.mockResolvedValue(
+      job({
+        status: "running",
+        source: "cbt_results",
+        filter: { passed: true },
+      }),
+    );
+    cbtSessions.listResults.mockResolvedValue([cbtResult()]);
+    jobs.markDone.mockResolvedValue(job({ status: "done" }));
+
+    const outcome = await service.executeClaimed(7);
+
+    expect(outcome).toBe("done");
+    expect(cbtSessions.listResults).toHaveBeenCalledWith(
+      APP_DB,
+      { passed: true },
+      { limit: 1000, offset: 0 },
+    );
+    const [, buffer] = store.put.mock.calls[0] as [string, Buffer];
+    const text = buffer.toString("utf8");
+    expect(text).toContain(
+      "id,sessionId,participantName,packageId,packageTitle,twkScore,tiuScore,tkpScore,totalScore,passed,computedAt,finishedAt",
+    );
+    expect(text).toContain("Peserta Uji");
+    expect(text).toContain("Paket SKD");
+    const markDoneCalls = jobs.markDone.mock.calls as unknown[][];
+    const patch = markDoneCalls[0]?.[2] as { fileName: string; rowCount: number };
+    expect(patch.rowCount).toBe(1);
+    expect(patch.fileName).toMatch(
+      /^ekspor-hasil-cbt-tes-cpns-\d{8}-\d{6}\.csv$/,
     );
   });
 

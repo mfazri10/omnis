@@ -10,7 +10,7 @@ import {
 import { admins } from "./admins.entity";
 
 /** Sumber ekspor yang terdaftar (registry di modul exports). */
-export type ExportSourceKey = "app_users" | "activity_logs";
+export type ExportSourceKey = "app_users" | "activity_logs" | "cbt_results";
 
 /** Status job: queued → running → done/failed; done bisa kedaluwarsa. */
 export type ExportJobStatusValue =

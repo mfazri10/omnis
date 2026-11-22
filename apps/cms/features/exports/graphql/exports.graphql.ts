@@ -2,10 +2,11 @@ import { gql } from "@apollo/client";
 import type { TypedDocumentNode } from "@apollo/client";
 import type { ActivityLogsFilter } from "../../audit/graphql/audit.graphql";
 import type { AppUsersFilter } from "../../app-users/graphql/app-users.graphql";
+import type { CbtResultsFilter } from "../../cbt/graphql/cbt.graphql";
 
 // TODO: ganti dokumen manual ini dengan hasil graphql-code-generator
 // saat codegen dikonfigurasi.
-export type ExportJobSource = "APP_USERS" | "ACTIVITY_LOGS";
+export type ExportJobSource = "APP_USERS" | "ACTIVITY_LOGS" | "CBT_RESULTS";
 export type ExportJobStatus =
   | "QUEUED"
   | "RUNNING"
@@ -58,6 +59,17 @@ export const EXPORT_ACTIVITY_LOGS_MUTATION: TypedDocumentNode<
 > = gql`
   mutation ExportActivityLogs($filter: ActivityLogFilterInput) {
     exportActivityLogs(filter: $filter) {
+      ${EXPORT_JOB_FIELDS}
+    }
+  }
+`;
+
+export const EXPORT_CBT_RESULTS_MUTATION: TypedDocumentNode<
+  { exportCbtResults: ExportJobData },
+  { filter?: CbtResultsFilter | null }
+> = gql`
+  mutation ExportCbtResults($filter: CbtResultFilterInput) {
+    exportCbtResults(filter: $filter) {
       ${EXPORT_JOB_FIELDS}
     }
   }

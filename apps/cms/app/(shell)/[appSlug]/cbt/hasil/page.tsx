@@ -10,6 +10,8 @@ import {
   CBT_RESULTS_QUERY,
 } from "../../../../../features/cbt/graphql/cbt.graphql";
 import type { CbtResultsFilter } from "../../../../../features/cbt/graphql/cbt.graphql";
+import { ExportButton } from "../../../../../features/exports/components/export-button";
+import { EXPORT_CBT_RESULTS_MUTATION } from "../../../../../features/exports/graphql/exports.graphql";
 import { useSessionStore } from "../../../../../stores/use-session-store";
 
 const PER_PAGE = 20;
@@ -242,6 +244,11 @@ export default function CbtHasilPage({
                     Atur ulang
                   </button>
                 </div>
+                <ExportButton
+                  requestMutation={EXPORT_CBT_RESULTS_MUTATION}
+                  filter={toFilterInput(applied)}
+                  labelSumber="hasil CBT"
+                />
               </form>
 
               {loading && <p className="mt-6 text-slate-900">Memuat…</p>}

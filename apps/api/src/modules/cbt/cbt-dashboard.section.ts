@@ -33,6 +33,14 @@ export class CbtDashboardSection implements DashboardSection {
   }
 }
 
+/**
+ * Pesan tunggal untuk aplikasi yang belum memasang modul CBT (tabel
+ * belum dimigrasi). Dipakai interceptor resolver DAN sumber ekspor
+ * hasil CBT supaya jawabannya konsisten di semua jalur.
+ */
+export const CBT_TABLES_MISSING_MESSAGE =
+  "Modul CBT belum terpasang di aplikasi ini. Terapkan migrasi app-cbt ke App DB aplikasi.";
+
 export function isUndefinedTable(error: unknown): boolean {
   if (typeof error !== "object" || error === null) {
     return false;

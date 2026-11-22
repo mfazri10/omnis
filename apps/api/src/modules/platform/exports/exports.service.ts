@@ -17,12 +17,17 @@ import { ActivityLogsRepository } from "../activity-logs/activity-logs.repositor
 import type { AppUserFilters } from "../app-users/app-users.repository";
 import { AppUsersRepository } from "../app-users/app-users.repository";
 import { AppsRepository } from "../apps/apps.repository";
+import { CbtSessionsRepository } from "../../cbt/sessions.repository";
 import type {
   ExportJobRow,
   ExportSourceKey,
 } from "../entities/export-jobs.entity";
 import { cellsOf, createExportSources } from "./export-sources";
-import type { ExportSourceRegistry } from "./export-sources";
+import type {
+  CbtResultFilters,
+  ExportSourceDef,
+  ExportSourceRegistry,
+} from "./export-sources";
 import { ExportFileStore } from "./export-file-store";
 import { ExportsRepository } from "./exports.repository";
 import { serializeCsv, type CsvCellValue } from "./csv";
@@ -41,6 +46,12 @@ export interface ActivityLogsExportFilter {
   entityType?: string;
   action?: string;
   search?: string;
+}
+
+/** Filter ekspor hasil CBT (F12): sama dengan filter daftar hasil. */
+export interface CbtResultsExportFilter {
+  packageId?: string;
+  passed?: boolean;
 }
 
 /** Konteks aplikasi tervalidasi guard untuk sumber app-scoped. */
@@ -78,9 +89,13 @@ const MAX_LIST_LIMIT = 20;
 const STALE_RUNNING_MINUTES = 10;
 
 function toSourceEnum(source: string): ExportSource {
-  return source === "activity_logs"
-    ? ExportSource.ACTIVITY_LOGS
-    : ExportSource.APP_USERS;
+  if (source === "activity_logs") {
+    return ExportSource.ACTIVITY_LOGS;
+  }
+  if (source === "cbt_results") {
+    return ExportSource.CBT_RESULTS;
+  }
+  return ExportSource.APP_USERS;
 }
 
 function toStatusEnum(status: string): ExportJobStatus {
@@ -139,11 +154,12 @@ export class ExportsService {
     private readonly jobs: ExportsRepository,
     appUsers: AppUsersRepository,
     activityLogs: ActivityLogsRepository,
+    cbtSessions: CbtSessionsRepository,
     private readonly apps: AppsRepository,
     private readonly activityLog: ActivityLogService,
     private readonly store: ExportFileStore,
   ) {
-    this.sources = createExportSources({ appUsers, activityLogs });
+    this.sources = createExportSources({ appUsers, activityLogs, cbtSessions });
     this.maxRows = positiveIntOf(
       this.config.get<number>("EXPORT_MAX_ROWS"),
       DEFAULT_MAX_ROWS,
@@ -173,8 +189,18 @@ export class ExportsService {
     ip: string | null,
   ): Promise<ExportJobItem>;
   async request(
+    source: "cbt_results",
+    filter: CbtResultsExportFilter,
+    admin: AdminProfile,
+    ctx: ExportRequestContext,
+    ip: string | null,
+  ): Promise<ExportJobItem>;
+  async request(
     source: ExportSourceKey,
-    filter: AppUsersExportFilter | ActivityLogsExportFilter,
+    filter:
+      | AppUsersExportFilter
+      | ActivityLogsExportFilter
+      | CbtResultsExportFilter,
     admin: AdminProfile,
     ctx: ExportRequestContext | null,
     ip: string | null,
@@ -204,7 +230,7 @@ export class ExportsService {
     const created = await this.jobs.insert(this.controlDb(), {
       requestedBy: this.parseId(admin.id),
       source,
-      appSlug: source === "app_users" && ctx ? ctx.slug : null,
+      appSlug: this.sources[source].appScoped && ctx ? ctx.slug : null,
       filter: this.toJsonFor(source, repoFilter),
     });
     await this.activityLog.record({
@@ -384,8 +410,22 @@ export class ExportsService {
 
   private toRepoFilter(
     source: ExportSourceKey,
-    filter: AppUsersExportFilter | ActivityLogsExportFilter,
-  ): AppUserFilters | ActivityLogFilters {
+    filter:
+      | AppUsersExportFilter
+      | ActivityLogsExportFilter
+      | CbtResultsExportFilter,
+  ): AppUserFilters | ActivityLogFilters | CbtResultFilters {
+    if (source === "cbt_results") {
+      const input = filter as CbtResultsExportFilter;
+      const repo: CbtResultFilters = {};
+      if (input.packageId !== undefined) {
+        repo.packageId = this.parseId(input.packageId);
+      }
+      if (input.passed !== undefined) {
+        repo.passed = input.passed;
+      }
+      return repo;
+    }
     if (source === "app_users") {
       const input = filter as AppUsersExportFilter;
       const repo: AppUserFilters = {};
@@ -426,62 +466,53 @@ export class ExportsService {
   private countFor(
     source: ExportSourceKey,
     db: Db,
-    filter: AppUserFilters | ActivityLogFilters,
+    filter: AppUserFilters | ActivityLogFilters | CbtResultFilters,
   ): Promise<number> {
-    if (source === "app_users") {
-      return this.sources.app_users.count(db, filter);
+    if (source === "cbt_results") {
+      return this.sources.cbt_results.count(db, filter as CbtResultFilters);
     }
-    return this.sources.activity_logs.count(db, filter);
+    if (source === "app_users") {
+      return this.sources.app_users.count(db, filter as AppUserFilters);
+    }
+    return this.sources.activity_logs.count(db, filter as ActivityLogFilters);
   }
 
   private toJsonFor(
     source: ExportSourceKey,
-    filter: AppUserFilters | ActivityLogFilters,
+    filter: AppUserFilters | ActivityLogFilters | CbtResultFilters,
   ): Record<string, unknown> {
-    if (source === "app_users") {
-      return this.sources.app_users.toJson(filter);
+    if (source === "cbt_results") {
+      return this.sources.cbt_results.toJson(filter as CbtResultFilters);
     }
-    return this.sources.activity_logs.toJson(filter);
+    if (source === "app_users") {
+      return this.sources.app_users.toJson(filter as AppUserFilters);
+    }
+    return this.sources.activity_logs.toJson(filter as ActivityLogFilters);
   }
 
   private auditAppId(
     source: ExportSourceKey,
     ctx: ExportRequestContext | null,
-    filter: AppUserFilters | ActivityLogFilters,
+    filter: AppUserFilters | ActivityLogFilters | CbtResultFilters,
   ): string | null {
-    if (source === "app_users") {
+    if (source === "app_users" || source === "cbt_results") {
       return ctx ? ctx.appId : null;
     }
     const appId = (filter as ActivityLogFilters).appId;
     return appId === undefined ? null : String(appId);
   }
 
-  private async collectRows(
-    row: ExportJobRow,
+  /**
+   * Baca seluruh baris satu job per batch memakai definisi sumbernya
+   * (filter, count, dan kolom ikut definisi — tidak ada cabang per
+   * sumber selain pemilihan definisinya).
+   */
+  private async collectWith<Row, RepoFilter>(
+    def: ExportSourceDef<Row, RepoFilter>,
+    filterJson: ExportJobRow["filter"],
     db: Db,
   ): Promise<{ header: string[]; rows: CsvCellValue[][] }> {
-    if (row.source === "app_users") {
-      const def = this.sources.app_users;
-      const filter = def.fromJson(row.filter);
-      const out: CsvCellValue[][] = [];
-      let offset = 0;
-      for (;;) {
-        const batch = await def.listBatch(db, filter, {
-          limit: BATCH_SIZE,
-          offset,
-        });
-        for (const item of batch) {
-          out.push(cellsOf(def, item));
-        }
-        offset += batch.length;
-        if (batch.length < BATCH_SIZE) {
-          break;
-        }
-      }
-      return { header: def.columns.map((c) => c.header), rows: out };
-    }
-    const def = this.sources.activity_logs;
-    const filter = def.fromJson(row.filter);
+    const filter = def.fromJson(filterJson);
     const out: CsvCellValue[][] = [];
     let offset = 0;
     for (;;) {
@@ -500,7 +531,27 @@ export class ExportsService {
     return { header: def.columns.map((c) => c.header), rows: out };
   }
 
+  private async collectRows(
+    row: ExportJobRow,
+    db: Db,
+  ): Promise<{ header: string[]; rows: CsvCellValue[][] }> {
+    if (row.source === "cbt_results") {
+      return this.collectWith(this.sources.cbt_results, row.filter, db);
+    }
+    if (row.source === "app_users") {
+      return this.collectWith(this.sources.app_users, row.filter, db);
+    }
+    return this.collectWith(this.sources.activity_logs, row.filter, db);
+  }
+
   private async downloadAuditAppId(row: ExportJobRow): Promise<string | null> {
+    if (row.source === "cbt_results") {
+      if (!row.appSlug) {
+        return null;
+      }
+      const app = await this.apps.findBySlug(this.controlDb(), row.appSlug);
+      return app ? String(app.id) : null;
+    }
     if (row.source === "app_users") {
       if (!row.appSlug) {
         return null;

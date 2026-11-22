@@ -6,6 +6,7 @@ import { AuthGuard } from "../../../common/guards/auth.guard";
 import { PermissionGuard } from "../../../common/guards/permission.guard";
 import { ActivityLogsExportResolver } from "./activity-logs-export.resolver";
 import { AppUsersExportResolver } from "./app-users-export.resolver";
+import { CbtResultsExportResolver } from "./cbt-results-export.resolver";
 import { ExportJobsResolver } from "./export-jobs.resolver";
 
 const reflector = new Reflector();
@@ -68,6 +69,43 @@ describe("AppUsersExportResolver metadata", () => {
 
     expect(transformed.filter?.search).toBe("budi");
     expect(transformed.filter?.status).toBe("active");
+  });
+});
+
+describe("CbtResultsExportResolver metadata", () => {
+  it("dikunci AuthGuard + AppContextGuard + PermissionGuard urut", () => {
+    expect(guardsOf(CbtResultsExportResolver)).toEqual([
+      AuthGuard,
+      AppContextGuard,
+      PermissionGuard,
+    ]);
+  });
+
+  it("exportCbtResults → cbt.results.view + @AppScoped", () => {
+    expect(
+      permsOf(CbtResultsExportResolver.prototype, "exportCbtResults"),
+    ).toEqual(["cbt.results.view"]);
+    expect(
+      scopedOf(CbtResultsExportResolver.prototype, "exportCbtResults"),
+    ).toBe(true);
+  });
+
+  it("argumen exportCbtResults menerima filter tanpa ditolak whitelist", async () => {
+    const { ValidationPipe } = await import("@nestjs/common");
+    const pipe = new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    });
+
+    const { ExportCbtResultsArgs } = await import("./dto/export.input");
+    const transformed = (await pipe.transform(
+      { filter: { packageId: "1", passed: true } },
+      { type: "body", metatype: ExportCbtResultsArgs },
+    )) as InstanceType<typeof ExportCbtResultsArgs>;
+
+    expect(transformed.filter?.packageId).toBe("1");
+    expect(transformed.filter?.passed).toBe(true);
   });
 });
 

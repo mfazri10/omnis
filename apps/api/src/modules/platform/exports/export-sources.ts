@@ -1,4 +1,9 @@
 import type { Db } from "../../../database/database.service";
+import { BadRequestException } from "@nestjs/common";
+import {
+  CBT_TABLES_MISSING_MESSAGE,
+  isUndefinedTable,
+} from "../../cbt/cbt-dashboard.section";
 import type { AppUserRow } from "../app-users/app-users.entity";
 import type { AppUserFilters } from "../app-users/app-users.repository";
 import type { AppUsersRepository } from "../app-users/app-users.repository";
@@ -7,6 +12,10 @@ import type {
   ActivityLogListItem,
 } from "../activity-logs/activity-logs.repository";
 import type { ActivityLogsRepository } from "../activity-logs/activity-logs.repository";
+import type {
+  CbtResultListItem,
+  CbtSessionsRepository,
+} from "../../cbt/sessions.repository";
 import type {
   ExportJobFilterJson,
   ExportSourceKey,
@@ -43,11 +52,19 @@ export interface ExportSourceDef<Row, RepoFilter> {
 export interface ExportSourceRegistry {
   app_users: ExportSourceDef<AppUserRow, AppUserFilters>;
   activity_logs: ExportSourceDef<ActivityLogListItem, ActivityLogFilters>;
+  cbt_results: ExportSourceDef<CbtResultListItem, CbtResultFilters>;
+}
+
+/** Filter hasil CBT: sama dengan daftar hasil di layar CMS. */
+export interface CbtResultFilters {
+  packageId?: number;
+  passed?: boolean;
 }
 
 export interface ExportSourceRepos {
   appUsers: AppUsersRepository;
   activityLogs: ActivityLogsRepository;
+  cbtSessions: CbtSessionsRepository;
 }
 
 function isNonEmptyString(value: unknown): value is string {
@@ -180,11 +197,73 @@ export function createExportSources(
       listBatch: (db, filter, page) =>
         repos.activityLogs.list(db, filter, page),
     },
+    cbt_results: {
+      key: "cbt_results",
+      label: "hasil CBT",
+      permission: "cbt.results.view",
+      appScoped: true,
+      fileNamePrefix: "hasil-cbt",
+      columns: [
+        { header: "id", pick: (row) => row.id },
+        { header: "sessionId", pick: (row) => row.sessionId },
+        { header: "participantName", pick: (row) => row.participantName },
+        { header: "packageId", pick: (row) => row.packageId },
+        { header: "packageTitle", pick: (row) => row.packageTitle },
+        { header: "twkScore", pick: (row) => row.twkScore },
+        { header: "tiuScore", pick: (row) => row.tiuScore },
+        { header: "tkpScore", pick: (row) => row.tkpScore },
+        { header: "totalScore", pick: (row) => row.totalScore },
+        { header: "passed", pick: (row) => row.passed },
+        { header: "computedAt", pick: (row) => row.computedAt },
+        { header: "finishedAt", pick: (row) => row.finishedAt },
+      ],
+      toJson: (filter) =>
+        stripUndefined({ packageId: filter.packageId, passed: filter.passed }),
+      fromJson: (json) => {
+        const filter: CbtResultFilters = {};
+        const packageId = asPositiveInt(json["packageId"]);
+        if (packageId !== undefined) {
+          filter.packageId = packageId;
+        }
+        if (typeof json["passed"] === "boolean") {
+          filter.passed = json["passed"];
+        }
+        return filter;
+      },
+      count: (db, filter) =>
+        withCbtTables(db, () => repos.cbtSessions.countResults(db, filter)),
+      listBatch: (db, filter, page) =>
+        withCbtTables(db, () => repos.cbtSessions.listResults(db, filter, page)),
+    },
   };
 }
 
+/**
+ * Jalur ekspor tidak lewat resolver modul CBT, jadi interceptor 42P01
+ * modul itu tidak berlaku di sini: sumber hasil CBT memetakan
+ * `undefined_table` sendiri agar aplikasi tanpa modul dijawab pesan
+ * yang sama, bukan INTERNAL_ERROR.
+ */
+async function withCbtTables<T>(
+  _db: Db,
+  run: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await run();
+  } catch (error: unknown) {
+    if (isUndefinedTable(error)) {
+      throw new BadRequestException(CBT_TABLES_MISSING_MESSAGE);
+    }
+    throw error;
+  }
+}
+
 export function isExportSourceKey(value: string): value is ExportSourceKey {
-  return value === "app_users" || value === "activity_logs";
+  return (
+    value === "app_users" ||
+    value === "activity_logs" ||
+    value === "cbt_results"
+  );
 }
 
 /** Satu baris repository → sel CSV sesuai urutan kolom sumber. */

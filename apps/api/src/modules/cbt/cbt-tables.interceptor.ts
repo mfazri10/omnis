@@ -4,7 +4,7 @@ import {
 } from "@nestjs/common";
 import type { CallHandler, ExecutionContext, NestInterceptor } from "@nestjs/common";
 import { Observable, catchError, throwError } from "rxjs";
-import { isUndefinedTable } from "./cbt-dashboard.section";
+import { isUndefinedTable, CBT_TABLES_MISSING_MESSAGE } from "./cbt-dashboard.section";
 
 /**
  * Aplikasi tanpa migrasi app-cbt menghasilkan error Postgres 42P01
@@ -19,9 +19,7 @@ export class CbtTablesInterceptor implements NestInterceptor {
       catchError((error: unknown) =>
         throwError(() =>
           isUndefinedTable(error)
-            ? new BadRequestException(
-                "Modul CBT belum terpasang di aplikasi ini. Terapkan migrasi app-cbt ke App DB aplikasi.",
-              )
+            ? new BadRequestException(CBT_TABLES_MISSING_MESSAGE)
             : error,
         ),
       ),
