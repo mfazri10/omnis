@@ -39,9 +39,10 @@ Pendekatan pertama dipilih karena permintaan mencakup kesiapan jalur produksi. M
 
 - Pertahankan bentuk payload push; driver FCM menerima identitas aplikasi beserta kredensial yang sudah didekripsi server-side.
 - Setiap Firebase app di-cache per aplikasi dan kredensial, cache lama dibersihkan saat rotasi, lalu semua app ditutup saat worker berhenti.
-- Mode `noop` tetap tersedia untuk development, namun kampanye harus berakhir dengan status `simulated`, bukan `sent`.
+- Mode `noop` tetap tersedia untuk development, namun kampanye harus berakhir dengan status `simulated`, bukan `sent`. Statistik harus membedakan simulasi dari pengiriman nyata melalui `simulated_count`.
 - Hasil push ambigu (FCM mungkin menerima pesan, tetapi worker tidak menerima atau menyimpan konfirmasi) berakhir dengan status `unknown` dan tidak dikirim ulang otomatis. Error yang secara tegas menyatakan FCM tidak menerima pesan menjadi gagal terminal; operator dapat membedakan dan meninjau hasil `unknown`.
-- Pindahkan pemindaian kampanye jatuh tempo dan pemrosesan ekspor ke worker BullMQ terpisah. API tetap mencatat perubahan domain; worker melakukan klaim database bersyarat dan eksekusi job yang idempotent.
+- Simpan agregat hasil per token; hapus token hanya jika FCM secara eksplisit menyatakannya tidak valid.
+- Pindahkan pemindaian kampanye jatuh tempo dan pemrosesan ekspor ke worker BullMQ terpisah. API tetap mencatat perubahan domain; worker melakukan klaim database bersyarat dan eksekusi job yang idempotent. Retry dan kegagalan terminal memperbarui status domain serta audit log tanpa mengirim ulang target yang sudah terkirim atau hasilnya ambigu.
 - Worker menjalankan rekonsiliasi periodik untuk menemukan kampanye/job yang tertinggal setelah restart. Worker menyimpan target dan memperbarui heartbeat kampanye selama pengiriman. Jika lease pengiriman melewati 10 menit, sisa target dihitung sebagai `unknown`; kampanye tidak di-retry otomatis.
 - Tambahkan script untuk menjalankan worker terpisah. Mode test mematikan scheduler otomatis.
 
@@ -71,5 +72,5 @@ Pendekatan pertama dipilih karena permintaan mencakup kesiapan jalur produksi. M
 - **Secret tidak tersedia di mesin ini:** verifikasi memakai mock dan fixture; kode menyediakan konfigurasi tanpa menyimpan secret.
 - **Job ganda saat retry:** semua eksekusi memakai ID job deterministik dan klaim/status bersyarat database.
 - **Driver lokal tidak cocok untuk produksi multi-instance:** konfigurasi production menolak driver lokal.
-- **Pengiriman FCM ambigu setelah crash:** hindari duplikat dengan tidak mengulang kampanye yang tertinggal di `sending`; recovery mengubah target yang tidak tercatat sebagai terkirim/gagal menjadi `unknown` untuk ditinjau operator.
+- **Pengiriman FCM sebagian berhasil atau ambigu setelah crash:** simpan agregat per token dan hapus hanya token yang secara eksplisit tidak valid. Jangan kirim ulang target yang sudah terkirim atau ambigu; recovery mengubah target yang tidak tercatat sebagai terkirim/gagal menjadi `unknown` untuk ditinjau operator.
 - **Uji browser memodifikasi data lokal:** gunakan database fixture terpisah dan bersihkan setelah selesai.

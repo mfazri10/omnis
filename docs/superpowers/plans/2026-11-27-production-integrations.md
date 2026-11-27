@@ -23,7 +23,7 @@
 
 ## Review Focus
 
-- Campaign recovery must not automatically resend an ambiguous FCM attempt; stale campaign rows move to `unknown` and recovery makes no sender call.
+- Campaign recovery must never resend an ambiguous or already delivered FCM attempt; stale unresolved targets move to `unknown`, and recovery makes no sender call. Pin tests for persisted per-token outcomes and recovery without a sender call.
 - Campaign reschedule/cancel races must not execute stale scheduled work; pin with a worker test that re-reads and conditionally claims the campaign.
 - Production boot with incomplete SMTP/S3/FCM configuration must fail with actionable messages; pin with environment validation tests.
 - A noop run must end as `simulated`; pin with a service test and CMS status labels.
