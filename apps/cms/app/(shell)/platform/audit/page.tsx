@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { TableToolbar } from "@/components/shared/table-toolbar";
 import { ErrorState, LoadingState } from "@/components/shared/page-state";
 import { DataTable } from "@/components/shared/data-table";
+import { Button } from "@/components/ui/button";
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { useQuery } from "@apollo/client/react";
@@ -177,7 +178,7 @@ export default function AuditPage(): JSX.Element {
       <PageHeader title="Audit Log" />
       {!ready && <LoadingState />}
       {ready && !canView && (
-        <p className="mt-6 text-sm text-slate-600">
+        <p className="mt-6 text-sm text-muted-foreground">
           Anda tidak memiliki izin untuk melihat Audit Log.
         </p>
       )}
@@ -243,19 +244,12 @@ export default function AuditPage(): JSX.Element {
               />
             </label>
             <div className="flex gap-2">
-              <button
-                type="submit"
-                className="min-h-[44px] bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-              >
+              <Button type="submit" className="min-h-11">
                 Terapkan filter
-              </button>
-              <button
-                type="button"
-                onClick={handleReset}
-                className="min-h-[44px] border border-slate-300 px-4 py-2 text-sm text-slate-900"
-              >
+              </Button>
+              <Button type="button" variant="outline" className="min-h-11" onClick={handleReset}>
                 Atur ulang
-              </button>
+              </Button>
             </div>
             <ExportButton
               requestMutation={EXPORT_ACTIVITY_LOGS_MUTATION}

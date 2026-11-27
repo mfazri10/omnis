@@ -38,19 +38,19 @@ function PreviewRow({
 }): JSX.Element {
   return (
     <p className="text-sm">
-      <span className="text-slate-600">{label}: </span>
-      <span className="text-slate-900">{value}</span>
+      <span className="text-muted-foreground">{label}: </span>
+      <span className="text-foreground">{value}</span>
     </p>
   );
 }
 
 function EffectivePreview({ config }: { config: AppConfigData }): JSX.Element {
   return (
-    <section className="border border-slate-200 p-4">
-      <h2 className="text-sm font-semibold text-slate-900">
+    <section className="rounded-xl border border-border bg-card p-4">
+      <h2 className="text-sm font-semibold">
         Pratinjau nilai efektif
       </h2>
-      <p className="mt-1 text-sm text-slate-600">
+      <p className="mt-1 text-sm text-muted-foreground">
         Nilai dari server, diperbarui setiap berhasil menyimpan.
       </p>
       <div className="mt-3 flex flex-col gap-1">
@@ -66,7 +66,7 @@ function EffectivePreview({ config }: { config: AppConfigData }): JSX.Element {
             alt={`Ikon ${config.displayName}`}
             width={40}
             height={40}
-            className="mt-1 h-10 w-10 border border-slate-200 object-contain"
+            className="mt-1 h-10 w-10 border border-border object-contain"
           />
         )}
         <PreviewRow
@@ -82,13 +82,13 @@ function EffectivePreview({ config }: { config: AppConfigData }): JSX.Element {
         />
         <PreviewRow label="Versi minimum iOS" value={config.minVersionIos} />
         <p className="flex items-center gap-2 text-sm">
-          <span className="text-slate-600">Warna primer: </span>
+          <span className="text-muted-foreground">Warna primer: </span>
           <span
             aria-hidden="true"
-            className="inline-block h-4 w-4 border border-slate-300"
+            className="inline-block h-4 w-4 border border-border"
             style={{ backgroundColor: config.themePrimaryColor }}
           />
-          <span className="text-slate-900">{config.themePrimaryColor}</span>
+          <span className="text-foreground">{config.themePrimaryColor}</span>
         </p>
         <PreviewRow
           label="Email dukungan"
@@ -164,22 +164,22 @@ function SettingsForm({
       onSubmit={(e) => void handleSubmit(e)}
     >
       <section>
-        <h2 className="text-sm font-semibold text-slate-900">Maintenance</h2>
+        <h2 className="text-sm font-semibold">Maintenance</h2>
         <div className="mt-2 flex flex-col gap-3">
-          <label className="flex min-h-[44px] cursor-pointer items-center gap-3">
+          <label className="flex min-h-11 cursor-pointer items-center gap-3">
             <input
               type="checkbox"
               checked={maintenanceMode}
               disabled={disabled}
               onChange={(e) => setMaintenanceMode(e.target.checked)}
-              className="h-5 w-5 accent-slate-900"
+              className="h-5 w-5 accent-primary"
             />
-            <span className="text-slate-900">
+            <span className="text-foreground">
               Mode maintenance {maintenanceMode ? "aktif" : "mati"}
             </span>
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-slate-900">Pesan maintenance</span>
+            <span className="text-foreground">Pesan maintenance</span>
             <textarea
               rows={3}
               value={message}
@@ -194,10 +194,10 @@ function SettingsForm({
       </section>
 
       <section>
-        <h2 className="text-sm font-semibold text-slate-900">Versi minimum</h2>
+        <h2 className="text-sm font-semibold">Versi minimum</h2>
         <div className="mt-2 grid grid-cols-1 gap-3 md:grid-cols-2">
           <label className="flex flex-col gap-1">
-            <span className="text-slate-900">Android (format 1.2.3)</span>
+            <span className="text-foreground">Android (format 1.2.3)</span>
             <Input
               type="text"
               required
@@ -209,7 +209,7 @@ function SettingsForm({
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-slate-900">iOS (format 1.2.3)</span>
+            <span className="text-foreground">iOS (format 1.2.3)</span>
             <Input
               type="text"
               required
@@ -230,21 +230,21 @@ function SettingsForm({
             label="URL store iOS"
             value={config.storeUrlIos ?? "belum diisi di registry"}
           />
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-muted-foreground">
             URL store dikelola di registry aplikasi, tidak diubah dari sini.
           </p>
         </div>
       </section>
 
       <section>
-        <h2 className="text-sm font-semibold text-slate-900">Identitas</h2>
+        <h2 className="text-sm font-semibold">Identitas</h2>
         <div className="mt-2 flex flex-col gap-3">
           <PreviewRow label="Nama tampil" value={config.displayName} />
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-muted-foreground">
             Nama tampil berasal dari registry dan tidak diubah dari sini.
           </p>
           <label className="flex flex-col gap-1">
-            <span className="text-slate-900">URL logo (http/https)</span>
+            <span className="text-foreground">URL logo (http/https)</span>
             <input
               type="url"
               value={logo}
@@ -258,7 +258,7 @@ function SettingsForm({
           <div className="flex flex-col gap-1">
             <label
               htmlFor="theme-primary-color"
-              className="text-slate-900"
+              className="text-foreground"
             >
               Warna primer (hex, contoh #1976D2)
             </label>
@@ -269,7 +269,7 @@ function SettingsForm({
                 value={HEX_COLOR.test(color) ? color : DEFAULT_COLOR}
                 disabled={disabled}
                 onChange={(e) => setColor(e.target.value)}
-                className="h-10 w-12 cursor-pointer border border-slate-300 bg-white p-1 disabled:cursor-not-allowed"
+                className="h-10 w-12 cursor-pointer border border-input bg-card p-1 disabled:cursor-not-allowed"
               />
               <input
                 id="theme-primary-color"
@@ -287,12 +287,12 @@ function SettingsForm({
       </section>
 
       <section>
-        <h2 className="text-sm font-semibold text-slate-900">
+        <h2 className="text-sm font-semibold">
           Kontak dukungan
         </h2>
         <div className="mt-2 grid grid-cols-1 gap-3 md:grid-cols-2">
           <label className="flex flex-col gap-1">
-            <span className="text-slate-900">Email</span>
+            <span className="text-foreground">Email</span>
             <input
               type="email"
               value={email}
@@ -303,7 +303,7 @@ function SettingsForm({
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-slate-900">WhatsApp (contoh +62812…)</span>
+            <span className="text-foreground">WhatsApp (contoh +62812…)</span>
             <Input
               type="tel"
               value={whatsapp}
@@ -325,7 +325,7 @@ function SettingsForm({
           {saving ? "Menyimpan…" : "Simpan pengaturan"}
         </Button>
         {!canManage && (
-          <p className="mt-2 text-sm text-slate-600">
+          <p className="mt-2 text-sm text-muted-foreground">
             Anda hanya bisa melihat pengaturan ini. Menyimpan perubahan butuh
             hak kelola konfigurasi aplikasi.
           </p>
@@ -363,20 +363,20 @@ export default function AppSettingsPage({
     <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
       <PageHeader title={config?.displayName ?? appSlug} description="Pengaturan aplikasi" />
       {!contextReady && (
-        <p className="mt-6 text-slate-900">Menyiapkan konteks…</p>
+        <p className="mt-6 text-foreground">Menyiapkan konteks…</p>
       )}
       {contextReady && loading && (
-        <p className="mt-6 text-slate-900">Memuat pengaturan…</p>
+        <p className="mt-6 text-foreground">Memuat pengaturan…</p>
       )}
       {contextReady && error && (
         <div className="mt-6">
-          <p className="text-sm text-red-700">
+          <p className="text-sm text-destructive">
             {graphQLErrorMessage(error, "Gagal memuat pengaturan.")}
           </p>
           <button
             type="button"
             onClick={() => void refetch()}
-            className="mt-2 min-h-[44px] underline"
+            className="mt-2 min-h-11 underline"
           >
             Muat ulang
           </button>
@@ -388,8 +388,8 @@ export default function AppSettingsPage({
             <p
               className={
                 status.kind === "sukses"
-                  ? "text-sm text-green-700"
-                  : "text-sm text-red-700"
+                  ? "text-sm text-emerald-700"
+                  : "text-sm text-destructive"
               }
             >
               {status.text}

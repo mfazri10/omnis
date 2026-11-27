@@ -147,7 +147,7 @@ function UserForm({ initial, onDone, onCancel }: UserFormProps): JSX.Element {
 
   return (
     <section className="rounded-xl border border-border bg-card p-4">
-      <h2 className="text-sm font-semibold text-slate-900">
+      <h2 className="text-sm font-semibold">
         {initial === null ? "Tambah user" : `Ubah user: ${initial.name}`}
       </h2>
       <form
@@ -213,7 +213,7 @@ function UserForm({ initial, onDone, onCancel }: UserFormProps): JSX.Element {
             className={CONTROL_CLASS}
           />
         </label>
-        <p className="text-xs text-slate-600 md:col-span-2">
+        <p className="text-xs text-muted-foreground md:col-span-2">
           Minimal salah satu dari email atau nomor telepon wajib diisi.
         </p>
         <div className="flex gap-2 md:col-span-2">
@@ -365,14 +365,14 @@ export default function AppUsersPage({
       <PageHeader title="Pengguna aplikasi" description={appSlug} />
       {!ready && <LoadingState />}
       {ready && !canView && (
-        <p className="mt-6 text-sm text-slate-600">
+        <p className="mt-6 text-sm text-muted-foreground">
           Anda tidak memiliki izin untuk melihat user aplikasi ini.
         </p>
       )}
       {ready && canView && (
         <>
           {!contextReady && (
-            <p className="mt-6 text-slate-900">Menyiapkan konteks…</p>
+            <p className="mt-6 text-foreground">Menyiapkan konteks…</p>
           )}
           {contextReady && (
             <>
@@ -404,28 +404,22 @@ export default function AppUsersPage({
                   </select>
                 </label>
                 <div className="flex gap-2">
-                  <button
-                    type="submit"
-                    className="min-h-[44px] bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-                  >
+                  <Button type="submit" className="min-h-11">
                     Terapkan filter
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleReset}
-                    className="min-h-[44px] border border-slate-300 px-4 py-2 text-sm text-slate-900"
-                  >
+                  </Button>
+                  <Button type="button" variant="outline" className="min-h-11" onClick={handleReset}>
                     Atur ulang
-                  </button>
+                  </Button>
                 </div>
                 {canManage && (
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    className="min-h-11"
                     onClick={openCreate}
-                    className="min-h-[44px] border border-slate-900 px-4 py-2 text-sm font-semibold text-slate-900"
                   >
                     Tambah user
-                  </button>
+                  </Button>
                 )}
                 <ExportButton
                   requestMutation={EXPORT_APP_USERS_MUTATION}
@@ -438,8 +432,8 @@ export default function AppUsersPage({
                 <p
                   className={
                     status.kind === "sukses"
-                      ? "mt-4 text-sm text-green-700"
-                      : "mt-4 text-sm text-red-700"
+                      ? "mt-4 text-sm text-emerald-700"
+                      : "mt-4 text-sm text-destructive"
                   }
                 >
                   {status.text}

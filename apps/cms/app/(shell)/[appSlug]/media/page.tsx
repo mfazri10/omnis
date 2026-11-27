@@ -29,7 +29,7 @@ import { Input } from "@/components/ui/input";
 
 const PER_PAGE = 24;
 
-const LABEL_CLASS = "text-xs font-semibold text-slate-600";
+const LABEL_CLASS = "text-xs font-semibold text-muted-foreground";
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
 
@@ -170,13 +170,13 @@ function UploadDialog({ open, appSlug, finalFocus, onDone, onClose }: UploadDial
               aria-valuenow={percent}
               aria-valuemin={0}
               aria-valuemax={100}
-              className="h-2 border border-slate-300"
+              className="h-2 border border-border"
             >
-              <div className="h-full bg-slate-900" style={{ width: `${percent}%` }} />
+              <div className="h-full bg-primary" style={{ width: `${percent}%` }} />
             </div>
           )}
           {uploading && (
-            <p className="text-xs text-slate-600">{`Mengunggah… ${percent}%`}</p>
+            <p className="text-xs text-muted-foreground">{`Mengunggah… ${percent}%`}</p>
           )}
           {error && <ErrorState>{error}</ErrorState>}
           <div className="flex gap-2">
@@ -296,16 +296,16 @@ export default function MediaPage({
       <PageHeader title="Perpustakaan media" description={appSlug} actions={canView && canCreate &&
         <Button className="min-h-11" type="button" ref={uploadTrigger}
           onClick={() => { setStatus(null); setDialogOpen(true); }}>Unggah media</Button>} />
-      {!ready && <p className="mt-6 text-slate-900">Memuat…</p>}
+      {!ready && <p className="mt-6 text-foreground">Memuat…</p>}
       {ready && !canView && (
-        <p className="mt-6 text-sm text-slate-600">
+        <p className="mt-6 text-sm text-muted-foreground">
           Anda tidak memiliki izin untuk melihat media aplikasi ini.
         </p>
       )}
       {ready && canView && (
         <>
           {!contextReady && (
-            <p className="mt-6 text-slate-900">Menyiapkan konteks…</p>
+            <p className="mt-6 text-foreground">Menyiapkan konteks…</p>
           )}
           {contextReady && (
             <>
@@ -343,8 +343,8 @@ export default function MediaPage({
                   role={status.kind === "sukses" ? "status" : "alert"}
                   className={
                     status.kind === "sukses"
-                      ? "mt-4 text-sm text-green-700"
-                      : "mt-4 text-sm text-red-700"
+                      ? "mt-4 text-sm text-emerald-700"
+                      : "mt-4 text-sm text-destructive"
                   }
                 >
                   {status.text}
@@ -400,29 +400,29 @@ export default function MediaPage({
                           />
                         ) : (
                           <div
-                            className="flex aspect-square w-full flex-col items-center justify-center gap-1 bg-slate-100"
+                            className="flex aspect-square w-full flex-col items-center justify-center gap-1 bg-muted"
                             aria-label={`Berkas ${item.fileName}`}
                           >
-                            <span className="text-lg font-bold text-slate-700">
+                            <span className="text-lg font-bold text-muted-foreground">
                               PDF
                             </span>
-                            <span className="max-w-full truncate px-2 text-xs text-slate-600">
+                            <span className="max-w-full truncate px-2 text-xs text-muted-foreground">
                               {item.fileName}
                             </span>
                           </div>
                         )}
                         <div className="flex flex-1 flex-col gap-1 p-3">
                           <p
-                            className="truncate text-sm font-semibold text-slate-900"
+                            className="truncate text-sm font-semibold"
                             title={item.fileName}
                           >
                             {item.fileName}
                           </p>
-                          <p className="text-xs text-slate-600">
+                          <p className="text-xs text-muted-foreground">
                             {`${formatBytes(item.sizeBytes)} · ${formatDateTime(item.createdAt)}`}
                           </p>
                           {item.altText && (
-                            <p className="truncate text-xs text-slate-600">
+                            <p className="truncate text-xs text-muted-foreground">
                               {item.altText}
                             </p>
                           )}
@@ -431,7 +431,7 @@ export default function MediaPage({
                               type="button"
                               disabled={deleting}
                               onClick={() => void handleDelete(item)}
-                              className="mt-2 min-h-[44px] self-start text-sm text-red-700 underline disabled:opacity-50"
+                              className="mt-2 min-h-11 self-start text-sm text-destructive underline disabled:opacity-50"
                             >
                               Hapus
                             </button>

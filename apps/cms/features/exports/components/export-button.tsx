@@ -126,7 +126,7 @@ export function ExportButton<F>({
         >
           Unduh CSV
         </a>
-        <p className="text-xs text-slate-600">
+        <p className="text-xs text-muted-foreground">
           {job.fileName}
           {job.fileSizeBytes !== null && ` (${formatSize(job.fileSizeBytes)})`}
           {job.expiresAt && `, berlaku sampai ${formatExpiry(job.expiresAt)}`}

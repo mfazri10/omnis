@@ -66,7 +66,7 @@ function AssignForm({ adminId }: { adminId: string }): JSX.Element {
   return (
     <form className="flex flex-col gap-2" onSubmit={(e) => void handleSubmit(e)}>
       <label className="flex flex-col gap-1 text-sm">
-        <span className="text-slate-900">Tambah penetapan role</span>
+        <span className="text-foreground">Tambah penetapan role</span>
         <select
           required
           value={roleId}
@@ -82,16 +82,16 @@ function AssignForm({ adminId }: { adminId: string }): JSX.Element {
         </select>
       </label>
       {chosen && chosen.scopeType === "app" && (
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted-foreground">
           Berlaku untuk aplikasi: {chosenApp?.name ?? chosen.appId}
         </p>
       )}
-      {error && <p className="text-sm text-red-700">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
       <div>
         <button
           type="submit"
           disabled={saving || roleId === ""}
-          className="bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+          className="min-h-11 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
         >
           {saving ? "Menyimpan…" : "Tetapkan"}
         </button>
@@ -123,7 +123,7 @@ function EffectivePanel({ adminId }: { adminId: string }): JSX.Element {
   return (
     <div className="text-sm">
       <label className="flex flex-col gap-1">
-        <span className="text-slate-900">Konteks</span>
+        <span className="text-foreground">Konteks</span>
         <select
           value={contextApp}
           onChange={(e) => setContextApp(e.target.value)}
@@ -137,12 +137,12 @@ function EffectivePanel({ adminId }: { adminId: string }): JSX.Element {
           ))}
         </select>
       </label>
-      {loading && <p className="mt-2 text-slate-600">Memuat…</p>}
+      {loading && <p className="mt-2 text-muted-foreground">Memuat…</p>}
       {!loading && keys.length === 0 && (
-        <p className="mt-2 text-slate-600">Tidak ada hak dalam konteks ini.</p>
+        <p className="mt-2 text-muted-foreground">Tidak ada hak dalam konteks ini.</p>
       )}
       {!loading && keys.length > 0 && (
-        <ul className="mt-2 list-disc pl-5 text-slate-900">
+        <ul className="mt-2 list-disc pl-5">
           {keys.map((key) => (
             <li key={key}>{key}</li>
           ))}
@@ -220,20 +220,20 @@ export default function AdminDetailPage(): JSX.Element {
   return (
     <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
       <PageHeader title="Kelola admin" />
-      {loading && <p className="mt-6 text-slate-900">Memuat…</p>}
+      {loading && <p className="mt-6 text-foreground">Memuat…</p>}
       {queryError && (
-        <p className="mt-6 text-sm text-red-700">
+        <p className="mt-6 text-sm text-destructive">
           {graphQLErrorMessage(queryError, "Gagal memuat admin.")}
         </p>
       )}
       {data && !admin && (
-        <p className="mt-6 text-sm text-red-700">Admin tidak ditemukan.</p>
+        <p className="mt-6 text-sm text-destructive">Admin tidak ditemukan.</p>
       )}
       {admin && (
         <div className="mt-6 flex flex-col gap-8">
           <section>
-            <h2 className="text-sm font-semibold text-slate-900">Profil</h2>
-            <p className="mt-1 text-sm text-slate-600">
+            <h2 className="text-sm font-semibold">Profil</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
               {admin.email} · {admin.isSuperAdmin ? "Super Admin" : "Admin"} ·{" "}
               {admin.isActive ? "Aktif" : "Nonaktif"}
             </p>
@@ -253,7 +253,7 @@ export default function AdminDetailPage(): JSX.Element {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  className="min-h-11 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
                 >
                   {saving ? "Menyimpan…" : "Ubah nama"}
                 </button>
@@ -262,18 +262,18 @@ export default function AdminDetailPage(): JSX.Element {
                 type="button"
                 disabled={toggling}
                 onClick={() => void handleToggle(!admin.isActive)}
-                className="mt-3 text-sm text-red-700 underline disabled:opacity-50"
+                className="mt-3 text-sm text-destructive underline disabled:opacity-50"
               >
                 {admin.isActive ? "Nonaktifkan" : "Aktifkan kembali"}
               </button>
             </PermissionGate>
           </section>
           <section>
-            <h2 className="text-sm font-semibold text-slate-900">
+            <h2 className="text-sm font-semibold">
               Penetapan role
             </h2>
             {(assignData?.adminAssignments ?? []).length === 0 && (
-              <p className="mt-1 text-sm text-slate-600">
+              <p className="mt-1 text-sm text-muted-foreground">
                 Belum ada penetapan role.
               </p>
             )}
@@ -281,7 +281,7 @@ export default function AdminDetailPage(): JSX.Element {
               {(assignData?.adminAssignments ?? []).map((a) => (
                 <li
                   key={`${a.roleId}:${a.appId ?? "global"}`}
-                  className="flex items-center gap-3 text-slate-900"
+                  className="flex items-center gap-3"
                 >
                   <span>
                     {a.roleName} ({a.scopeType}
@@ -308,14 +308,14 @@ export default function AdminDetailPage(): JSX.Element {
             </PermissionGate>
           </section>
           <section>
-            <h2 className="text-sm font-semibold text-slate-900">
+            <h2 className="text-sm font-semibold">
               Akses efektif
             </h2>
             <div className="mt-1">
               <EffectivePanel adminId={id} />
             </div>
           </section>
-          {error && <p className="text-sm text-red-700">{error}</p>}
+          {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
       )}
     </main>

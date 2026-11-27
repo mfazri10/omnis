@@ -47,7 +47,7 @@ export default function NewAdminPage(): JSX.Element {
         onSubmit={(e) => void handleSubmit(e)}
       >
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-slate-900">Nama</span>
+          <span className="text-foreground">Nama</span>
           <Input
             type="text"
             required
@@ -57,7 +57,7 @@ export default function NewAdminPage(): JSX.Element {
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-slate-900">Email</span>
+          <span className="text-foreground">Email</span>
           <Input
             type="email"
             required
@@ -68,7 +68,7 @@ export default function NewAdminPage(): JSX.Element {
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-slate-900">Kata sandi awal (min. 8 karakter)</span>
+          <span className="text-foreground">Kata sandi awal (min. 8 karakter)</span>
           <Input
             type="password"
             required

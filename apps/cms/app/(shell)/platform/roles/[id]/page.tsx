@@ -76,12 +76,12 @@ function RoleForm({ role }: { role: RoleData }): JSX.Element {
       className="mt-6 flex flex-col gap-4"
       onSubmit={(e) => void handleSubmit(e)}
     >
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-muted-foreground">
         Cakupan: {role.scopeType}
         {role.appId ? ` (app ${role.appId})` : ""}. Cakupan tak bisa diubah.
       </p>
       <label className="flex flex-col gap-1 text-sm">
-        <span className="text-slate-900">Nama</span>
+        <span className="text-foreground">Nama</span>
         <input
           type="text"
           required
@@ -91,7 +91,7 @@ function RoleForm({ role }: { role: RoleData }): JSX.Element {
         />
       </label>
       <label className="flex flex-col gap-1 text-sm">
-        <span className="text-slate-900">Deskripsi (opsional)</span>
+        <span className="text-foreground">Deskripsi (opsional)</span>
         <input
           type="text"
           value={description}
@@ -100,10 +100,10 @@ function RoleForm({ role }: { role: RoleData }): JSX.Element {
         />
       </label>
       <div className="text-sm">
-        <p className="text-slate-900">Permission</p>
+        <p className="text-foreground">Permission</p>
         {modules.map((module) => (
           <div key={module} className="mt-3">
-            <p className="font-semibold text-slate-900">{module}</p>
+            <p className="font-semibold">{module}</p>
             <div className="mt-1 flex flex-col gap-1">
               {permissions
                 .filter((p) => p.module === module)
@@ -112,7 +112,7 @@ function RoleForm({ role }: { role: RoleData }): JSX.Element {
                   return (
                     <label
                       key={p.key}
-                      className="flex items-center gap-2 text-slate-900"
+                      className="flex items-center gap-2"
                     >
                       <input
                         type="checkbox"
@@ -122,7 +122,7 @@ function RoleForm({ role }: { role: RoleData }): JSX.Element {
                       />
                       <span>
                         {p.label}
-                        <span className="text-slate-600"> ({p.key})</span>
+                        <span className="text-muted-foreground"> ({p.key})</span>
                       </span>
                     </label>
                   );
@@ -131,12 +131,12 @@ function RoleForm({ role }: { role: RoleData }): JSX.Element {
           </div>
         ))}
       </div>
-      {error && <p className="text-sm text-red-700">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="flex gap-4">
         <button
           type="submit"
           disabled={saving}
-          className="bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+          className="min-h-11 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
         >
           {saving ? "Menyimpan…" : "Simpan"}
         </button>
@@ -147,7 +147,7 @@ function RoleForm({ role }: { role: RoleData }): JSX.Element {
           type="button"
           disabled={deleting}
           onClick={() => void handleDelete()}
-          className="px-4 py-2 text-sm text-red-700 underline disabled:opacity-50"
+          className="min-h-11 px-4 py-2 text-sm text-destructive underline disabled:opacity-50"
         >
           Hapus role
         </button>
@@ -166,14 +166,14 @@ export default function RoleDetailPage(): JSX.Element {
   return (
     <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
       <PageHeader title="Ubah role" />
-      {loading && <p className="mt-6 text-slate-900">Memuat…</p>}
+      {loading && <p className="mt-6 text-foreground">Memuat…</p>}
       {error && (
-        <p className="mt-6 text-sm text-red-700">
+        <p className="mt-6 text-sm text-destructive">
           {graphQLErrorMessage(error, "Gagal memuat role.")}
         </p>
       )}
       {data && !role && (
-        <p className="mt-6 text-sm text-red-700">Role tidak ditemukan.</p>
+        <p className="mt-6 text-sm text-destructive">Role tidak ditemukan.</p>
       )}
       {role && <RoleForm key={role.id} role={role} />}
     </main>

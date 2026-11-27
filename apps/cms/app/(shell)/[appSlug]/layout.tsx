@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { useToastStore } from "../../../stores/use-toast-store";
 import { useSessionStore } from "../../../stores/use-session-store";
 import { CMS_PICKER_PATH } from "@/features/shell/routes";
+import { Button } from "@/components/ui/button";
 
 export default function AppSlugLayout({
   children,
@@ -39,7 +40,7 @@ export default function AppSlugLayout({
   if (!ready) {
     return (
       <main className="mx-auto max-w-xl px-6 py-8 font-sans">
-        <p className="text-slate-900">Menyiapkan sesi…</p>
+        <p className="text-foreground">Menyiapkan sesi…</p>
       </main>
     );
   }
@@ -47,16 +48,16 @@ export default function AppSlugLayout({
   if (!known) {
     return (
       <main className="mx-auto max-w-xl px-6 py-8 font-sans">
-        <h1 className="text-2xl font-bold text-slate-900">
+        <h1 className="text-2xl font-semibold tracking-tight">
           Anda tidak memiliki akses
         </h1>
-        <p className="mt-2 text-sm text-slate-600">
+        <p className="mt-2 text-sm text-muted-foreground">
           Aplikasi &ldquo;{appSlug}&rdquo; tidak ada atau berada di luar hak
           Anda.
         </p>
-        <button
+        <Button
           type="button"
-          className="mt-4 bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+          className="mt-4 min-h-11"
           onClick={() => {
             setActiveSlug(null);
             pushToast("Kembali ke pemilih aplikasi.");
@@ -64,14 +65,14 @@ export default function AppSlugLayout({
           }}
         >
           Kembali ke pemilih aplikasi
-        </button>
+        </Button>
       </main>
     );
   }
   if (activeSlug !== appSlug) {
     return (
       <main className="mx-auto max-w-xl px-6 py-8 font-sans">
-        <p className="text-slate-900">Menyiapkan konteks aplikasi…</p>
+        <p className="text-foreground">Menyiapkan konteks aplikasi…</p>
       </main>
     );
   }

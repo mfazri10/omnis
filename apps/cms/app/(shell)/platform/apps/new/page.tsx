@@ -62,7 +62,7 @@ export default function NewAppPage(): JSX.Element {
         aria-busy={provisioning}
       >
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-slate-900">Nama</span>
+          <span className="text-foreground">Nama</span>
           <Input
             type="text"
             required
@@ -72,7 +72,7 @@ export default function NewAppPage(): JSX.Element {
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-slate-900">
+          <span className="text-foreground">
             Slug (huruf kecil/angka/strip, 3–64 karakter)
           </span>
           <Input
@@ -85,7 +85,7 @@ export default function NewAppPage(): JSX.Element {
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-slate-900">Catatan (opsional)</span>
+          <span className="text-foreground">Catatan (opsional)</span>
           <Input
             type="text"
             value={notes}
@@ -94,10 +94,10 @@ export default function NewAppPage(): JSX.Element {
           />
         </label>
         <fieldset className="rounded-lg border border-border bg-card p-3">
-          <legend className="px-1 text-sm font-semibold text-slate-900">
+          <legend className="px-1 text-sm font-semibold">
             Modul domain
           </legend>
-          <label className="flex min-h-[44px] items-center gap-2 text-sm text-slate-900">
+          <label className="flex min-h-11 items-center gap-2 text-sm">
             <input
               type="checkbox"
               checked={cbtModule}
@@ -106,7 +106,7 @@ export default function NewAppPage(): JSX.Element {
             />
             CBT (Tes CPNS): bank soal, paket, sesi, hasil &amp; analitik
           </label>
-          <p className="text-xs text-slate-600">
+          <p className="text-xs text-muted-foreground">
             Modul yang dipilih ikut dimigrasi ke database aplikasi saat
             provisioning.
           </p>

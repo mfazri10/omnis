@@ -79,7 +79,7 @@ export default function NewRolePage(): JSX.Element {
         onSubmit={(e) => void handleSubmit(e)}
       >
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-slate-900">Nama</span>
+          <span className="text-foreground">Nama</span>
           <input
             type="text"
             required
@@ -89,7 +89,7 @@ export default function NewRolePage(): JSX.Element {
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-slate-900">Deskripsi (opsional)</span>
+          <span className="text-foreground">Deskripsi (opsional)</span>
           <input
             type="text"
             value={description}
@@ -98,7 +98,7 @@ export default function NewRolePage(): JSX.Element {
           />
         </label>
         <fieldset className="flex gap-6 text-sm">
-          <legend className="text-slate-900">Cakupan</legend>
+          <legend className="text-foreground">Cakupan</legend>
           <label className="flex items-center gap-2">
             <input
               type="radio"
@@ -106,7 +106,7 @@ export default function NewRolePage(): JSX.Element {
               checked={scope === "global"}
               onChange={() => changeScope("global")}
             />
-            <span className="text-slate-900">Global</span>
+            <span className="text-foreground">Global</span>
           </label>
           <label className="flex items-center gap-2">
             <input
@@ -115,12 +115,12 @@ export default function NewRolePage(): JSX.Element {
               checked={scope === "app"}
               onChange={() => changeScope("app")}
             />
-            <span className="text-slate-900">Satu aplikasi</span>
+            <span className="text-foreground">Satu aplikasi</span>
           </label>
         </fieldset>
         {scope === "app" && (
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-slate-900">Aplikasi</span>
+            <span className="text-foreground">Aplikasi</span>
             <select
               required
               value={appId}
@@ -137,11 +137,11 @@ export default function NewRolePage(): JSX.Element {
           </label>
         )}
         <div className="text-sm">
-          <p className="text-slate-900">Permission</p>
-          {permLoading && <p className="mt-2 text-slate-600">Memuat…</p>}
+          <p className="text-foreground">Permission</p>
+          {permLoading && <p className="mt-2 text-muted-foreground">Memuat…</p>}
           {modules.map((module) => (
             <div key={module} className="mt-3">
-              <p className="font-semibold text-slate-900">{module}</p>
+              <p className="font-semibold">{module}</p>
               <div className="mt-1 flex flex-col gap-1">
                 {permissions
                   .filter((p) => p.module === module)
@@ -150,7 +150,7 @@ export default function NewRolePage(): JSX.Element {
                     return (
                       <label
                         key={p.key}
-                        className="flex items-center gap-2 text-slate-900"
+                        className="flex items-center gap-2"
                       >
                         <input
                           type="checkbox"
@@ -160,9 +160,9 @@ export default function NewRolePage(): JSX.Element {
                         />
                         <span>
                           {p.label}
-                          <span className="text-slate-600"> ({p.key})</span>
+                          <span className="text-muted-foreground"> ({p.key})</span>
                           {p.globalOnly && (
-                            <span className="text-slate-600"> (global)</span>
+                            <span className="text-muted-foreground"> (global)</span>
                           )}
                         </span>
                       </label>
@@ -172,12 +172,12 @@ export default function NewRolePage(): JSX.Element {
             </div>
           ))}
         </div>
-        {error && <p className="text-sm text-red-700">{error}</p>}
+        {error && <p className="text-sm text-destructive">{error}</p>}
         <div className="flex gap-4">
           <button
             type="submit"
             disabled={saving}
-            className="bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            className="min-h-11 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
           >
             {saving ? "Menyimpan…" : "Simpan"}
           </button>
