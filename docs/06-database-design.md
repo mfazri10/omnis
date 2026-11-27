@@ -7,7 +7,7 @@ PostgreSQL. Satu server menampung **control-plane DB** (`platform`) + **satu App
 ```text
 platform (control-plane)
   apps, app_configs, admins, roles, permissions,
-  role_permissions, admin_role_assignments,
+  role_permissions, admin_role_assignments, menus,
   activity_logs, notification_campaigns
   + tabel better-auth (user, session, account, verification)
 
@@ -100,6 +100,22 @@ Tanpa `deleted_at` (append-only); retensi ≥ 1 tahun.
 | scheduled_at / sent_at | timestamp NULL | |
 | target_count / sent_count / failed_count / simulated_count / unknown_count | int | Agregat hasil; hasil tak pasti tidak dihitung terkirim |
 
+### `menus` (navigasi mobile per aplikasi)
+
+| Kolom | Tipe | Catatan |
+|---|---|---|
+| id | bigint PK | |
+| app_id | FK → apps | Konfigurasi berada di control-plane dan terisolasi per aplikasi |
+| name | varchar(255) | Label menu |
+| slug | varchar(255) | Unik bersama `app_id` |
+| route_key / icon_key | varchar(255) NULL | Identifier, bukan URL, path, atau kode bebas |
+| parent_id | bigint NULL | Parent harus dari aplikasi yang sama; parent dengan anak tidak dapat dihapus |
+| order_no | int | Urutan sibling; nilai seri diputus dengan `id` |
+| is_active | boolean | |
+| created_at / updated_at | timestamp with time zone | |
+
+Constraint: `UNIQUE (app_id, slug)`, foreign key komposit `(app_id, parent_id)` → `(app_id, id)` dengan `ON DELETE RESTRICT`, serta indeks `(app_id, parent_id)`. Validasi service mencegah relasi parent yang bersiklus. Menu dikelola admin CMS melalui RBAC F05; permission tidak disimpan pada tabel menu.
+
 ### Tabel better-auth (control-plane, identitas admin)
 
 better-auth mengelola skemanya sendiri (`user`, `session`, `account`, `verification`) dengan adapter database yang sama. `admins.auth_user_id` menunjuk ke `user.id`. Fase mobile menambahkan instance better-auth per App DB untuk user aplikasi (pola sama, database berbeda).
@@ -154,6 +170,6 @@ Didefinisikan dalam dokumen modul masing-masing saat fasenya dimulai (satu sumbe
 
 ## 5. Indeks & Operasional
 
-- Indeks: `apps.slug`, `admins.email`, `permissions.key`, `activity_logs(app_id, created_at)`, `notification_campaigns(app_id, status, scheduled_at)`, `users.email`, `device_tokens.token`.
+- Indeks: `apps.slug`, `admins.email`, `permissions.key`, `activity_logs(app_id, created_at)`, `notification_campaigns(app_id, status, scheduled_at)`, `menus(app_id, slug)`, `menus(app_id, parent_id)`, `users.email`, `device_tokens.token`.
 - Migrasi teregistrasi per database: control-plane sekali; tiap App DB = migrasi template + migrasi modulnya. Provisioning menjalankan semuanya dalam satu transaksi alur (lihat [05-arsitektur-sistem.md](05-arsitektur-sistem.md)).
 - Backup harian mencakup `platform` + seluruh `app_*`; daftar DB diambil dari registry agar aplikasi baru otomatis tercakup.

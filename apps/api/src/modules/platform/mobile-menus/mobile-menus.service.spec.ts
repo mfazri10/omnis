@@ -1,0 +1,283 @@
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from "@nestjs/common";
+import type { SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
+import type { DatabaseService } from "../../../database/database.service";
+import type { Db } from "../../../database/database.service";
+import { menus } from "../entities/mobile-menus.entity";
+import type { MobileMenuRow } from "../entities/mobile-menus.entity";
+import { MobileMenusRepository } from "./mobile-menus.repository";
+import { MobileMenusService } from "./mobile-menus.service";
+
+type Mocked<T> = { [K in keyof T]: jest.Mock };
+
+function makeService(): {
+  service: MobileMenusService;
+  repository: Mocked<MobileMenusRepository>;
+} {
+  const repository: Mocked<MobileMenusRepository> = {
+    listByAppId: jest.fn().mockResolvedValue([]),
+    findByAppIdAndId: jest.fn(),
+    findByAppIdAndSlug: jest.fn().mockResolvedValue(null),
+    listByParentId: jest.fn().mockResolvedValue([]),
+    insert: jest.fn(),
+    updateByAppIdAndId: jest.fn(),
+    deleteByAppIdAndId: jest.fn(),
+  };
+  const database = {
+    getControlPlaneConnection: jest.fn().mockReturnValue({}),
+  } as unknown as DatabaseService;
+  return {
+    service: new MobileMenusService(database, repository),
+    repository,
+  };
+}
+
+function menuRow(over: Partial<MobileMenuRow> = {}): MobileMenuRow {
+  return {
+    id: 1,
+    appId: 7,
+    name: "Beranda",
+    slug: "beranda",
+    routeKey: "home",
+    iconKey: "home",
+    parentId: null,
+    orderNo: 0,
+    isActive: true,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+    ...over,
+  };
+}
+
+function menuQuery(rows: MobileMenuRow[] = []): {
+  db: Db;
+  where: jest.Mock;
+  orderBy: jest.Mock;
+  limit: jest.Mock;
+} {
+  const query = {
+    where: jest.fn().mockReturnThis(),
+    orderBy: jest.fn().mockResolvedValue(rows),
+    limit: jest.fn().mockResolvedValue(rows),
+  };
+  const db = {
+    select: jest.fn().mockReturnValue({
+      from: jest.fn().mockReturnValue(query),
+    }),
+  } as unknown as Db;
+  return { db, ...query };
+}
+
+describe("MobileMenusRepository", () => {
+  it("scopes list to app and orders by orderNo then id", async () => {
+    const repository = new MobileMenusRepository();
+    const { db, where, orderBy } = menuQuery();
+
+    await repository.listByAppId(db, 7);
+
+    const filter = where.mock.calls[0]?.[0] as SQL;
+    expect(new PgDialect().sqlToQuery(filter).params).toContain(7);
+    expect(orderBy).toHaveBeenCalledWith(menus.orderNo, menus.id);
+  });
+
+  it("scopes ID lookup to both app and menu", async () => {
+    const repository = new MobileMenusRepository();
+    const { db, where } = menuQuery([menuRow()]);
+
+    await repository.findByAppIdAndId(db, 7, 9);
+
+    const filter = where.mock.calls[0]?.[0] as SQL;
+    expect(new PgDialect().sqlToQuery(filter).params).toEqual(
+      expect.arrayContaining([7, 9]),
+    );
+  });
+
+  it("scopes slug lookup to both app and slug", async () => {
+    const repository = new MobileMenusRepository();
+    const { db, where } = menuQuery([menuRow()]);
+
+    await repository.findByAppIdAndSlug(db, 7, "beranda");
+
+    const filter = where.mock.calls[0]?.[0] as SQL;
+    const query = new PgDialect().sqlToQuery(filter);
+    expect(query.params).toContain(7);
+    expect(query.params).toContain("beranda");
+  });
+});
+
+describe("MobileMenusService", () => {
+  it("lists only the app from the control-plane context", async () => {
+    const { service, repository } = makeService();
+    const row = menuRow();
+    repository.listByAppId.mockResolvedValue([row]);
+
+    await expect(service.list("7")).resolves.toEqual([row]);
+    expect(repository.listByAppId).toHaveBeenCalledWith(expect.anything(), 7);
+  });
+
+  it("rejects a duplicate slug during creation", async () => {
+    const { service, repository } = makeService();
+    repository.findByAppIdAndSlug.mockResolvedValue(menuRow());
+
+    await expect(
+      service.create("7", { name: "Beranda", slug: "beranda" }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(repository.insert).not.toHaveBeenCalled();
+  });
+
+  it("maps a concurrent duplicate-slug insert to conflict", async () => {
+    const { service, repository } = makeService();
+    repository.insert.mockRejectedValue(
+      Object.assign(new Error("duplicate"), {
+        code: "23505",
+        constraint: "menus_app_slug_uk",
+      }),
+    );
+
+    await expect(
+      service.create("7", { name: "Beranda", slug: "beranda" }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it("does not translate an unidentified unique violation to slug conflict", async () => {
+    const { service, repository } = makeService();
+    const error = Object.assign(new Error("unidentified unique violation"), {
+      code: "23505",
+    });
+    repository.insert.mockRejectedValue(error);
+
+    await expect(
+      service.create("7", { name: "Beranda", slug: "beranda" }),
+    ).rejects.toBe(error);
+  });
+
+  it("rejects a parent that is not in the current app", async () => {
+    const { service, repository } = makeService();
+    repository.findByAppIdAndId.mockResolvedValue(null);
+
+    await expect(
+      service.create("7", {
+        name: "Materi",
+        slug: "materi",
+        parentId: "99",
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repository.insert).not.toHaveBeenCalled();
+  });
+
+  it("rejects moving a menu below one of its descendants", async () => {
+    const { service, repository } = makeService();
+    const byId: Record<number, MobileMenuRow> = {
+      2: menuRow({ id: 2, parentId: null }),
+      3: menuRow({ id: 3, parentId: 4 }),
+      4: menuRow({ id: 4, parentId: 2 }),
+    };
+    repository.findByAppIdAndId.mockImplementation(
+      async (_db: unknown, _appId: number, id: number) => byId[id] ?? null,
+    );
+
+    await expect(
+      service.update("7", "2", { parentId: "3" }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repository.updateByAppIdAndId).not.toHaveBeenCalled();
+  });
+
+  it("rejects an update to another menu's slug", async () => {
+    const { service, repository } = makeService();
+    repository.findByAppIdAndId.mockResolvedValue(menuRow());
+    repository.findByAppIdAndSlug.mockResolvedValue(menuRow({ id: 2 }));
+
+    await expect(
+      service.update("7", "1", { slug: "materi" }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(repository.updateByAppIdAndId).not.toHaveBeenCalled();
+  });
+
+  it("maps a concurrent duplicate-slug update to conflict", async () => {
+    const { service, repository } = makeService();
+    repository.findByAppIdAndId.mockResolvedValue(menuRow());
+    repository.findByAppIdAndSlug.mockResolvedValue(null);
+    repository.updateByAppIdAndId.mockRejectedValue(
+      Object.assign(new Error("duplicate"), {
+        code: "23505",
+        constraint: "menus_app_slug_uk",
+      }),
+    );
+
+    await expect(
+      service.update("7", "1", { slug: "materi" }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it.each(["/home", "https://example.test/home", "home/items"])(
+    "rejects a route key that is a path or URL: %s",
+    async (routeKey) => {
+      const { service, repository } = makeService();
+
+      await expect(
+        service.create("7", {
+          name: "Beranda",
+          slug: "beranda",
+          routeKey,
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(repository.insert).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["/home", "https://example.test/icon", "icons/home"])(
+    "rejects an icon key that is a path or URL: %s",
+    async (iconKey) => {
+      const { service, repository } = makeService();
+
+      await expect(
+        service.create("7", {
+          name: "Beranda",
+          slug: "beranda",
+          iconKey,
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(repository.insert).not.toHaveBeenCalled();
+    },
+  );
+
+  it("returns a deleted leaf and does not delete a parent", async () => {
+    const { service, repository } = makeService();
+    const row = menuRow();
+    repository.findByAppIdAndId.mockResolvedValue(row);
+    repository.listByParentId.mockResolvedValue([]);
+
+    await expect(service.delete("7", "1")).resolves.toEqual(row);
+    expect(repository.deleteByAppIdAndId).toHaveBeenCalledWith(
+      expect.anything(),
+      7,
+      1,
+    );
+  });
+
+  it("rejects deleting a menu that still has children", async () => {
+    const { service, repository } = makeService();
+    repository.findByAppIdAndId.mockResolvedValue(menuRow());
+    repository.listByParentId.mockResolvedValue([
+      menuRow({ id: 2, parentId: 1 }),
+    ]);
+
+    await expect(service.delete("7", "1")).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(repository.deleteByAppIdAndId).not.toHaveBeenCalled();
+  });
+
+  it("rejects an identifier that is not a positive integer", async () => {
+    const { service, repository } = makeService();
+
+    await expect(service.list("0")).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(repository.listByAppId).not.toHaveBeenCalled();
+  });
+});
