@@ -6,6 +6,7 @@ import {
   FileQuestion,
   Images,
   LayoutDashboard,
+  ListTree,
   Package,
   ScrollText,
   Settings,
@@ -102,6 +103,14 @@ export function appMenu(slug: string, modules: string[] = []): MenuItem[] {
       icon: Bell,
       href: `/${slug}/notifications`,
       requires: "platform.notifications.view",
+      status: "live",
+    },
+    {
+      key: "menu-mobile",
+      label: "Menu Mobile",
+      icon: ListTree,
+      href: `/${slug}/menu-mobile`,
+      requires: "platform.mobile-menus.view",
       status: "live",
     },
     {
