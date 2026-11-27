@@ -3,12 +3,20 @@
 import { PageHeader } from "@/components/shared/page-header";
 import { TableToolbar } from "@/components/shared/table-toolbar";
 import { useBoundedPage } from "@/hooks/use-bounded-page";
-import { LoadingState } from "@/components/shared/page-state";
-import { Table } from "@/components/ui/table";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "@/components/shared/page-state";
+import { DataTable } from "@/components/shared/data-table";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 import { useMutation, useQuery } from "@apollo/client/react";
 import { use, useEffect, useState } from "react";
 import type { FormEvent, JSX } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { graphQLErrorMessage } from "../../../../../features/rbac/graphql/errors";
 import { APP_USERS_QUERY } from "../../../../../features/app-users/graphql/app-users.graphql";
 import {
@@ -21,6 +29,7 @@ import {
 } from "../../../../../features/cbt/graphql/cbt.graphql";
 import type {
   CbtOption,
+  CbtSessionData,
   CbtSessionDetailData,
   CbtSessionsFilter,
 } from "../../../../../features/cbt/graphql/cbt.graphql";
@@ -144,50 +153,41 @@ function AnswerSheet({ detail, canManage, onDone, onClose }: AnswerSheetProps): 
   const pg = detail.package.passingGrade;
 
   return (
-    <section className="border border-slate-200 p-4">
+    <section className="rounded-xl border border-border bg-card p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-slate-900">
+        <h2 className="text-sm font-semibold">
           Lembar jawaban: {detail.session.participantName}{" "}
-          <span className="font-normal text-slate-600">
+          <span className="font-normal text-muted-foreground">
             ({detail.package.title})
           </span>
         </h2>
-        <button
-          type="button"
-          onClick={onClose}
-          className="min-h-[44px] border border-slate-300 px-3 py-2 text-sm text-slate-900"
-        >
+        <Button type="button" variant="outline" className="min-h-11" onClick={onClose}>
           Tutup
-        </button>
+        </Button>
       </div>
 
       {result && (
-        <div className="mt-3 border border-slate-200 p-3">
-          <p className="text-sm font-semibold text-slate-900">
+        <div className="mt-3 rounded-lg border border-border p-3">
+          <p className="flex flex-wrap items-center gap-2 text-sm font-semibold">
             Hasil penilaian otomatis{" "}
-            <span
-              className={
-                result.passed
-                  ? "bg-green-100 px-2 py-1 text-xs font-semibold text-green-800"
-                  : "bg-red-100 px-2 py-1 text-xs font-semibold text-red-800"
-              }
-            >
-              {result.passed ? "LULUS" : "TIDAK LULUS"}
-            </span>
+            <StatusBadge
+              label={result.passed ? "LULUS" : "TIDAK LULUS"}
+              tone={result.passed ? "success" : "danger"}
+            />
           </p>
-          <p className="mt-2 text-sm text-slate-600">
+          <p className="mt-2 text-sm text-muted-foreground">
             {`TWK ${result.twkScore} (ambang ${pg.twk}) / TIU ${result.tiuScore} (ambang ${pg.tiu}) / TKP ${result.tkpScore} (ambang ${pg.tkp})`}
           </p>
-          <p className="mt-1 text-sm text-slate-900">
-            Total skor: <span className="font-semibold">{result.totalScore}</span>
+          <p className="mt-1 text-sm">
+            Total skor: <span className="font-semibold tabular-nums">{result.totalScore}</span>
           </p>
         </div>
       )}
 
       <ol className="mt-4 flex flex-col gap-4">
         {detail.questions.map((q, index) => (
-          <li key={q.id} className="border border-slate-100 p-3">
-            <p className="text-sm text-slate-900">
+          <li key={q.id} className="rounded-lg border border-border p-3">
+            <p className="text-sm">
               <span className="font-semibold">
                 {index + 1}. [{q.category}]
               </span>{" "}
@@ -199,14 +199,14 @@ function AnswerSheet({ detail, canManage, onDone, onClose }: AnswerSheetProps): 
                 alt=""
                 width={320}
                 height={180}
-                className="mt-2 max-h-44 w-auto border border-slate-200 object-contain"
+                className="mt-2 max-h-44 w-auto rounded-md border border-border object-contain"
               />
             )}
             <div className="mt-2 flex flex-col gap-1">
               {OPTIONS.map((o) => (
                 <label
                   key={o}
-                  className="flex min-h-[44px] items-start gap-2 text-sm text-slate-900"
+                  className="flex min-h-11 items-start gap-2 text-sm"
                 >
                   <input
                     type="radio"
@@ -225,16 +225,17 @@ function AnswerSheet({ detail, canManage, onDone, onClose }: AnswerSheetProps): 
                 </label>
               ))}
               {ongoing && canManage && (
-                <button
+                <Button
                   type="button"
+                  variant="link"
                   disabled={busy}
                   onClick={() =>
                     setPicked((prev) => ({ ...prev, [q.id]: null }))
                   }
-                  className="min-h-[44px] self-start text-xs underline disabled:opacity-50"
+                  className="min-h-11 self-start px-0 text-xs"
                 >
                   Kosongkan jawaban
-                </button>
+                </Button>
               )}
             </div>
           </li>
@@ -243,26 +244,16 @@ function AnswerSheet({ detail, canManage, onDone, onClose }: AnswerSheetProps): 
 
       {ongoing && canManage && (
         <div className="mt-4 flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void handleSave()}
-            className="min-h-[44px] border border-slate-900 px-4 py-2 text-sm font-semibold text-slate-900 disabled:opacity-50"
-          >
+          <Button type="button" variant="outline" disabled={busy} onClick={() => void handleSave()} className="min-h-11">
             {saving ? "Menyimpan…" : "Simpan jawaban"}
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void handleFinish()}
-            className="min-h-[44px] bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-          >
+          </Button>
+          <Button type="button" disabled={busy} onClick={() => void handleFinish()} className="min-h-11">
             {finishing ? "Menilai…" : "Selesaikan sesi (nilai otomatis)"}
-          </button>
+          </Button>
         </div>
       )}
       {!ongoing && (
-        <p className="mt-4 text-xs text-slate-600">
+        <p className="mt-4 text-xs text-muted-foreground">
           Sesi sudah selesai; jawaban tidak bisa diubah.
         </p>
       )}
@@ -368,42 +359,89 @@ export default function CbtSesiPage({
 
   const total = data?.cbtSessions.total ?? 0;
   const pageValid = useBoundedPage(page, setPage, PER_PAGE, loading ? undefined : data?.cbtSessions.total);
-  const from = total === 0 ? 0 : (page - 1) * PER_PAGE + 1;
-  const to = Math.min(page * PER_PAGE, total);
   const packageItems = packages.data?.cbtPackages.items ?? [];
   const userItems = users.data?.appUsers.items ?? [];
+
+  const columns: ColumnDef<CbtSessionData>[] = [
+    {
+      id: "participant",
+      header: "Peserta",
+      cell: ({ row: { original: s } }) => (
+        <span className="font-medium">{s.participantName}</span>
+      ),
+    },
+    {
+      id: "package",
+      header: "Paket",
+      cell: ({ row: { original: s } }) => (
+        <span className="text-muted-foreground">{s.packageTitle}</span>
+      ),
+    },
+    {
+      id: "status",
+      header: "Status",
+      cell: ({ row: { original: s } }) => (
+        <StatusBadge
+          label={s.status === "COMPLETED" ? "Selesai" : "Berlangsung"}
+          tone={s.status === "COMPLETED" ? "success" : "warning"}
+        />
+      ),
+    },
+    {
+      id: "startedAt",
+      header: "Mulai",
+      cell: ({ row: { original: s } }) => (
+        <span className="whitespace-nowrap text-muted-foreground">
+          {formatDateTime(s.startedAt)}
+        </span>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Aksi",
+      cell: ({ row: { original: s } }) => (
+        <Button
+          type="button"
+          variant="link"
+          className="min-h-11"
+          onClick={() => {
+            setOpenedId(s.id);
+            setStatus(null);
+          }}
+        >
+          {s.status === "COMPLETED" ? "Lihat hasil" : "Buka lembar"}
+        </Button>
+      ),
+    },
+  ];
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
       <PageHeader title="Sesi ujian" description={appSlug} />
-      <p className="mt-2 text-sm text-slate-600">
+      <p className="mt-2 text-sm text-muted-foreground">
         Fase CMS: simulasi penilaian. Mulai sesi untuk peserta, isi jawaban,
         lalu selesaikan untuk menilai otomatis.
       </p>
       {!ready && <LoadingState />}
       {ready && !canView && (
-        <p className="mt-6 text-sm text-slate-600">
-          Anda tidak memiliki izin untuk melihat sesi ujian aplikasi ini.
-        </p>
+        <EmptyState>Anda tidak memiliki izin untuk melihat sesi ujian aplikasi ini.</EmptyState>
       )}
       {ready && canView && (
         <>
-          {!contextReady && (
-            <p className="mt-6 text-slate-900">Menyiapkan konteks…</p>
-          )}
+          {!contextReady && <LoadingState>Menyiapkan konteks…</LoadingState>}
           {contextReady && (
             <>
               <TableToolbar onSubmit={handleApply}>
                 <label className="flex flex-col gap-1">
                   <span className={LABEL_CLASS}>Cari peserta</span>
-                  <input
+                  <Input
                     type="search"
                     placeholder="Nama peserta…"
                     value={draft.search}
                     onChange={(e) =>
                       setDraft((prev) => ({ ...prev, search: e.target.value }))
                     }
-                    className={CONTROL_CLASS}
+                    className="min-h-11 bg-card"
                   />
                 </label>
                 <label className="flex flex-col gap-1">
@@ -421,31 +459,23 @@ export default function CbtSesiPage({
                   </select>
                 </label>
                 <div className="flex gap-2">
-                  <button
-                    type="submit"
-                    className="min-h-[44px] bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-                  >
-                    Terapkan filter
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleReset}
-                    className="min-h-[44px] border border-slate-300 px-4 py-2 text-sm text-slate-900"
-                  >
+                  <Button type="submit" className="min-h-11">Terapkan filter</Button>
+                  <Button type="button" variant="outline" className="min-h-11" onClick={handleReset}>
                     Atur ulang
-                  </button>
+                  </Button>
                 </div>
                 {canManage && (
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    className="min-h-11"
                     onClick={() => {
                       setStartOpen((v) => !v);
                       setStatus(null);
                     }}
-                    className="min-h-[44px] border border-slate-900 px-4 py-2 text-sm font-semibold text-slate-900"
                   >
                     Mulai simulasi
-                  </button>
+                  </Button>
                 )}
               </TableToolbar>
 
@@ -453,8 +483,8 @@ export default function CbtSesiPage({
                 <p
                   className={
                     status.kind === "sukses"
-                      ? "mt-4 text-sm text-green-700"
-                      : "mt-4 text-sm text-red-700"
+                      ? "mt-4 text-sm text-emerald-700"
+                      : "mt-4 text-sm text-destructive"
                   }
                 >
                   {status.text}
@@ -462,8 +492,8 @@ export default function CbtSesiPage({
               )}
 
               {startOpen && canManage && (
-                <section className="mt-6 border border-slate-200 p-4">
-                  <h2 className="text-sm font-semibold text-slate-900">
+                <section className="mt-6 rounded-xl border border-border bg-card p-4">
+                  <h2 className="text-sm font-semibold">
                     Mulai simulasi penilaian
                   </h2>
                   <form
@@ -489,8 +519,8 @@ export default function CbtSesiPage({
                     </label>
                     <fieldset className="flex flex-col gap-1">
                       <legend className={LABEL_CLASS}>Peserta</legend>
-                      <div className="flex gap-4 text-sm text-slate-900">
-                        <label className="flex min-h-[44px] items-center gap-1">
+                      <div className="flex gap-4 text-sm">
+                        <label className="flex min-h-11 items-center gap-1">
                           <input
                             type="radio"
                             name="mode"
@@ -500,7 +530,7 @@ export default function CbtSesiPage({
                           />
                           User aplikasi
                         </label>
-                        <label className="flex min-h-[44px] items-center gap-1">
+                        <label className="flex min-h-11 items-center gap-1">
                           <input
                             type="radio"
                             name="mode"
@@ -528,7 +558,7 @@ export default function CbtSesiPage({
                           ))}
                         </select>
                       ) : (
-                        <input
+                        <Input
                           aria-label="Nama peserta simulasi"
                           type="text"
                           required
@@ -537,38 +567,35 @@ export default function CbtSesiPage({
                           value={participantName}
                           disabled={starting}
                           onChange={(e) => setParticipantName(e.target.value)}
-                          className={CONTROL_CLASS}
+                          className="min-h-11"
                         />
                       )}
                     </fieldset>
                     <div className="flex gap-2 md:col-span-2">
-                      <button
-                        type="submit"
-                        disabled={starting}
-                        className="min-h-[44px] bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-                      >
+                      <Button type="submit" disabled={starting} className="min-h-11">
                         {starting ? "Memulai…" : "Mulai sesi"}
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="button"
+                        variant="outline"
                         disabled={starting}
                         onClick={() => setStartOpen(false)}
-                        className="min-h-[44px] border border-slate-300 px-4 py-2 text-sm text-slate-900 disabled:opacity-50"
+                        className="min-h-11"
                       >
                         Batal
-                      </button>
+                      </Button>
                     </div>
                   </form>
                 </section>
               )}
 
               {openedId !== null && detail.loading && (
-                <p className="mt-6 text-slate-900">Memuat lembar jawaban…</p>
+                <LoadingState>Memuat lembar jawaban…</LoadingState>
               )}
               {openedId !== null && detail.error && (
-                <p className="mt-6 text-sm text-red-700">
+                <ErrorState>
                   {graphQLErrorMessage(detail.error, "Gagal memuat sesi.")}
-                </p>
+                </ErrorState>
               )}
               {openedId !== null && detail.data && (
                 <div className="mt-6">
@@ -581,101 +608,26 @@ export default function CbtSesiPage({
                 </div>
               )}
 
-              {loading && <p className="mt-6 text-slate-900">Memuat…</p>}
+              {loading && <LoadingState />}
               {error && (
-                <div className="mt-6">
-                  <p className="text-sm text-red-700">
-                    {graphQLErrorMessage(error, "Gagal memuat sesi ujian.")}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => void refetch()}
-                    className="mt-2 min-h-[44px] underline"
-                  >
-                    Muat ulang
-                  </button>
-                </div>
+                <ErrorState onRetry={() => void refetch()}>
+                  {graphQLErrorMessage(error, "Gagal memuat sesi ujian.")}
+                </ErrorState>
               )}
               {data && total === 0 && (
-                <p className="mt-6 text-sm text-slate-600">
-                  Belum ada sesi. Mulai simulasi untuk membuat sesi pertama.
-                </p>
+                <EmptyState>Belum ada sesi. Mulai simulasi untuk membuat sesi pertama.</EmptyState>
               )}
-              {data && total > 0 && pageValid && (
-                <>
-                  <div className="mt-6 overflow-x-auto">
-                    <Table scrollLabel="Daftar sesi CBT" className="min-w-max bg-card text-left">
-                      <thead>
-                        <tr className="border-b border-slate-200 text-slate-600">
-                          <th className="py-2 pr-4 font-semibold">Peserta</th>
-                          <th className="py-2 pr-4 font-semibold">Paket</th>
-                          <th className="py-2 pr-4 font-semibold">Status</th>
-                          <th className="py-2 pr-4 font-semibold">Mulai</th>
-                          <th className="py-2 font-semibold">Aksi</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {data.cbtSessions.items.map((s) => (
-                          <tr key={s.id} className="border-b border-slate-100">
-                            <td className="py-2 pr-4 text-slate-900">
-                              {s.participantName}
-                            </td>
-                            <td className="py-2 pr-4 text-slate-600">
-                              {s.packageTitle}
-                            </td>
-                            <td className="py-2 pr-4">
-                              <span
-                                className={
-                                  s.status === "COMPLETED"
-                                    ? "bg-green-100 px-2 py-1 text-xs font-semibold text-green-800"
-                                    : "bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800"
-                                }
-                              >
-                                {s.status === "COMPLETED" ? "Selesai" : "Berlangsung"}
-                              </span>
-                            </td>
-                            <td className="whitespace-nowrap py-2 pr-4 text-slate-600">
-                              {formatDateTime(s.startedAt)}
-                            </td>
-                            <td className="whitespace-nowrap py-2">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setOpenedId(s.id);
-                                  setStatus(null);
-                                }}
-                                className="min-h-[44px] underline"
-                              >
-                                {s.status === "COMPLETED" ? "Lihat hasil" : "Buka lembar"}
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </Table>
-                  </div>
-                  <div className="mt-4 flex items-center gap-4 text-sm">
-                    <button
-                      type="button"
-                      disabled={page <= 1}
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      className="min-h-[44px] underline disabled:opacity-50"
-                    >
-                      Sebelumnya
-                    </button>
-                    <span className="text-slate-600">
-                      {`${from}–${to} dari ${total}`}
-                    </span>
-                    <button
-                      type="button"
-                      disabled={page * PER_PAGE >= total}
-                      onClick={() => setPage((p) => p + 1)}
-                      className="min-h-[44px] underline disabled:opacity-50"
-                    >
-                      Berikutnya
-                    </button>
-                  </div>
-                </>
+              {data && pageValid && (
+                <div className="mt-6">
+                  <DataTable
+                    rows={data.cbtSessions.items}
+                    columns={columns}
+                    getRowId={(s) => s.id}
+                    label="Daftar sesi CBT"
+                    emptyMessage={total === 0 ? "Belum ada sesi. Mulai simulasi untuk membuat sesi pertama." : "Tidak ada sesi pada halaman ini."}
+                    pagination={{ pageIndex: page - 1, pageSize: PER_PAGE, totalRows: total, onPageChange: (index) => setPage(index + 1) }}
+                  />
+                </div>
               )}
             </>
           )}
