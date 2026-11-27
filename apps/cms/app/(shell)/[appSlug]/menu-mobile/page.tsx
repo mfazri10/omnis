@@ -104,7 +104,7 @@ function MenuForm({
       }
       parentOptions.push({
         id: node.menu.id,
-        label: `${"— ".repeat(depth)}${node.menu.name} (${node.menu.slug})`,
+        label: `${"- ".repeat(depth)}${node.menu.name} (${node.menu.slug})`,
       });
       walk(node.children, depth + 1);
     }
