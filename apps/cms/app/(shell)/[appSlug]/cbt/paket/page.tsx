@@ -2,14 +2,21 @@
 
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { TableToolbar } from "@/components/shared/table-toolbar";
 import { useBoundedPage } from "@/hooks/use-bounded-page";
-import { LoadingState } from "@/components/shared/page-state";
-import { Table } from "@/components/ui/table";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "@/components/shared/page-state";
+import { DataTable } from "@/components/shared/data-table";
+import { StatusBadge } from "@/components/shared/status-badge";
 
 import { useMutation, useQuery } from "@apollo/client/react";
 import { use, useState } from "react";
 import type { FormEvent, JSX } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { graphQLErrorMessage } from "../../../../../features/rbac/graphql/errors";
 import {
   CBT_PACKAGES_QUERY,
@@ -107,7 +114,7 @@ function PackageForm({ initial, onDone, onCancel }: PackageFormProps): JSX.Eleme
 
   return (
     <section className="rounded-xl border border-border bg-card p-4">
-      <h2 className="text-sm font-semibold text-slate-900">
+      <h2 className="text-sm font-semibold">
         {initial === null ? "Tambah paket" : `Ubah paket: ${initial.title}`}
       </h2>
       <form
@@ -154,7 +161,7 @@ function PackageForm({ initial, onDone, onCancel }: PackageFormProps): JSX.Eleme
             Passing grade per kategori (bilangan bulat &ge; 0)
           </legend>
           <div className="mt-1 flex flex-wrap gap-3">
-            <label className="flex items-center gap-1 text-sm text-slate-900">
+            <label className="flex items-center gap-1 text-sm">
               TWK
               <input
                 type="number"
@@ -163,10 +170,10 @@ function PackageForm({ initial, onDone, onCancel }: PackageFormProps): JSX.Eleme
                 value={pgTwk}
                 disabled={saving}
                 onChange={(e) => setPgTwk(e.target.value)}
-                className="min-h-[44px] w-24 border border-slate-300 px-2 py-2 text-sm"
+                className="min-h-11 w-24 rounded-md border border-input bg-card px-2 py-2 text-sm"
               />
             </label>
-            <label className="flex items-center gap-1 text-sm text-slate-900">
+            <label className="flex items-center gap-1 text-sm">
               TIU
               <input
                 type="number"
@@ -175,10 +182,10 @@ function PackageForm({ initial, onDone, onCancel }: PackageFormProps): JSX.Eleme
                 value={pgTiu}
                 disabled={saving}
                 onChange={(e) => setPgTiu(e.target.value)}
-                className="min-h-[44px] w-24 border border-slate-300 px-2 py-2 text-sm"
+                className="min-h-11 w-24 rounded-md border border-input bg-card px-2 py-2 text-sm"
               />
             </label>
-            <label className="flex items-center gap-1 text-sm text-slate-900">
+            <label className="flex items-center gap-1 text-sm">
               TKP
               <input
                 type="number"
@@ -187,11 +194,11 @@ function PackageForm({ initial, onDone, onCancel }: PackageFormProps): JSX.Eleme
                 value={pgTkp}
                 disabled={saving}
                 onChange={(e) => setPgTkp(e.target.value)}
-                className="min-h-[44px] w-24 border border-slate-300 px-2 py-2 text-sm"
+                className="min-h-11 w-24 rounded-md border border-input bg-card px-2 py-2 text-sm"
               />
             </label>
           </div>
-          <p className="mt-1 text-xs text-slate-600">
+          <p className="mt-1 text-xs text-muted-foreground">
             Peserta lulus bila skor tiap kategori mencapai ambangnya.
           </p>
         </fieldset>
@@ -277,16 +284,16 @@ function CompositionEditor({ pkg, onDone, onClose }: CompositionEditorProps): JS
   const bankItems = bank.data?.cbtQuestions?.items ?? [];
 
   return (
-    <section className="border border-slate-200 p-4">
-      <h2 className="text-sm font-semibold text-slate-900">
+    <section className="rounded-xl border border-border bg-card p-4">
+      <h2 className="text-sm font-semibold">
         Komposisi soal: {pkg.title}
       </h2>
-      <p className="mt-1 text-xs text-slate-600">
+      <p className="mt-1 text-xs text-muted-foreground">
         Centang soal aktif yang masuk paket. Urutan centang menjadi urutan
         penyajian. Soal nonaktif tidak bisa dimasukkan.
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-2 text-sm text-slate-900">
+        <label className="flex items-center gap-2 text-sm">
           Kategori
           <select
             value={categoryFilter}
@@ -299,26 +306,22 @@ function CompositionEditor({ pkg, onDone, onClose }: CompositionEditorProps): JS
             <option value="TKP">TKP</option>
           </select>
         </label>
-        <span className="text-sm text-slate-600">
+        <span className="text-sm text-muted-foreground">
           {current.length} soal dipilih
         </span>
       </div>
-      {bank.loading && <p className="mt-3 text-sm text-slate-900">Memuat bank soal…</p>}
+      {bank.loading && <LoadingState>Memuat bank soal…</LoadingState>}
       {bank.error && (
-        <p className="mt-3 text-sm text-red-700">
-          {graphQLErrorMessage(bank.error, "Gagal memuat bank soal.")}
-        </p>
+        <ErrorState>{graphQLErrorMessage(bank.error, "Gagal memuat bank soal.")}</ErrorState>
       )}
       {bank.data && bankItems.length === 0 && (
-        <p className="mt-3 text-sm text-slate-600">
-          Tidak ada soal aktif pada kategori ini.
-        </p>
+        <EmptyState>Tidak ada soal aktif pada kategori ini.</EmptyState>
       )}
       {bankItems.length > 0 && (
-        <ul className="mt-3 flex max-h-80 flex-col gap-1 overflow-y-auto border border-slate-100 p-2">
+        <ul className="mt-3 flex max-h-80 flex-col gap-1 overflow-y-auto rounded-lg border border-border p-2">
           {bankItems.map((q) => (
             <li key={q.id}>
-              <label className="flex min-h-[44px] items-start gap-2 px-1 py-1 text-sm text-slate-900">
+              <label className="flex min-h-11 items-start gap-2 px-1 py-1 text-sm">
                 <input
                   type="checkbox"
                   checked={current.includes(q.id)}
@@ -335,22 +338,23 @@ function CompositionEditor({ pkg, onDone, onClose }: CompositionEditorProps): JS
         </ul>
       )}
       <div className="mt-3 flex gap-2">
-        <button
+        <Button
           type="button"
           disabled={saving || detail.loading}
           onClick={() => void handleSave()}
-          className="min-h-[44px] bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+          className="min-h-11"
         >
           {saving ? "Menyimpan…" : "Simpan komposisi"}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="outline"
           disabled={saving}
           onClick={onClose}
-          className="min-h-[44px] border border-slate-300 px-4 py-2 text-sm text-slate-900 disabled:opacity-50"
+          className="min-h-11"
         >
           Tutup
-        </button>
+        </Button>
       </div>
     </section>
   );
@@ -426,36 +430,119 @@ export default function CbtPaketPage({
 
   const total = data?.cbtPackages.total ?? 0;
   const pageValid = useBoundedPage(page, setPage, PER_PAGE, loading ? undefined : data?.cbtPackages.total);
-  const from = total === 0 ? 0 : (page - 1) * PER_PAGE + 1;
-  const to = Math.min(page * PER_PAGE, total);
+
+  const columns: ColumnDef<CbtPackageData>[] = [
+    {
+      id: "title",
+      header: "Judul",
+      cell: ({ row: { original: pkg } }) => (
+        <span className="block max-w-72 whitespace-normal font-medium wrap-anywhere">
+          {pkg.title}
+        </span>
+      ),
+    },
+    {
+      id: "duration",
+      header: "Durasi",
+      cell: ({ row: { original: pkg } }) => (
+        <span className="whitespace-nowrap text-muted-foreground">
+          {pkg.durationMinutes} menit
+        </span>
+      ),
+    },
+    {
+      id: "passingGrade",
+      header: "Passing grade",
+      cell: ({ row: { original: pkg } }) => (
+        <span className="whitespace-nowrap text-muted-foreground">
+          {`TWK ${pkg.passingGrade.twk} / TIU ${pkg.passingGrade.tiu} / TKP ${pkg.passingGrade.tkp}`}
+        </span>
+      ),
+    },
+    {
+      id: "questionCount",
+      header: "Soal",
+      cell: ({ row: { original: pkg } }) => (
+        <span className="tabular-nums">{pkg.questionCount}</span>
+      ),
+    },
+    {
+      id: "status",
+      header: "Status",
+      cell: ({ row: { original: pkg } }) => (
+        <StatusBadge
+          label={pkg.isActive ? "Aktif" : "Nonaktif"}
+          tone={pkg.isActive ? "success" : "neutral"}
+        />
+      ),
+    },
+  ];
+  if (canManage) {
+    columns.push({
+      id: "actions",
+      header: "Aksi",
+      cell: ({ row: { original: pkg } }) => (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <Button
+            type="button"
+            variant="link"
+            className="min-h-11"
+            onClick={() => {
+              setEditing(pkg);
+              setStatus(null);
+              setFormOpen(true);
+            }}
+          >
+            Ubah
+          </Button>
+          <Button
+            type="button"
+            variant="link"
+            className="min-h-11"
+            onClick={() => {
+              setComposing(pkg);
+              setStatus(null);
+            }}
+          >
+            Komposisi
+          </Button>
+          <Button
+            type="button"
+            variant="link"
+            className="min-h-11"
+            disabled={toggling}
+            onClick={() => void handleToggle(pkg)}
+          >
+            {pkg.isActive ? "Nonaktifkan" : "Aktifkan"}
+          </Button>
+        </div>
+      ),
+    });
+  }
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
       <PageHeader title="Paket ujian" description={appSlug} />
       {!ready && <LoadingState />}
       {ready && !canView && (
-        <p className="mt-6 text-sm text-slate-600">
-          Anda tidak memiliki izin untuk melihat paket ujian aplikasi ini.
-        </p>
+        <EmptyState>Anda tidak memiliki izin untuk melihat paket ujian aplikasi ini.</EmptyState>
       )}
       {ready && canView && (
         <>
-          {!contextReady && (
-            <p className="mt-6 text-slate-900">Menyiapkan konteks…</p>
-          )}
+          {!contextReady && <LoadingState>Menyiapkan konteks…</LoadingState>}
           {contextReady && (
             <>
               <TableToolbar onSubmit={handleApply}>
                 <label className="flex flex-col gap-1">
                   <span className={LABEL_CLASS}>Pencarian</span>
-                  <input
+                  <Input
                     type="search"
                     placeholder="Cari judul paket…"
                     value={draft.search}
                     onChange={(e) =>
                       setDraft((prev) => ({ ...prev, search: e.target.value }))
                     }
-                    className={CONTROL_CLASS}
+                    className="min-h-11 bg-card"
                   />
                 </label>
                 <label className="flex flex-col gap-1">
@@ -473,32 +560,24 @@ export default function CbtPaketPage({
                   </select>
                 </label>
                 <div className="flex gap-2">
-                  <button
-                    type="submit"
-                    className="min-h-[44px] bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-                  >
-                    Terapkan filter
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleReset}
-                    className="min-h-[44px] border border-slate-300 px-4 py-2 text-sm text-slate-900"
-                  >
+                  <Button type="submit" className="min-h-11">Terapkan filter</Button>
+                  <Button type="button" variant="outline" className="min-h-11" onClick={handleReset}>
                     Atur ulang
-                  </button>
+                  </Button>
                 </div>
                 {canManage && (
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    className="min-h-11"
                     onClick={() => {
                       setEditing(null);
                       setStatus(null);
                       setFormOpen(true);
                     }}
-                    className="min-h-[44px] border border-slate-900 px-4 py-2 text-sm font-semibold text-slate-900"
                   >
                     Tambah paket
-                  </button>
+                  </Button>
                 )}
               </TableToolbar>
 
@@ -506,8 +585,8 @@ export default function CbtPaketPage({
                 <p
                   className={
                     status.kind === "sukses"
-                      ? "mt-4 text-sm text-green-700"
-                      : "mt-4 text-sm text-red-700"
+                      ? "mt-4 text-sm text-emerald-700"
+                      : "mt-4 text-sm text-destructive"
                   }
                 >
                   {status.text}
@@ -539,130 +618,26 @@ export default function CbtPaketPage({
                 </div>
               )}
 
-              {loading && <p className="mt-6 text-slate-900">Memuat…</p>}
+              {loading && <LoadingState />}
               {error && (
-                <div className="mt-6">
-                  <p className="text-sm text-red-700">
-                    {graphQLErrorMessage(error, "Gagal memuat paket ujian.")}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => void refetch()}
-                    className="mt-2 min-h-[44px] underline"
-                  >
-                    Muat ulang
-                  </button>
-                </div>
+                <ErrorState onRetry={() => void refetch()}>
+                  {graphQLErrorMessage(error, "Gagal memuat paket ujian.")}
+                </ErrorState>
               )}
               {data && total === 0 && (
-                <p className="mt-6 text-sm text-slate-600">
-                  Belum ada paket yang cocok. Tambah paket atau ubah filter.
-                </p>
+                <EmptyState>Belum ada paket yang cocok. Tambah paket atau ubah filter.</EmptyState>
               )}
-              {data && total > 0 && pageValid && (
-                <>
-                  <div className="mt-6 overflow-x-auto">
-                    <Table scrollLabel="Daftar paket CBT" className="min-w-max bg-card text-left">
-                      <thead>
-                        <tr className="border-b border-slate-200 text-slate-600">
-                          <th className="py-2 pr-4 font-semibold">Judul</th>
-                          <th className="py-2 pr-4 font-semibold">Durasi</th>
-                          <th className="py-2 pr-4 font-semibold">
-                            Passing grade
-                          </th>
-                          <th className="py-2 pr-4 font-semibold">Soal</th>
-                          <th className="py-2 pr-4 font-semibold">Status</th>
-                          {canManage && (
-                            <th className="py-2 font-semibold">Aksi</th>
-                          )}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {data.cbtPackages.items.map((pkg) => (
-                          <tr key={pkg.id} className="border-b border-slate-100">
-                            <td className="py-2 pr-4 text-slate-900">
-                              {pkg.title}
-                            </td>
-                            <td className="whitespace-nowrap py-2 pr-4 text-slate-600">
-                              {pkg.durationMinutes} menit
-                            </td>
-                            <td className="whitespace-nowrap py-2 pr-4 text-slate-600">
-                              {`TWK ${pkg.passingGrade.twk} / TIU ${pkg.passingGrade.tiu} / TKP ${pkg.passingGrade.tkp}`}
-                            </td>
-                            <td className="py-2 pr-4 text-slate-600">
-                              {pkg.questionCount}
-                            </td>
-                            <td className="py-2 pr-4">
-                              <span
-                                className={
-                                  pkg.isActive
-                                    ? "bg-green-100 px-2 py-1 text-xs font-semibold text-green-800"
-                                    : "bg-slate-200 px-2 py-1 text-xs font-semibold text-slate-700"
-                                }
-                              >
-                                {pkg.isActive ? "Aktif" : "Nonaktif"}
-                              </span>
-                            </td>
-                            {canManage && (
-                              <td className="whitespace-nowrap py-2">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditing(pkg);
-                                    setStatus(null);
-                                    setFormOpen(true);
-                                  }}
-                                  className="min-h-[44px] pr-3 underline"
-                                >
-                                  Ubah
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setComposing(pkg);
-                                    setStatus(null);
-                                  }}
-                                  className="min-h-[44px] pr-3 underline"
-                                >
-                                  Komposisi
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={toggling}
-                                  onClick={() => void handleToggle(pkg)}
-                                  className="min-h-[44px] underline disabled:opacity-50"
-                                >
-                                  {pkg.isActive ? "Nonaktifkan" : "Aktifkan"}
-                                </button>
-                              </td>
-                            )}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </Table>
-                  </div>
-                  <div className="mt-4 flex items-center gap-4 text-sm">
-                    <button
-                      type="button"
-                      disabled={page <= 1}
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      className="min-h-[44px] underline disabled:opacity-50"
-                    >
-                      Sebelumnya
-                    </button>
-                    <span className="text-slate-600">
-                      {`${from}–${to} dari ${total}`}
-                    </span>
-                    <button
-                      type="button"
-                      disabled={page * PER_PAGE >= total}
-                      onClick={() => setPage((p) => p + 1)}
-                      className="min-h-[44px] underline disabled:opacity-50"
-                    >
-                      Berikutnya
-                    </button>
-                  </div>
-                </>
+              {data && pageValid && (
+                <div className="mt-6">
+                  <DataTable
+                    rows={data.cbtPackages.items}
+                    columns={columns}
+                    getRowId={(pkg) => pkg.id}
+                    label="Daftar paket CBT"
+                    emptyMessage={total === 0 ? "Belum ada paket yang cocok. Tambah paket atau ubah filter." : "Tidak ada paket pada halaman ini."}
+                    pagination={{ pageIndex: page - 1, pageSize: PER_PAGE, totalRows: total, onPageChange: (index) => setPage(index + 1) }}
+                  />
+                </div>
               )}
             </>
           )}
