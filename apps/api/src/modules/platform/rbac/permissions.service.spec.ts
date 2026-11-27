@@ -68,10 +68,18 @@ describe("PermissionsService", () => {
 });
 
 describe("PLATFORM_CATALOG", () => {
-  it("16 kunci unik, format modul.entitas.aksi, tanpa wildcard", () => {
+  it("20 kunci unik termasuk permission menu mobile, format modul.entitas.aksi", () => {
     const keys = PLATFORM_CATALOG.map((d) => d.key);
-    expect(keys).toHaveLength(16);
-    expect(new Set(keys).size).toBe(16);
+    expect(keys).toHaveLength(20);
+    expect(new Set(keys).size).toBe(20);
+    expect(keys).toEqual(
+      expect.arrayContaining([
+        "platform.mobile-menus.view",
+        "platform.mobile-menus.create",
+        "platform.mobile-menus.update",
+        "platform.mobile-menus.delete",
+      ]),
+    );
     for (const key of keys) {
       expect(key).toMatch(/^[a-z]+\.[a-z-]+\.[a-z]+$/);
     }
