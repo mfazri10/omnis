@@ -5,11 +5,11 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { DatabaseService } from "../../../database/database.service";
-import type { Db } from "../../../database/database.service";
 import type { MobileMenuRow } from "../entities/mobile-menus.entity";
 import { MobileMenusRepository } from "./mobile-menus.repository";
 import type {
   CreateMobileMenuRow,
+  MobileMenuDb,
   UpdateMobileMenuRow,
 } from "./mobile-menus.repository";
 
@@ -150,6 +150,17 @@ export class MobileMenusService {
     const db = this.database.getControlPlaneConnection();
     const numericAppId = parseId(appId, "ID aplikasi");
     const numericId = parseId(id, "ID menu");
+    return this.menus.withAppLock(db, numericAppId, (transaction) =>
+      this.updateInAppLock(transaction, numericAppId, numericId, input),
+    );
+  }
+
+  private async updateInAppLock(
+    db: MobileMenuDb,
+    numericAppId: number,
+    numericId: number,
+    input: UpdateMobileMenuInput,
+  ): Promise<MobileMenuRow> {
     await this.mustFind(db, numericAppId, numericId);
     const patch: UpdateMobileMenuRow = {};
 
@@ -232,7 +243,7 @@ export class MobileMenusService {
   }
 
   private async ensureSlugAvailable(
-    db: Db,
+    db: MobileMenuDb,
     appId: number,
     slug: string,
     exceptId?: number,
@@ -244,7 +255,7 @@ export class MobileMenusService {
   }
 
   private async resolveParentId(
-    db: Db,
+    db: MobileMenuDb,
     appId: number,
     parentId: string | null | undefined,
     menuId?: number,
@@ -270,7 +281,7 @@ export class MobileMenusService {
   }
 
   private async assertNoCycle(
-    db: Db,
+    db: MobileMenuDb,
     appId: number,
     menuId: number,
     parentId: number,
@@ -294,7 +305,7 @@ export class MobileMenusService {
   }
 
   private async mustFind(
-    db: Db,
+    db: MobileMenuDb,
     appId: number,
     id: number,
   ): Promise<MobileMenuRow> {

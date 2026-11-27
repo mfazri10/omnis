@@ -12,12 +12,27 @@ import { MobileMenusRepository } from "./mobile-menus.repository";
 import { MobileMenusService } from "./mobile-menus.service";
 
 type Mocked<T> = { [K in keyof T]: jest.Mock };
+type ScopedMenuDb = Pick<Db, "select" | "insert" | "update" | "delete">;
+type RepositoryWithAppLock = MobileMenusRepository & {
+  withAppLock<T>(
+    db: Db,
+    appId: number,
+    operation: (transaction: ScopedMenuDb) => Promise<T>,
+  ): Promise<T>;
+};
 
 function makeService(): {
   service: MobileMenusService;
-  repository: Mocked<MobileMenusRepository>;
+  repository: Mocked<MobileMenusRepository> & { withAppLock: jest.Mock };
 } {
-  const repository: Mocked<MobileMenusRepository> = {
+  const withAppLock = jest.fn(
+    (
+      _db: unknown,
+      _appId: number,
+      operation: (transaction: ScopedMenuDb) => Promise<unknown>,
+    ) => operation({} as ScopedMenuDb),
+  );
+  const repository = {
     listByAppId: jest.fn().mockResolvedValue([]),
     findByAppIdAndId: jest.fn(),
     findByAppIdAndSlug: jest.fn().mockResolvedValue(null),
@@ -25,7 +40,8 @@ function makeService(): {
     insert: jest.fn(),
     updateByAppIdAndId: jest.fn(),
     deleteByAppIdAndId: jest.fn(),
-  };
+    withAppLock,
+  } as unknown as Mocked<MobileMenusRepository> & { withAppLock: jest.Mock };
   const database = {
     getControlPlaneConnection: jest.fn().mockReturnValue({}),
   } as unknown as DatabaseService;
@@ -90,6 +106,49 @@ function menuQuery(rows: MobileMenuRow[] = []): {
 }
 
 describe("MobileMenusRepository", () => {
+  it("locks the app row in a transaction before hierarchy updates", async () => {
+    const repository = new MobileMenusRepository() as RepositoryWithAppLock;
+    let capturedFilter: SQL | undefined;
+    let lockMode: string | undefined;
+    const lockQuery = {
+      for: jest.fn((mode: string) => {
+        lockMode = mode;
+        return Promise.resolve([]);
+      }),
+    };
+    const transaction: ScopedMenuDb = {
+      select: jest.fn(() => ({
+        from: jest.fn(() => ({
+          where: jest.fn((condition: SQL) => {
+            capturedFilter = condition;
+            return lockQuery;
+          }),
+        })),
+      })),
+    } as unknown as ScopedMenuDb;
+    const db = {
+      transaction: jest.fn(
+        (operation: (tx: ScopedMenuDb) => Promise<string>) =>
+          operation(transaction),
+      ),
+    } as unknown as Db;
+
+    expect(typeof repository.withAppLock).toBe("function");
+    if (typeof repository.withAppLock !== "function") {
+      return;
+    }
+
+    const result = await repository.withAppLock(db, 7, () =>
+      Promise.resolve(lockMode),
+    );
+
+    expect(result).toBe("update");
+    expect(capturedFilter).toBeDefined();
+    expect(
+      new PgDialect().sqlToQuery(capturedFilter as SQL).params,
+    ).toContain(7);
+  });
+
   it("scopes list to app and orders by orderNo then id", async () => {
     const repository = new MobileMenusRepository();
     const { db, filter, orderBy } = menuQuery();
@@ -202,6 +261,75 @@ describe("MobileMenusService", () => {
       service.update("7", "2", { parentId: "3" }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(repository.updateByAppIdAndId).not.toHaveBeenCalled();
+  });
+
+  it("serializes concurrent parent moves so they cannot create a cycle", async () => {
+    const { service, repository } = makeService();
+    const rows = new Map<number, MobileMenuRow>([
+      [1, menuRow({ id: 1, parentId: null })],
+      [2, menuRow({ id: 2, parentId: null })],
+    ]);
+    repository.findByAppIdAndId.mockImplementation(
+      (
+        _db: unknown,
+        _appId: number,
+        id: number,
+      ): Promise<MobileMenuRow | null> => Promise.resolve(rows.get(id) ?? null),
+    );
+    repository.updateByAppIdAndId.mockImplementation(
+      (
+        _db: unknown,
+        _appId: number,
+        id: number,
+        patch: Partial<MobileMenuRow>,
+      ): Promise<MobileMenuRow | null> => {
+        const row = rows.get(id);
+        if (!row) {
+          return Promise.resolve(null);
+        }
+        const updated = { ...row, ...patch };
+        rows.set(id, updated);
+        return Promise.resolve(updated);
+      },
+    );
+
+    let lockTail = Promise.resolve();
+    repository.withAppLock.mockImplementation(
+      (
+        _db: unknown,
+        _appId: number,
+        operation: (transaction: ScopedMenuDb) => Promise<unknown>,
+      ) => {
+        const previous = lockTail;
+        let release: () => void = () => {};
+        lockTail = new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        return previous.then(async () => {
+          try {
+            return await operation({} as ScopedMenuDb);
+          } finally {
+            release();
+          }
+        });
+      },
+    );
+
+    const results = await Promise.allSettled([
+      service.update("7", "1", { parentId: "2" }),
+      service.update("7", "2", { parentId: "1" }),
+    ]);
+
+    expect(results.filter(({ status }) => status === "fulfilled")).toHaveLength(
+      1,
+    );
+    expect(results.filter(({ status }) => status === "rejected")).toHaveLength(
+      1,
+    );
+    expect(
+      rows.get(1)?.parentId === 2 && rows.get(2)?.parentId === 1,
+    ).toBe(false);
+    expect(repository.withAppLock).toHaveBeenCalledTimes(2);
   });
 
   it("rejects an update to another menu's slug", async () => {

@@ -1,8 +1,11 @@
 import { and, eq } from "drizzle-orm";
 import { Injectable } from "@nestjs/common";
 import type { Db } from "../../../database/database.service";
+import { apps } from "../entities/apps.entity";
 import { menus } from "../entities/mobile-menus.entity";
 import type { MobileMenuRow } from "../entities/mobile-menus.entity";
+
+export type MobileMenuDb = Pick<Db, "select" | "insert" | "update" | "delete">;
 
 export interface CreateMobileMenuRow {
   appId: number;
@@ -27,7 +30,22 @@ export interface UpdateMobileMenuRow {
 
 @Injectable()
 export class MobileMenusRepository {
-  async listByAppId(db: Db, appId: number): Promise<MobileMenuRow[]> {
+  async withAppLock<T>(
+    db: Db,
+    appId: number,
+    operation: (transaction: MobileMenuDb) => Promise<T>,
+  ): Promise<T> {
+    return db.transaction(async (transaction) => {
+      await transaction
+        .select({ id: apps.id })
+        .from(apps)
+        .where(eq(apps.id, appId))
+        .for("update");
+      return operation(transaction);
+    });
+  }
+
+  async listByAppId(db: MobileMenuDb, appId: number): Promise<MobileMenuRow[]> {
     return db
       .select()
       .from(menus)
@@ -36,7 +54,7 @@ export class MobileMenusRepository {
   }
 
   async findByAppIdAndId(
-    db: Db,
+    db: MobileMenuDb,
     appId: number,
     id: number,
   ): Promise<MobileMenuRow | null> {
@@ -49,7 +67,7 @@ export class MobileMenusRepository {
   }
 
   async findByAppIdAndSlug(
-    db: Db,
+    db: MobileMenuDb,
     appId: number,
     slug: string,
   ): Promise<MobileMenuRow | null> {
@@ -62,7 +80,7 @@ export class MobileMenusRepository {
   }
 
   async listByParentId(
-    db: Db,
+    db: MobileMenuDb,
     appId: number,
     parentId: number,
   ): Promise<MobileMenuRow[]> {
@@ -73,7 +91,7 @@ export class MobileMenusRepository {
       .orderBy(menus.orderNo, menus.id);
   }
 
-  async insert(db: Db, row: CreateMobileMenuRow): Promise<MobileMenuRow> {
+  async insert(db: MobileMenuDb, row: CreateMobileMenuRow): Promise<MobileMenuRow> {
     const rows = await db.insert(menus).values(row).returning();
     const created = rows[0];
     if (!created) {
@@ -83,7 +101,7 @@ export class MobileMenusRepository {
   }
 
   async updateByAppIdAndId(
-    db: Db,
+    db: MobileMenuDb,
     appId: number,
     id: number,
     patch: UpdateMobileMenuRow,
@@ -97,7 +115,7 @@ export class MobileMenusRepository {
   }
 
   async deleteByAppIdAndId(
-    db: Db,
+    db: MobileMenuDb,
     appId: number,
     id: number,
   ): Promise<void> {
