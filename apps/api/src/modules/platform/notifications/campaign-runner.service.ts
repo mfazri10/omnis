@@ -6,6 +6,8 @@ import { NotificationsService } from "./notifications.service";
 export interface RunnerRunResult {
   claimed: number;
   sent: number;
+  simulated: number;
+  unknown: number;
   failed: number;
   skipped: number;
 }
@@ -36,7 +38,7 @@ export class CampaignRunnerService implements OnModuleInit, OnModuleDestroy {
       typeof raw === "number" && raw > 0 ? raw : DEFAULT_INTERVAL_MS;
     const nodeEnv = this.config.get<string>("NODE_ENV") ?? "development";
     const flag = this.config.get<string>("CAMPAIGN_RUNNER") ?? "on";
-    this.enabled = nodeEnv !== "test" && flag !== "off";
+    this.enabled = nodeEnv === "development" && flag !== "off";
   }
 
   onModuleInit(): void {
@@ -60,7 +62,7 @@ export class CampaignRunnerService implements OnModuleInit, OnModuleDestroy {
     limit: number = CLAIM_LIMIT,
   ): Promise<RunnerRunResult> {
     if (this.running) {
-      return { claimed: 0, sent: 0, failed: 0, skipped: 0 };
+      return { claimed: 0, sent: 0, simulated: 0, unknown: 0, failed: 0, skipped: 0 };
     }
     this.running = true;
     try {
@@ -68,11 +70,13 @@ export class CampaignRunnerService implements OnModuleInit, OnModuleDestroy {
       const result: RunnerRunResult = {
         claimed: due.length,
         sent: 0,
+        simulated: 0,
+        unknown: 0,
         failed: 0,
         skipped: 0,
       };
       for (const campaign of due) {
-        let outcome: "sent" | "failed" | "skipped";
+        let outcome: "sent" | "simulated" | "unknown" | "failed" | "skipped";
         try {
           outcome =
             await this.notifications.executeClaimedCampaign(campaign.id);
@@ -86,6 +90,10 @@ export class CampaignRunnerService implements OnModuleInit, OnModuleDestroy {
         }
         if (outcome === "sent") {
           result.sent += 1;
+        } else if (outcome === "simulated") {
+          result.simulated += 1;
+        } else if (outcome === "unknown") {
+          result.unknown += 1;
         } else if (outcome === "skipped") {
           result.skipped += 1;
         } else {

@@ -1,4 +1,5 @@
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
+import type { ConfigService } from "@nestjs/config";
 import { Reflector } from "@nestjs/core";
 import { APP_SCOPED_KEY } from "../../../common/decorators/app-scoped.decorator";
 import { PERMISSIONS_KEY } from "../../../common/decorators/require-permissions.decorator";
@@ -70,6 +71,22 @@ describe("validateServePath", () => {
   it("menolak slug di luar pola", () => {
     expect(() => validateServePath("../x", "berkas.png")).toThrow(
       BadRequestException,
+    );
+  });
+});
+
+describe("MediaUploadController.serve storage mode", () => {
+  it("does not read local media when S3 is selected", async () => {
+    const controller = new MediaUploadController(
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      { get: () => "s3" } as unknown as ConfigService,
+    );
+
+    await expect(controller.serve("app-test", "file.png")).rejects.toThrow(
+      NotFoundException,
     );
   });
 });

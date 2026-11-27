@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { FormEvent, JSX } from "react";
 import { graphQLErrorMessage } from "../../../../../features/rbac/graphql/errors";
+import { MY_APPS_QUERY } from "../../../../../features/shell/graphql/session.graphql";
 import { PROVISION_APP_MUTATION } from "../../../../../features/apps/graphql/apps.graphql";
 
 const inputClass = "border border-slate-300 px-3 py-2 text-slate-900";
@@ -34,6 +35,8 @@ export default function NewAppPage(): JSX.Element {
             modules: cbtModule ? ["cbt"] : [],
           },
         },
+          refetchQueries: [{ query: MY_APPS_QUERY }],
+          awaitRefetchQueries: true,
       });
       const created = result.data?.provisionApp;
       router.push(

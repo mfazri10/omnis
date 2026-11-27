@@ -96,9 +96,9 @@ Tanpa `deleted_at` (append-only); retensi ≥ 1 tahun.
 | link_target | varchar NULL | Rute tujuan di aplikasi (dipakai fase mobile) |
 | target_type | enum | `all`, `segment` |
 | target_segment | jsonb NULL | Kriteria segmen sederhana |
-| status | enum | `draft`, `scheduled`, `sending`, `sent`, `failed`, `cancelled` |
+| status | varchar | `draft`, `scheduled`, `sending`, `sent`, `simulated`, `unknown`, `failed`, `cancelled` |
 | scheduled_at / sent_at | timestamp NULL | |
-| target_count / sent_count / failed_count | int | Agregat hasil |
+| target_count / sent_count / failed_count / simulated_count / unknown_count | int | Agregat hasil; hasil tak pasti tidak dihitung terkirim |
 
 ### Tabel better-auth (control-plane, identitas admin)
 

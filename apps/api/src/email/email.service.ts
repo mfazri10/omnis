@@ -8,16 +8,24 @@ import type { EmailSender } from "../auth/better-auth";
 export class EmailService {
   private readonly transporter: Transporter | null;
   private readonly from: string;
+  private readonly allowStub: boolean;
 
   constructor(config: ConfigService) {
     const host = config.get<string>("SMTP_HOST");
+    const nodeEnv = config.get<string>("NODE_ENV") ?? "development";
+    this.allowStub = nodeEnv !== "production";
+    if (nodeEnv === "production" && !host) {
+      throw new Error("SMTP_HOST wajib diatur di production.");
+    }
     const user = config.get<string>("SMTP_USER");
     const pass = config.get<string>("SMTP_PASS");
     this.transporter = host
       ? nodemailer.createTransport({
           host,
           port: config.get<number>("SMTP_PORT", 587),
-          secure: config.get<string>("SMTP_SECURE", "false") === "true",
+          secure:
+            config.get<boolean | string>("SMTP_SECURE", false) === true ||
+            config.get<string>("SMTP_SECURE") === "true",
           auth: user && pass ? { user, pass } : undefined,
         })
       : null;
@@ -35,6 +43,9 @@ export class EmailService {
     text: string,
   ): Promise<void> {
     if (!this.transporter) {
+      if (!this.allowStub) {
+        throw new Error("Email tidak terkirim: SMTP belum dikonfigurasi.");
+      }
       console.log(`[email-stub] To: ${to}\nSubject: ${subject}\n\n${text}`);
       return;
     }

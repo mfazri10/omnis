@@ -12,6 +12,19 @@ export interface EnvVars {
   PROVISION_TIMEOUT_MS: number;
   STORAGE_LOCAL_ROOT: string;
   STORAGE_PUBLIC_BASE_URL: string;
+  STORAGE_DRIVER: string;
+  S3_ENDPOINT?: string;
+  S3_REGION?: string;
+  S3_BUCKET?: string;
+  S3_ACCESS_KEY_ID?: string;
+  S3_SECRET_ACCESS_KEY?: string;
+  S3_PUBLIC_BASE_URL?: string;
+  SMTP_HOST?: string;
+  SMTP_PORT: number;
+  SMTP_SECURE: boolean;
+  SMTP_USER?: string;
+  SMTP_PASS?: string;
+  SMTP_FROM: string;
   UPLOAD_MAX_BYTES: number;
   UPLOAD_ALLOWED_MIME: string;
   PUSH_DRIVER: string;
@@ -82,6 +95,44 @@ export function validateEnv(config: Record<string, unknown>): EnvVars {
   ) {
     throw new Error("EXPORT_STORAGE_ROOT must be a non-empty string");
   }
+  const nodeEnv = isNonEmptyString(config.NODE_ENV) ? config.NODE_ENV : "development";
+  const storageDriver = isNonEmptyString(config.STORAGE_DRIVER)
+    ? config.STORAGE_DRIVER
+    : "local";
+  const smtpPort = Number(config.SMTP_PORT ?? 587);
+  if (!Number.isInteger(smtpPort) || smtpPort < 1 || smtpPort > 65535) {
+    throw new Error("SMTP_PORT must be an integer from 1 to 65535");
+  }
+  if (storageDriver !== "local" && storageDriver !== "s3") {
+    throw new Error('STORAGE_DRIVER must be "local" or "s3"');
+  }
+  if (nodeEnv === "production") {
+    if (!isNonEmptyString(config.SMTP_HOST)) {
+      throw new Error("SMTP_HOST is required in production");
+    }
+    if (!isNonEmptyString(config.SMTP_FROM)) {
+      throw new Error("SMTP_FROM is required in production");
+    }
+    if (storageDriver !== "s3") {
+      throw new Error('STORAGE_DRIVER must be "s3" in production');
+    }
+  }
+  if (storageDriver === "s3") {
+    for (const key of ["S3_REGION", "S3_BUCKET", "S3_PUBLIC_BASE_URL"] as const) {
+      if (!isNonEmptyString(config[key])) throw new Error(`${key} is required when STORAGE_DRIVER=s3`);
+    }
+    if (Boolean(config.S3_ACCESS_KEY_ID) !== Boolean(config.S3_SECRET_ACCESS_KEY)) {
+      throw new Error("S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY must be set together");
+    }
+  }
+  if (nodeEnv === "production") {
+    if ((config.PUSH_DRIVER ?? "noop") !== "fcm") {
+      throw new Error('PUSH_DRIVER must be "fcm" in production');
+    }
+    if (!isNonEmptyString(config.FCM_CREDENTIAL_KEY)) {
+      throw new Error("FCM_CREDENTIAL_KEY is required in production");
+    }
+  }
   return {
     CONTROL_PLANE_DB_URL: config.CONTROL_PLANE_DB_URL as string,
     POSTGRES_BASE_URL: config.POSTGRES_BASE_URL as string,
@@ -90,9 +141,7 @@ export function validateEnv(config: Record<string, unknown>): EnvVars {
     CORS_ORIGIN: isNonEmptyString(config.CORS_ORIGIN)
       ? config.CORS_ORIGIN
       : "http://localhost:3001",
-    NODE_ENV: isNonEmptyString(config.NODE_ENV)
-      ? config.NODE_ENV
-      : "development",
+    NODE_ENV: nodeEnv,
     BETTER_AUTH_SECRET: config.BETTER_AUTH_SECRET as string,
     BETTER_AUTH_URL: isNonEmptyString(config.BETTER_AUTH_URL)
       ? config.BETTER_AUTH_URL
@@ -113,6 +162,19 @@ export function validateEnv(config: Record<string, unknown>): EnvVars {
     )
       ? config.STORAGE_PUBLIC_BASE_URL
       : "http://localhost:3000/media",
+    STORAGE_DRIVER: storageDriver,
+    S3_ENDPOINT: isNonEmptyString(config.S3_ENDPOINT) ? config.S3_ENDPOINT : undefined,
+    S3_REGION: isNonEmptyString(config.S3_REGION) ? config.S3_REGION : undefined,
+    S3_BUCKET: isNonEmptyString(config.S3_BUCKET) ? config.S3_BUCKET : undefined,
+    S3_ACCESS_KEY_ID: isNonEmptyString(config.S3_ACCESS_KEY_ID) ? config.S3_ACCESS_KEY_ID : undefined,
+    S3_SECRET_ACCESS_KEY: isNonEmptyString(config.S3_SECRET_ACCESS_KEY) ? config.S3_SECRET_ACCESS_KEY : undefined,
+    S3_PUBLIC_BASE_URL: isNonEmptyString(config.S3_PUBLIC_BASE_URL) ? config.S3_PUBLIC_BASE_URL : undefined,
+    SMTP_HOST: isNonEmptyString(config.SMTP_HOST) ? config.SMTP_HOST : undefined,
+    SMTP_PORT: smtpPort,
+    SMTP_SECURE: config.SMTP_SECURE === true || config.SMTP_SECURE === "true",
+    SMTP_USER: isNonEmptyString(config.SMTP_USER) ? config.SMTP_USER : undefined,
+    SMTP_PASS: isNonEmptyString(config.SMTP_PASS) ? config.SMTP_PASS : undefined,
+    SMTP_FROM: isNonEmptyString(config.SMTP_FROM) ? config.SMTP_FROM : "noreply@localhost",
     UPLOAD_MAX_BYTES: uploadMaxBytes,
     UPLOAD_ALLOWED_MIME: isNonEmptyString(config.UPLOAD_ALLOWED_MIME)
       ? config.UPLOAD_ALLOWED_MIME

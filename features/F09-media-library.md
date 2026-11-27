@@ -50,10 +50,11 @@ sehingga Status tetap `Dikerjakan`.
 Keputusan Fase 1:
 
 - Storage abstrak (`StorageDriver`: `put`/`delete`/`publicUrl`) dengan
-  implementasi lokal (`STORAGE_LOCAL_ROOT`, default `./storage/media`).
-  Driver S3 menyusul tanpa mengubah pemakai.
-- Berkas lokal dilayani `GET /media/:slug/:file` (pengganti URL S3
-  publik di dev; produksi memakai URL S3 langsung).
+  driver lokal untuk development dan `S3StorageDriver` untuk produksi.
+  Pilih `STORAGE_DRIVER=s3`; konfigurasi `S3_REGION`, `S3_BUCKET`,
+  `S3_PUBLIC_BASE_URL`, dan kredensial atau IAM role.
+- Berkas lokal dilayani `GET /media/:slug/:file` hanya saat driver lokal
+  aktif. Produksi memakai URL publik/CDN dari `S3_PUBLIC_BASE_URL`.
 - Batas interceptor multipart 6 MB (backstop anti-OOM); batas service
   `UPLOAD_MAX_BYTES` default 5 MB dengan pesan menyebut batasnya.
 - Validasi MIME ganda: content-type terkirim harus ada di daftar izin

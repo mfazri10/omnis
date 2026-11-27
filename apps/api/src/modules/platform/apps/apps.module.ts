@@ -17,6 +17,6 @@ import { ProvisioningService } from "./provisioning.service";
     FcmCredentialService,
     ProvisioningService,
   ],
-  exports: [AppsRepository, AppsService, AppConfigsRepository],
+  exports: [AppsRepository, AppsService, AppConfigsRepository, FcmCredentialService],
 })
 export class AppsModule {}

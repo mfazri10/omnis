@@ -19,6 +19,8 @@ export interface CampaignData {
   targetCount: number;
   sentCount: number;
   failedCount: number;
+  simulatedCount: number;
+  unknownCount: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -49,6 +51,8 @@ const CAMPAIGN_FIELDS = `
   targetCount
   sentCount
   failedCount
+  simulatedCount
+  unknownCount
   createdAt
   updatedAt
 `;

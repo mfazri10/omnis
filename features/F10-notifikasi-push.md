@@ -16,10 +16,9 @@ Admin bisa membuat dan menjadwalkan kampanye push per aplikasi; worker mengirim 
 
 - [x] Tabel `notification_campaigns` (control-plane): judul, isi, gambar, target halaman, audiens, jadwal, status, agregat hasil
 - [x] CRUD kampanye + `sendCampaignNow` + `cancelCampaign` (permission `platform.notifications.*`)
-- [ ] Worker BullMQ + Redis: eksekusi terjadwal, ambil token dari App DB target, kirim via FCM (kredensial aplikasi dari registry)
-  - [x] Pengganti Fase 1: `CampaignRunnerService` in-process (`setInterval` 30 detik, klaim berkunci per kampanye)
-  - [x] Pengganti Fase 1: `PushSender` + `NoopPushSender` (tanpa jaringan; FCM nyata menyusul)
-- [x] Catat `target/sent/failed_count`; bersihkan token basi; kampanye gagal bisa dilihat alasannya (via audit log)
+- [x] Worker BullMQ + Redis: pemindaian terjadwal oleh proses worker terpisah; klaim database mencegah job ganda
+- [x] FCM memakai kredensial aplikasi yang dienkripsi di control-plane; token invalid dibersihkan
+- [x] Catat target, terkirim, gagal, dan hasil ambigu; alasan kegagalan dicatat di audit log
 - [x] Segmen sederhana v1 (`last_active_days` di atas `device_tokens.last_seen_at`); segmen kompleks = lanjutan
 
 ## Lingkup CMS UI
@@ -35,30 +34,26 @@ Admin bisa membuat dan menjadwalkan kampanye push per aplikasi; worker mengirim 
 3. Kampanye aplikasi A tidak pernah menyentuh token aplikasi B.
 4. Tanpa token perangkat (sebelum fase mobile), eksekusi tetap berjalan dan tercatat `target_count = 0` — bukan error.
 
-## Catatan Implementasi (Fase 1)
+## Catatan Implementasi
 
 Status `Dikerjakan`, bukan `Selesai`: seluruh lingkup di atas
 diimplementasikan dan diuji (unit mock + typecheck + lint + build),
 tetapi uji runtime (migrasi + boot + kirim nyata) menjadi wewenang
 reviewer manusia.
 
-Pengecualian yang disengaja (keputusan desain, bukan kelalaian):
-
-- Penjadwalan in-process, bukan BullMQ: paket `bullmq`/`@nestjs/bullmq`
-  tidak terpasang dan menambah dependency dilarang. `CampaignRunnerService`
-  menyapu tiap 30 detik (`CAMPAIGN_RUNNER_INTERVAL_MS`, mati saat
-  `NODE_ENV=test` atau `CAMPAIGN_RUNNER=off`), sehingga toleransi
-  ≤1 menit pada kriteria 1 tetap terpenuhi. Klaim antar-instance
-  dikunci di repository (`UPDATE ... WHERE status='scheduled'`
-  per kampanye; yang kalah mengembalikan 0 baris dan dilewati).
-  BullMQ + Redis menyusul tanpa mengubah kontrak service.
-- Pengiriman FCM diganti `NoopPushSender` (env `PUSH_DRIVER=noop`,
-  satu-satunya nilai valid Fase 1): mencatat ke console, tanpa
-  jaringan, selalu `sent`. Bukan bukti pengiriman FCM nyata;
-  driver FCM (memakai kredensial registry + `firebase-admin`)
-  menyusul di implementasi `PushSender` yang sama.
-- Alasan gagal tercatat di audit log (`action: send` + ringkasan
-  alasan), karena skema tak punya kolom alasan gagal.
+- `bun run --filter api worker` menjalankan worker kampanye dan ekspor;
+  API tidak menjalankan polling in-process di production. Development dapat
+  memakai runner lokal tanpa menyalakan worker.
+- `PUSH_DRIVER=noop` hanya untuk development dan mencatat status `simulated`;
+  nilai itu tidak menambah `sent_count`. Production mewajibkan
+  `PUSH_DRIVER=fcm`, `FCM_CREDENTIAL_KEY`, dan service account per aplikasi.
+- Jika koneksi FCM putus sehingga penerimaan pesan tak bisa dipastikan,
+  kampanye menjadi `unknown`. Worker tidak mengirim ulang otomatis;
+  setelah 10 menit tanpa heartbeat, kampanye `sending` juga direkonsiliasi
+  menjadi `unknown`. Hitungan hasil tiap penerima terlihat melalui
+  `sent_count`, `failed_count`, `simulated_count`, dan `unknown_count`.
+- Pengiriman nyata belum diverifikasi karena tidak ada service account/token
+  uji. Unit tests memakai hasil provider yang dikontrol dan tidak memanggil FCM.
 - Runner melewati kampanye milik aplikasi nonaktif (dikembalikan ke
   `scheduled`, dikirim setelah aplikasi aktif lagi); aksi manual
   admin tetap jalan karena guard CMS sudah memveto konteksnya.

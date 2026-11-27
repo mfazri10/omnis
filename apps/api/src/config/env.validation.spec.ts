@@ -90,6 +90,25 @@ describe("validateEnv", () => {
     );
   });
 
+  it("menolak konfigurasi production tanpa SMTP, S3, dan FCM", () => {
+    expect(() => validateEnv({ ...base, NODE_ENV: "production" })).toThrow("SMTP_HOST");
+    const withSmtp = {
+      ...base,
+      NODE_ENV: "production",
+      SMTP_HOST: "smtp.example.test",
+      SMTP_FROM: "support@example.test",
+    };
+    expect(() => validateEnv(withSmtp)).toThrow("STORAGE_DRIVER");
+    expect(() => validateEnv({ ...withSmtp, STORAGE_DRIVER: "s3" })).toThrow("S3_REGION");
+    expect(() => validateEnv({
+      ...withSmtp,
+      STORAGE_DRIVER: "s3",
+      S3_REGION: "us-east-1",
+      S3_BUCKET: "bucket",
+      S3_PUBLIC_BASE_URL: "https://cdn.example.test",
+    })).toThrow("PUSH_DRIVER");
+  });
+
   it("EXPORT_STORAGE_ROOT default ./storage/exports dan tak boleh kosong", () => {
     expect(validateEnv({ ...base }).EXPORT_STORAGE_ROOT).toBe(
       "./storage/exports",

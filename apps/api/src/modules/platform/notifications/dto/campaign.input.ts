@@ -23,6 +23,8 @@ export type CampaignStatus =
   | "scheduled"
   | "sending"
   | "sent"
+  | "simulated"
+  | "unknown"
   | "failed"
   | "cancelled";
 
@@ -33,6 +35,8 @@ export const CAMPAIGN_STATUSES: CampaignStatus[] = [
   "scheduled",
   "sending",
   "sent",
+  "simulated",
+  "unknown",
   "failed",
   "cancelled",
 ];

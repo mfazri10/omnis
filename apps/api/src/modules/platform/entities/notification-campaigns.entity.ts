@@ -17,6 +17,8 @@ export type CampaignStatusValue =
   | "scheduled"
   | "sending"
   | "sent"
+  | "simulated"
+  | "unknown"
   | "failed"
   | "cancelled";
 
@@ -64,6 +66,8 @@ export const notificationCampaigns = pgTable(
     targetCount: integer("target_count").notNull().default(0),
     sentCount: integer("sent_count").notNull().default(0),
     failedCount: integer("failed_count").notNull().default(0),
+    simulatedCount: integer("simulated_count").notNull().default(0),
+    unknownCount: integer("unknown_count").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

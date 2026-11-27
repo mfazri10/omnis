@@ -270,11 +270,45 @@ Arsitektur multi-database ([05-arsitektur-sistem.md](05-arsitektur-sistem.md)) m
 
 ---
 
-## 5. Soft Delete Policy
+
+## 5. Integrasi Provider dan Worker
+
+Production API membutuhkan `SMTP_HOST`, `SMTP_FROM`, `STORAGE_DRIVER=s3`
+beserta `S3_REGION`, `S3_BUCKET`, `S3_PUBLIC_BASE_URL`, `PUSH_DRIVER=fcm`,
+dan `FCM_CREDENTIAL_KEY` (64 karakter hex). `SMTP_PORT`, `SMTP_SECURE`,
+`SMTP_USER`, `SMTP_PASS`, `S3_ENDPOINT`, access key, dan secret key bersifat
+opsional sesuai konfigurasi provider. AWS IAM role dapat
+menggantikan access key/secret. Jangan menaruh secret di repo.
+
+Atur service account FCM pada setiap aplikasi melalui pengaturan kredensial
+FCM di CMS. API mengenkripsi JSON itu dengan `FCM_CREDENTIAL_KEY`; perubahan
+kunci enkripsi perlu direncanakan sebelum rotasi. FCM, SMTP, dan S3 belum
+diuji dengan kredensial live dalam workspace ini.
+
+Jalankan API dan worker sebagai proses terpisah:
+
+```sh
+bun run --filter api start
+bun run --filter api worker
+```
+
+Worker mendaftarkan job scheduler persisten di Redis: scan kampanye tiap 30
+detik dan ekspor tiap 5 detik. Klaim PostgreSQL tetap menjadi sumber kebenaran.
+Kampanye `sending` yang tidak memiliki heartbeat selama 10 menit berubah ke
+`unknown`; status ini tidak dikirim ulang otomatis karena FCM mungkin telah
+menerima pesannya. `sent_count`, `failed_count`, `simulated_count`, dan
+`unknown_count` menunjukkan hasil per penerima yang disimpan worker.
+
+Development dapat memilih `STORAGE_DRIVER=local`, `PUSH_DRIVER=noop`, dan
+SMTP stub. Kampanye noop berstatus `simulated`. Jalankan
+`bun run --filter api worker:dev` untuk memeriksa job lokal; jangan jalankan
+API production dengan runner development aktif.
+
+## 6. Soft Delete Policy
 
 Kebijakan penghapusan data per tabel, berdasarkan skema di [06-database-design.md](06-database-design.md):
 
-### 5.1 Control-Plane DB (`platform`)
+### 6.1 Control-Plane DB (`platform`)
 
 | Tabel | Strategi | Mekanisme | Alasan |
 |---|---|---|---|
@@ -285,7 +319,7 @@ Kebijakan penghapusan data per tabel, berdasarkan skema di [06-database-design.m
 | `activity_logs` | Append-only, **TIDAK dihapus** | — | Kebutuhan audit; retensi ≥ 1 tahun (lihat [06-database-design.md](06-database-design.md)) |
 | `notification_campaigns` | Soft delete | `deleted_at` timestamp | Riwayat kampanye untuk pelaporan |
 
-### 5.2 App DB (`app_{slug}`)
+### 6.2 App DB (`app_{slug}`)
 
 | Tabel | Strategi | Mekanisme | Alasan |
 |---|---|---|---|
@@ -293,7 +327,7 @@ Kebijakan penghapusan data per tabel, berdasarkan skema di [06-database-design.m
 | `media` | **Hard delete** | Hapus record DB + hapus file dari object storage | Tidak ada referensi kritis; menghemat storage |
 | `device_tokens` | **Hard delete** | Hapus record DB | Token basi dibersihkan secara periodik oleh worker notifikasi |
 
-### 5.3 Konvensi Query
+### 6.3 Konvensi Query
 
 Semua query default harus menyertakan filter soft delete:
 
@@ -315,7 +349,7 @@ Resolver yang butuh data terhapus (misal: audit trail detail) harus secara ekspl
 
 ---
 
-## 6. Referensi Antar Dokumen
+## 7. Referensi Antar Dokumen
 
 | Topik | Dokumen | Relevansi |
 |---|---|---|

@@ -13,7 +13,7 @@ Dibagi dua: **terkunci** (keputusan pemilik produk, tidak diubah tanpa diskusi) 
 | Antrian | Redis + BullMQ | Kampanye notifikasi terjadwal |
 | Push | Firebase Cloud Messaging | Kredensial per aplikasi di registry |
 | Object storage | S3-compatible | Prefix per aplikasi (`{slug}/`) + `platform/` |
-| Email transaksional | Penyedia SMTP/API (TBD — Q3) | Wajib ada untuk verifikasi & reset kata sandi better-auth |
+| Email transaksional | SMTP via Nodemailer | `SMTP_HOST` wajib di production; development dapat memakai stub |
 | CMS web | Next.js + Apollo + Tailwind | Dikunci via setup Full F00 (Q2 terjawab) |
 | Package manager & monorepo | Bun + Turborepo | Node.js ≥ 22 sebagai runtime apps; Bun sebagai package manager & script runner |
 

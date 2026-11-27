@@ -14,14 +14,25 @@ export interface PushPayload {
   linkTarget: string | null;
 }
 
-export type PushSendResult = "sent" | "invalid-token" | "failed";
+export type PushSendResult =
+  | "sent"
+  | "simulated"
+  | "invalid-token"
+  | "failed"
+  | "unknown";
 
 export interface PushSender {
+  readonly simulated: boolean;
   /**
    * Kirim ke satu token. `invalid-token` = token basi, wajib dihapus
    * pemanggil dan dihitung gagal.
    */
-  send(token: string, payload: PushPayload): Promise<PushSendResult>;
+  send(
+    appId: number,
+    credentialJson: string | null,
+    token: string,
+    payload: PushPayload,
+  ): Promise<PushSendResult>;
 }
 
 /**
@@ -31,11 +42,12 @@ export interface PushSender {
  */
 @Injectable()
 export class NoopPushSender implements PushSender {
-  send(token: string, payload: PushPayload): Promise<PushSendResult> {
+  readonly simulated = true;
+  send(_appId: number, _credentialJson: string | null, token: string, payload: PushPayload): Promise<PushSendResult> {
     const tail = token.length > 6 ? `***${token.slice(-6)}` : "***";
     console.log(
       `[push:noop] "${payload.title}" → ${tail} (draf dev, tanpa jaringan).`,
     );
-    return Promise.resolve("sent");
+    return Promise.resolve("simulated");
   }
 }

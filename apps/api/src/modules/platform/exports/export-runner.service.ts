@@ -34,7 +34,7 @@ export class ExportRunnerService implements OnModuleInit, OnModuleDestroy {
       typeof raw === "number" && raw > 0 ? raw : DEFAULT_INTERVAL_MS;
     const nodeEnv = this.config.get<string>("NODE_ENV") ?? "development";
     const flag = this.config.get<string>("EXPORT_RUNNER") ?? "on";
-    this.enabled = nodeEnv !== "test" && flag !== "off";
+    this.enabled = nodeEnv === "development" && flag !== "off";
   }
 
   onModuleInit(): void {

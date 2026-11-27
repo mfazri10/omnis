@@ -11,6 +11,7 @@ import {
 } from "../../../database/database.service";
 import { ActivityLogService } from "../activity-logs/activity-log.service";
 import { AppsRepository } from "../apps/apps.repository";
+import { FcmCredentialService } from "../apps/fcm-credential.service";
 import type {
   CampaignRow,
   CampaignSegmentCriteria,
@@ -26,7 +27,7 @@ import type {
 import { CampaignsRepository } from "./notifications.repository";
 import type { CampaignFilters } from "./notifications.repository";
 import { PUSH_SENDER } from "./push-sender";
-import type { PushSender } from "./push-sender";
+import type { PushSendResult, PushSender } from "./push-sender";
 
 export interface CampaignFilterInput {
   status?: CampaignStatus;
@@ -60,11 +61,13 @@ export interface CampaignItem {
   targetCount: number;
   sentCount: number;
   failedCount: number;
+  simulatedCount: number;
+  unknownCount: number;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export type CampaignSendOutcome = "sent" | "failed" | "skipped";
+export type CampaignSendOutcome = "sent" | "simulated" | "unknown" | "failed" | "skipped";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_PER_PAGE = 20;
@@ -89,6 +92,8 @@ function toItem(row: CampaignRow): CampaignItem {
     targetCount: row.targetCount,
     sentCount: row.sentCount,
     failedCount: row.failedCount,
+    simulatedCount: row.simulatedCount,
+    unknownCount: row.unknownCount,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -109,6 +114,7 @@ export class NotificationsService {
     private readonly campaigns: CampaignsRepository,
     private readonly tokens: DeviceTokensRepository,
     private readonly apps: AppsRepository,
+    private readonly fcmCredentials: FcmCredentialService,
     private readonly activityLog: ActivityLogService,
     @Inject(PUSH_SENDER) private readonly sender: PushSender,
   ) {}
@@ -308,6 +314,22 @@ export class NotificationsService {
     return this.campaigns.claimDueCampaigns(this.controlDb(), now, limit);
   }
 
+  async reconcileStaleSending(cutoff: Date): Promise<number> {
+    const unknown = await this.campaigns.markStaleSendingUnknown(this.controlDb(), cutoff);
+    for (const row of unknown) {
+      await this.activityLog.record({
+        adminId: String(row.createdBy),
+        appId: String(row.appId),
+        action: "send",
+        entityType: "notification_campaign",
+        entityId: String(row.id),
+        summary: `Hasil kampanye "${row.title}" tidak dapat dipastikan setelah worker berhenti; pengiriman otomatis tidak diulang.`,
+        ip: null,
+      });
+    }
+    return unknown.length;
+  }
+
   /**
    * Eksekusi satu kampanye ter-klaim dari runner. Audit memakai pembuat
    * kampanye karena runner tak punya admin (kolom audit wajib terisi).
@@ -338,18 +360,19 @@ export class NotificationsService {
     try {
       const app = await this.apps.findById(db, campaign.appId);
       if (!app) {
-        await this.markFailed(
+        const failed = await this.markFailed(
           campaign,
           audit,
           `Aplikasi pemilik kampanye (id ${campaign.appId}) tidak ditemukan.`,
         );
-        return "failed";
+        return failed ? "failed" : "unknown";
       }
       if (app.status !== "active" && actor === "runner") {
-        await this.campaigns.update(db, campaign.id, {
+        const restored = await this.campaigns.updateSending(db, campaign.id, {
           status: "scheduled",
           updatedAt: new Date(),
         });
+        if (!restored) return "unknown";
         console.log(
           `Kampanye ${campaign.id} dilewati: aplikasi "${app.slug}" berstatus ${app.status}.`,
         );
@@ -362,14 +385,20 @@ export class NotificationsService {
         activeSince: this.activeSince(campaign),
       });
       if (tokens.length === 0) {
-        await this.campaigns.update(db, campaign.id, {
-          status: "sent",
-          sentAt: new Date(),
+        const emptyStatus: CampaignStatusValue = this.sender.simulated
+          ? "simulated"
+          : "sent";
+        const completed = await this.campaigns.updateSending(db, campaign.id, {
+          status: emptyStatus,
+          sentAt: emptyStatus === "sent" ? new Date() : null,
           targetCount: 0,
           sentCount: 0,
           failedCount: 0,
+          simulatedCount: 0,
+          unknownCount: 0,
           updatedAt: new Date(),
         });
+        if (!completed) return "unknown";
         await this.activityLog.record({
           adminId: audit.adminId,
           appId: String(campaign.appId),
@@ -381,27 +410,62 @@ export class NotificationsService {
             `perangkat, tercatat target 0.`,
           ip: audit.ip,
         });
-        return "sent";
+        return emptyStatus;
       }
+      const initialized = await this.campaigns.updateSending(db, campaign.id, {
+        targetCount: tokens.length,
+        sentCount: 0,
+        failedCount: 0,
+        simulatedCount: 0,
+        unknownCount: tokens.length,
+        updatedAt: new Date(),
+      });
+      if (!initialized) return "unknown";
+      const credentialJson = app.fcmCredential
+        ? this.fcmCredentials.decrypt(app.fcmCredential)
+        : null;
       let sent = 0;
       let failed = 0;
+      let simulated = 0;
+      let unknown = 0;
       for (const item of tokens) {
-        const ok = await this.sendToToken(appDb, item.token, campaign);
-        if (ok) {
-          sent += 1;
-        } else {
-          failed += 1;
-        }
+        const result = await this.sendToToken(
+          appDb,
+          item.token,
+          campaign,
+          credentialJson,
+        );
+        if (result === "sent") sent += 1;
+        else if (result === "simulated") simulated += 1;
+        else if (result === "unknown") unknown += 1;
+        else failed += 1;
+        const heartbeat = await this.campaigns.updateSending(db, campaign.id, {
+          sentCount: sent,
+          failedCount: failed,
+          simulatedCount: simulated,
+          unknownCount: unknown,
+          updatedAt: new Date(),
+        });
+        if (!heartbeat) return "unknown";
       }
-      const status: CampaignStatusValue = sent === 0 ? "failed" : "sent";
-      await this.campaigns.update(db, campaign.id, {
+      const status: CampaignStatusValue = unknown > 0
+        ? "unknown"
+        : simulated === tokens.length
+          ? "simulated"
+          : sent > 0
+            ? "sent"
+            : "failed";
+      const completed = await this.campaigns.updateSending(db, campaign.id, {
         status,
         sentAt: status === "sent" ? new Date() : null,
         targetCount: tokens.length,
         sentCount: sent,
         failedCount: failed,
+        simulatedCount: simulated,
+        unknownCount: unknown,
         updatedAt: new Date(),
       });
+      if (!completed) return "unknown";
       await this.activityLog.record({
         adminId: audit.adminId,
         appId: String(campaign.appId),
@@ -410,7 +474,7 @@ export class NotificationsService {
         entityId: String(campaign.id),
         summary:
           `Mengirim kampanye "${campaign.title}" ke ${tokens.length} ` +
-          `perangkat: ${sent} terkirim, ${failed} gagal.` +
+          `perangkat: ${sent} terkirim, ${simulated} simulasi, ${failed} gagal, ${unknown} tidak diketahui.` +
           (actor === "runner" ? " (terjadwal otomatis)" : ""),
         ip: audit.ip,
       });
@@ -418,8 +482,8 @@ export class NotificationsService {
     } catch (error: unknown) {
       const reason =
         error instanceof Error ? error.message : "Kesalahan tak dikenal.";
-      await this.markFailed(campaign, audit, reason);
-      return "failed";
+      const markedFailed = await this.markFailed(campaign, audit, reason);
+      return markedFailed ? "failed" : "unknown";
     }
   }
 
@@ -428,17 +492,15 @@ export class NotificationsService {
     appDb: Db,
     token: string,
     campaign: CampaignRow,
-  ): Promise<boolean> {
+    credentialJson: string | null,
+  ): Promise<PushSendResult> {
     try {
-      const result = await this.sender.send(token, {
+      const result = await this.sender.send(campaign.appId, credentialJson, token, {
         title: campaign.title,
         body: campaign.body,
         imageUrl: campaign.imageUrl,
         linkTarget: campaign.linkTarget,
       });
-      if (result === "sent") {
-        return true;
-      }
       if (result === "invalid-token") {
         try {
           await this.tokens.deleteByToken(appDb, token);
@@ -446,10 +508,10 @@ export class NotificationsService {
           console.error("Gagal menghapus token basi:", error);
         }
       }
-      return false;
+      return result;
     } catch (error: unknown) {
       console.error("Gagal mengirim push:", error);
-      return false;
+      return "unknown";
     }
   }
 
@@ -458,12 +520,13 @@ export class NotificationsService {
     campaign: CampaignRow,
     audit: CampaignAuditContext,
     reason: string,
-  ): Promise<void> {
-    await this.campaigns.update(this.controlDb(), campaign.id, {
+  ): Promise<boolean> {
+    const updated = await this.campaigns.updateSending(this.controlDb(), campaign.id, {
       status: "failed",
       sentAt: null,
       updatedAt: new Date(),
     });
+    if (!updated) return false;
     await this.activityLog.record({
       adminId: audit.adminId,
       appId: String(campaign.appId),
@@ -473,6 +536,7 @@ export class NotificationsService {
       summary: `Pengiriman kampanye "${campaign.title}" gagal: ${reason}`,
       ip: audit.ip,
     });
+    return true;
   }
 
   /** Batas `last_seen_at` dari kriteria segmen; undefined = semua token. */

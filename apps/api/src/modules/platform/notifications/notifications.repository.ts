@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { and, asc, desc, eq, ilike, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, lt, lte, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { Db } from "../../../database/database.service";
 import type {
@@ -42,6 +42,8 @@ export interface UpdateCampaignRow {
   targetCount?: number;
   sentCount?: number;
   failedCount?: number;
+  simulatedCount?: number;
+  unknownCount?: number;
   updatedAt: Date;
 }
 
@@ -119,6 +121,22 @@ export class CampaignsRepository {
     return updated;
   }
 
+  async updateSending(
+    db: Db,
+    id: number,
+    patch: UpdateCampaignRow,
+  ): Promise<CampaignRow | null> {
+    const rows = await db
+      .update(notificationCampaigns)
+      .set(patch)
+      .where(and(
+        eq(notificationCampaigns.id, id),
+        eq(notificationCampaigns.status, "sending"),
+      ))
+      .returning();
+    return rows[0] ?? null;
+  }
+
   /**
    * Klaim kampanye jatuh tempo untuk dieksekusi: tiap kandidat dikunci
    * lewat UPDATE bersyarat (`status` masih `scheduled`) sehingga dua
@@ -159,6 +177,36 @@ export class CampaignsRepository {
       }
     }
     return claimed;
+  }
+
+  async markStaleSendingUnknown(db: Db, cutoff: Date): Promise<CampaignRow[]> {
+    const stale = await db
+      .select()
+      .from(notificationCampaigns)
+      .where(and(eq(notificationCampaigns.status, "sending"), lt(notificationCampaigns.updatedAt, cutoff)))
+      .limit(100);
+    const updated: CampaignRow[] = [];
+    for (const row of stale) {
+      const unknownCount = Math.max(
+        0,
+        row.targetCount - row.sentCount - row.failedCount - row.simulatedCount,
+      );
+      const rows = await db
+        .update(notificationCampaigns)
+        .set({
+          status: "unknown",
+          unknownCount,
+          updatedAt: new Date(),
+        })
+        .where(and(
+          eq(notificationCampaigns.id, row.id),
+          eq(notificationCampaigns.status, "sending"),
+          eq(notificationCampaigns.updatedAt, row.updatedAt),
+        ))
+        .returning();
+      if (rows[0]) updated.push(rows[0]);
+    }
+    return updated;
   }
 
   /**

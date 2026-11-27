@@ -31,6 +31,8 @@ const STATUS_LABELS: Record<string, string> = {
   scheduled: "Terjadwal",
   sending: "Mengirim",
   sent: "Terkirim",
+  simulated: "Simulasi",
+  unknown: "Hasil tidak diketahui",
   failed: "Gagal",
   cancelled: "Dibatalkan",
 };
@@ -40,6 +42,8 @@ const STATUS_BADGES: Record<string, string> = {
   scheduled: "bg-blue-100 text-blue-800",
   sending: "bg-amber-100 text-amber-800",
   sent: "bg-green-100 text-green-800",
+  simulated: "bg-slate-200 text-slate-700",
+  unknown: "bg-purple-100 text-purple-800",
   failed: "bg-red-100 text-red-800",
   cancelled: "bg-slate-200 text-slate-700",
 };
@@ -104,10 +108,10 @@ function audienceLabel(campaign: CampaignData): string {
 }
 
 function resultLabel(campaign: CampaignData): string {
-  if (campaign.status !== "sent" && campaign.status !== "failed") {
+  if (!['sent', 'simulated', 'unknown', 'failed'].includes(campaign.status)) {
     return "–";
   }
-  return `Target ${campaign.targetCount}, terkirim ${campaign.sentCount}, gagal ${campaign.failedCount}`;
+  return `Target ${campaign.targetCount}, terkirim ${campaign.sentCount}, simulasi ${campaign.simulatedCount}, gagal ${campaign.failedCount}, tidak diketahui ${campaign.unknownCount}`;
 }
 
 interface FilterDraft {
@@ -553,7 +557,7 @@ export default function NotificationsPage({
         text:
           sent === undefined
             ? `Kampanye "${campaign.title}" dikirim.`
-            : `Kampanye "${campaign.title}" dikirim: target ${sent.targetCount}, terkirim ${sent.sentCount}, gagal ${sent.failedCount}.`,
+            : `Kampanye "${campaign.title}" ${sent.status === "simulated" ? "disimulasikan" : "diproses"}: target ${sent.targetCount}, terkirim ${sent.sentCount}, simulasi ${sent.simulatedCount}, gagal ${sent.failedCount}, tidak diketahui ${sent.unknownCount}.`,
       });
     } catch (err: unknown) {
       setStatus({
@@ -640,6 +644,8 @@ export default function NotificationsPage({
                     <option value="scheduled">Terjadwal</option>
                     <option value="sending">Mengirim</option>
                     <option value="sent">Terkirim</option>
+                    <option value="simulated">Simulasi</option>
+                    <option value="unknown">Hasil tidak diketahui</option>
                     <option value="failed">Gagal</option>
                     <option value="cancelled">Dibatalkan</option>
                   </select>

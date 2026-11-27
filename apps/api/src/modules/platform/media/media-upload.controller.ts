@@ -26,6 +26,7 @@ import { AuthGuard } from "../../../common/guards/auth.guard";
 import { PermissionGuard } from "../../../common/guards/permission.guard";
 import { DatabaseService } from "../../../database/database.service";
 import { LocalStorageDriver } from "../../../storage/local-storage.driver";
+import { ConfigService } from "@nestjs/config";
 import type { AdminProfile } from "../admins/admins.service";
 import { AppsRepository } from "../apps/apps.repository";
 import { MediaService } from "./media.service";
@@ -104,6 +105,7 @@ export class MediaUploadController {
     private readonly database: DatabaseService,
     private readonly apps: AppsRepository,
     private readonly localStorage: LocalStorageDriver,
+    private readonly config: ConfigService,
   ) {}
 
   /**
@@ -164,6 +166,9 @@ export class MediaUploadController {
     @Param("slug") slug: string,
     @Param("file") file: string,
   ): Promise<StreamableFile> {
+    if ((this.config.get<string>("STORAGE_DRIVER") ?? "local") !== "local") {
+      throw new NotFoundException("Media lokal tidak tersedia.");
+    }
     const key = validateServePath(slug, file);
     const app = await this.apps.findBySlug(
       this.database.getControlPlaneConnection(),

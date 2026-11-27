@@ -27,6 +27,8 @@ function campaign(over: Partial<CampaignRow> = {}): CampaignRow {
     targetCount: 0,
     sentCount: 0,
     failedCount: 0,
+    simulatedCount: 0,
+    unknownCount: 0,
     createdAt: new Date("2026-11-17T00:00:00.000Z"),
     updatedAt: new Date("2026-11-18T00:00:00.000Z"),
     ...over,
@@ -71,7 +73,7 @@ describe("CampaignRunnerService.runOnce", () => {
     expect(service.executeClaimedCampaign).toHaveBeenCalledTimes(2);
     expect(service.executeClaimedCampaign).toHaveBeenNthCalledWith(1, 11);
     expect(service.executeClaimedCampaign).toHaveBeenNthCalledWith(2, 12);
-    expect(result).toEqual({ claimed: 2, sent: 1, failed: 1, skipped: 0 });
+    expect(result).toEqual({ claimed: 2, sent: 1, simulated: 0, unknown: 0, failed: 1, skipped: 0 });
   });
 
   it("tidak mengeksekusi apa pun bila tak ada kampanye jatuh tempo", async () => {
@@ -81,7 +83,7 @@ describe("CampaignRunnerService.runOnce", () => {
     const result = await runner.runOnce();
 
     expect(service.executeClaimedCampaign).not.toHaveBeenCalled();
-    expect(result).toEqual({ claimed: 0, sent: 0, failed: 0, skipped: 0 });
+    expect(result).toEqual({ claimed: 0, sent: 0, simulated: 0, unknown: 0, failed: 0, skipped: 0 });
   });
 
   it("klaim yang kalah (kosong) tidak memproses dua kali", async () => {
@@ -114,7 +116,7 @@ describe("CampaignRunnerService.runOnce", () => {
       const result = await runner.runOnce();
 
       expect(service.executeClaimedCampaign).toHaveBeenCalledTimes(2);
-      expect(result).toEqual({ claimed: 2, sent: 1, failed: 1, skipped: 0 });
+      expect(result).toEqual({ claimed: 2, sent: 1, simulated: 0, unknown: 0, failed: 1, skipped: 0 });
     } finally {
       errorSpy.mockRestore();
     }
@@ -127,7 +129,7 @@ describe("CampaignRunnerService.runOnce", () => {
 
     const result = await runner.runOnce();
 
-    expect(result).toEqual({ claimed: 1, sent: 0, failed: 0, skipped: 1 });
+    expect(result).toEqual({ claimed: 1, sent: 0, simulated: 0, unknown: 0, failed: 0, skipped: 1 });
   });
 });
 
@@ -212,6 +214,6 @@ describe("CampaignRunnerService.onModuleInit", () => {
     await first;
 
     expect(service.claimDueCampaigns).toHaveBeenCalledTimes(1);
-    expect(second).toEqual({ claimed: 0, sent: 0, failed: 0, skipped: 0 });
+    expect(second).toEqual({ claimed: 0, sent: 0, simulated: 0, unknown: 0, failed: 0, skipped: 0 });
   });
 });

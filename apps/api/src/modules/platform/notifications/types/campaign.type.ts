@@ -44,7 +44,7 @@ export class CampaignType {
 
   @Field(() => String, {
     description:
-      "Status: draft, scheduled, sending, sent, failed, cancelled.",
+      "Status: draft, scheduled, sending, sent, simulated, unknown, failed, cancelled.",
   })
   status!: string;
 
@@ -62,6 +62,12 @@ export class CampaignType {
 
   @Field(() => Int)
   failedCount!: number;
+
+  @Field(() => Int)
+  simulatedCount!: number;
+
+  @Field(() => Int)
+  unknownCount!: number;
 
   @Field(() => GraphQLISODateTime)
   createdAt!: Date;

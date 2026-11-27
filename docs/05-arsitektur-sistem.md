@@ -51,7 +51,7 @@ Backend NestJS tunggal yang modular, melayani CMS web lewat GraphQL. Data terpis
 |---|---|---|
 | `PlatformModule` | Apps, provisioning, config, admin, RBAC, audit, dashboard | Control-plane |
 | `MediaModule` | Metadata media + URL upload | App DB konteks (file di storage prefix aplikasi) |
-| `NotificationModule` | Kampanye + worker pengiriman | Control-plane (baca token dari App DB saat kirim) |
+| `NotificationModule` | Kampanye + FCM sender; proses `worker` BullMQ mengirim dan merekonsiliasi hasil | Control-plane (baca token dari App DB saat kirim) |
 | `CbtModule`, `PosModule`, `DebatModule` | Domain per aplikasi + katalog permission + statistik dashboard | App DB masing-masing |
 | `DatabaseModule` | Connection factory: control-plane (tetap) + App DB lazy pool dinamis per slug (lihat [11-connection-pooling.md](11-connection-pooling.md)) | — |
 

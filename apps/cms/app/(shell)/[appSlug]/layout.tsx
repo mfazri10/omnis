@@ -18,6 +18,7 @@ export default function AppSlugLayout({
   const router = useRouter();
   const ready = useSessionStore((state) => state.ready);
   const apps = useSessionStore((state) => state.accessibleApps);
+  const activeSlug = useSessionStore((state) => state.activeSlug);
   const setActiveSlug = useSessionStore((state) => state.setActiveSlug);
   const pushToast = useToastStore((state) => state.push);
 
@@ -63,6 +64,13 @@ export default function AppSlugLayout({
         >
           Kembali ke pemilih aplikasi
         </button>
+      </main>
+    );
+  }
+  if (activeSlug !== appSlug) {
+    return (
+      <main className="mx-auto max-w-xl px-6 py-8 font-sans">
+        <p className="text-slate-900">Menyiapkan konteks aplikasi…</p>
       </main>
     );
   }

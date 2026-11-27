@@ -41,6 +41,8 @@ function campaign(over: Partial<CampaignRow> = {}): CampaignRow {
     targetCount: 0,
     sentCount: 0,
     failedCount: 0,
+    simulatedCount: 0,
+    unknownCount: 0,
     createdAt: new Date("2026-11-17T00:00:00.000Z"),
     updatedAt: new Date("2026-11-17T00:00:00.000Z"),
     ...over,
@@ -91,8 +93,10 @@ async function loadService(): Promise<{
     findById: jest.fn(),
     insert: jest.fn(),
     update: jest.fn(),
+    updateSending: jest.fn(),
     claimDueCampaigns: jest.fn(),
     claimForSend: jest.fn(),
+    markStaleSendingUnknown: jest.fn(),
   } as unknown as Mocked<CampaignsRepository>;
   const tokens = {
     listTokens: jest.fn(),
@@ -104,16 +108,22 @@ async function loadService(): Promise<{
   const activityLog = {
     record: jest.fn(),
   } as unknown as Mocked<ActivityLogService>;
+  const fcmCredentials = { decrypt: jest.fn((value: string) => value) };
   const sender = {
     send: jest.fn(),
+    simulated: false,
   } as unknown as Mocked<PushSender>;
   const service = new Service(
     database as unknown as DatabaseService,
     campaigns,
     tokens,
     apps,
+    fcmCredentials as never,
     activityLog as unknown as ActivityLogService,
-    sender,
+    sender as unknown as PushSender,
+  );
+  campaigns.updateSending.mockImplementation(() =>
+    Promise.resolve(campaign({ status: "sending" })),
   );
   return { service, database, campaigns, tokens, apps, activityLog, sender };
 }
@@ -353,12 +363,12 @@ describe("NotificationsService.sendCampaignNow", () => {
     apps.findById.mockResolvedValue(app());
     database.getAppConnection.mockResolvedValue(APP_DB);
     tokens.listTokens.mockResolvedValue([]);
-    campaigns.update.mockResolvedValue(campaign({ status: "sent" }));
+    campaigns.updateSending.mockResolvedValue(campaign({ status: "sent" }));
 
     const item = await service.sendCampaignNow("11", "1", AUDIT);
 
     expect(sender.send).not.toHaveBeenCalled();
-    expect(campaigns.update).toHaveBeenCalledWith(
+    expect(campaigns.updateSending).toHaveBeenCalledWith(
       CONTROL_DB,
       11,
       expect.objectContaining({
@@ -391,12 +401,12 @@ describe("NotificationsService.sendCampaignNow", () => {
       .mockResolvedValueOnce("sent")
       .mockResolvedValueOnce("failed")
       .mockResolvedValueOnce("sent");
-    campaigns.update.mockResolvedValue(campaign({ status: "sent" }));
+    campaigns.updateSending.mockResolvedValue(campaign({ status: "sent" }));
 
     await service.sendCampaignNow("11", "1", AUDIT);
 
     expect(sender.send).toHaveBeenCalledTimes(3);
-    expect(campaigns.update).toHaveBeenCalledWith(
+    expect(campaigns.updateSending).toHaveBeenCalledWith(
       CONTROL_DB,
       11,
       expect.objectContaining({
@@ -417,12 +427,12 @@ describe("NotificationsService.sendCampaignNow", () => {
     database.getAppConnection.mockResolvedValue(APP_DB);
     tokens.listTokens.mockResolvedValue([{ id: 9, token: "token-basi" }]);
     sender.send.mockResolvedValue("invalid-token");
-    campaigns.update.mockResolvedValue(campaign({ status: "failed" }));
+    campaigns.updateSending.mockResolvedValue(campaign({ status: "failed" }));
 
     await service.sendCampaignNow("11", "1", AUDIT);
 
     expect(tokens.deleteByToken).toHaveBeenCalledWith(APP_DB, "token-basi");
-    expect(campaigns.update).toHaveBeenCalledWith(
+    expect(campaigns.updateSending).toHaveBeenCalledWith(
       CONTROL_DB,
       11,
       expect.objectContaining({
@@ -445,11 +455,76 @@ describe("NotificationsService.sendCampaignNow", () => {
     database.getAppConnection.mockResolvedValue(APP_DB);
     tokens.listTokens.mockResolvedValue([{ id: 1, token: "token-1" }]);
     sender.send.mockResolvedValue("failed");
-    campaigns.update.mockResolvedValue(campaign({ status: "failed" }));
+    campaigns.updateSending.mockResolvedValue(campaign({ status: "failed" }));
 
     const item = await service.sendCampaignNow("11", "1", AUDIT);
 
     expect(item.status).toBe("failed");
+  });
+
+  it("mengakhiri kampanye noop sebagai simulated, bukan sent", async () => {
+    const { service, campaigns, tokens, apps, database, sender } = await loadService();
+    Object.defineProperty(sender, "simulated", { value: true });
+    campaigns.findById
+      .mockResolvedValueOnce(campaign())
+      .mockResolvedValueOnce(campaign({ status: "simulated" }));
+    campaigns.claimForSend.mockResolvedValue(campaign({ status: "sending" }));
+    apps.findById.mockResolvedValue(app());
+    database.getAppConnection.mockResolvedValue(APP_DB);
+    tokens.listTokens.mockResolvedValue([{ id: 1, token: "token-1" }]);
+    sender.send.mockResolvedValue("simulated");
+    campaigns.updateSending.mockResolvedValue(campaign({ status: "simulated" }));
+
+    const item = await service.sendCampaignNow("11", "1", AUDIT);
+
+    expect(item.status).toBe("simulated");
+    expect(campaigns.updateSending).toHaveBeenLastCalledWith(
+      CONTROL_DB,
+      11,
+      expect.objectContaining({ status: "simulated", sentCount: 0, simulatedCount: 1, failedCount: 0, unknownCount: 0 }),
+    );
+  });
+
+  it("tidak menimpa unknown jika rekonsiliasi menang saat FCM masih berjalan", async () => {
+    const { service, campaigns, tokens, apps, database, sender } = await loadService();
+    campaigns.findById.mockResolvedValue(campaign({ status: "sending", targetCount: 1 }));
+    apps.findById.mockResolvedValue(app());
+    database.getAppConnection.mockResolvedValue(APP_DB);
+    tokens.listTokens.mockResolvedValue([{ id: 1, token: "token-1" }]);
+    sender.send.mockResolvedValue("sent");
+    campaigns.updateSending
+      .mockResolvedValueOnce(campaign({ status: "sending", targetCount: 1 }))
+      .mockResolvedValueOnce(null);
+
+    const result = await service.executeClaimedCampaign(11);
+
+    expect(result).toBe("unknown");
+    expect(sender.send).toHaveBeenCalledTimes(1);
+    expect(campaigns.update).not.toHaveBeenCalled();
+    expect(campaigns.updateSending).toHaveBeenCalledTimes(2);
+  });
+
+  it("mencatat hasil ambigu sebagai unknown tanpa mengulang token", async () => {
+    const { service, campaigns, tokens, apps, database, sender } = await loadService();
+    campaigns.findById
+      .mockResolvedValueOnce(campaign())
+      .mockResolvedValueOnce(campaign({ status: "unknown", unknownCount: 1 }));
+    campaigns.claimForSend.mockResolvedValue(campaign({ status: "sending" }));
+    apps.findById.mockResolvedValue(app());
+    database.getAppConnection.mockResolvedValue(APP_DB);
+    tokens.listTokens.mockResolvedValue([{ id: 1, token: "token-1" }]);
+    sender.send.mockResolvedValue("unknown");
+    campaigns.updateSending.mockResolvedValue(campaign({ status: "unknown", unknownCount: 1 }));
+
+    const item = await service.sendCampaignNow("11", "1", AUDIT);
+
+    expect(sender.send).toHaveBeenCalledTimes(1);
+    expect(item.status).toBe("unknown");
+    expect(campaigns.updateSending).toHaveBeenLastCalledWith(
+      CONTROL_DB,
+      11,
+      expect.objectContaining({ status: "unknown", sentCount: 0, failedCount: 0, unknownCount: 1 }),
+    );
   });
 
   it("kegagalan App DB menandai failed + audit alasan, bukan menggantung sending", async () => {
@@ -465,11 +540,11 @@ describe("NotificationsService.sendCampaignNow", () => {
       campaigns.claimForSend.mockResolvedValue(campaign({ status: "sending" }));
       apps.findById.mockResolvedValue(app());
       database.getAppConnection.mockRejectedValue(new Error("DB putus"));
-      campaigns.update.mockResolvedValue(campaign({ status: "failed" }));
+      campaigns.updateSending.mockResolvedValue(campaign({ status: "failed" }));
 
       const item = await service.sendCampaignNow("11", "1", AUDIT);
 
-      expect(campaigns.update).toHaveBeenCalledWith(
+      expect(campaigns.updateSending).toHaveBeenCalledWith(
         CONTROL_DB,
         11,
         expect.objectContaining({ status: "failed" }),
@@ -533,6 +608,21 @@ describe("NotificationsService.sendCampaignNow", () => {
     expect(tokens.listTokens).toHaveBeenCalledWith(APP_DB, {
       activeSince: undefined,
     });
+  });
+});
+
+describe("NotificationsService.reconcileStaleSending", () => {
+  it("marks a stale send unknown and records an audit without invoking FCM", async () => {
+    const { service, campaigns, activityLog, sender } = await loadService();
+    campaigns.markStaleSendingUnknown.mockResolvedValue([
+      campaign({ status: "unknown", targetCount: 2, unknownCount: 2 }),
+    ]);
+
+    const count = await service.reconcileStaleSending(new Date("2026-11-27T00:00:00Z"));
+
+    expect(count).toBe(1);
+    expect(sender.send).not.toHaveBeenCalled();
+    expect(activityLog.record).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -612,7 +702,7 @@ describe("NotificationsService jalur runner", () => {
 
       expect(outcome).toBe("skipped");
       expect(tokens.listTokens).not.toHaveBeenCalled();
-      expect(campaigns.update).toHaveBeenCalledWith(
+      expect(campaigns.updateSending).toHaveBeenCalledWith(
         CONTROL_DB,
         11,
         expect.objectContaining({ status: "scheduled" }),
