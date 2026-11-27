@@ -2,14 +2,21 @@
 
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { TableToolbar } from "@/components/shared/table-toolbar";
 import { useBoundedPage } from "@/hooks/use-bounded-page";
-import { LoadingState } from "@/components/shared/page-state";
-import { Table } from "@/components/ui/table";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "@/components/shared/page-state";
+import { DataTable } from "@/components/shared/data-table";
+import { StatusBadge } from "@/components/shared/status-badge";
 
 import { useMutation, useQuery } from "@apollo/client/react";
 import { use, useState } from "react";
 import type { FormEvent, JSX } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { MediaPicker } from "../../../../../components/shared/media-picker";
 import { graphQLErrorMessage } from "../../../../../features/rbac/graphql/errors";
 import {
@@ -159,7 +166,7 @@ function QuestionForm({
 
   return (
     <section className="rounded-xl border border-border bg-card p-4">
-      <h2 className="text-sm font-semibold text-slate-900">
+      <h2 className="text-sm font-semibold">
         {initial === null ? "Tambah soal" : `Ubah soal #${initial.id}`}
       </h2>
       <form
@@ -184,23 +191,24 @@ function QuestionForm({
         <div className="flex flex-col gap-1">
           <label htmlFor="question-image" className={LABEL_CLASS}>Gambar soal (opsional)</label>
           <div className="flex flex-wrap gap-2">
-            <input
+            <Input
               id="question-image"
               type="url"
               value={imageUrl}
               disabled={saving}
               onChange={(e) => setImageUrl(e.target.value)}
               placeholder="https://…"
-              className={`${CONTROL_CLASS} min-w-0 flex-1`}
+              className="min-h-11 min-w-0 flex-1 bg-card"
             />
-            <button
+            <Button
               type="button"
+              variant="outline"
+              className="min-h-11"
               disabled={saving}
               onClick={() => setPickerOpen(true)}
-              className="min-h-[44px] border border-slate-300 px-3 py-2 text-sm text-slate-900"
             >
               Pilih media
-            </button>
+            </Button>
           </div>
         </div>
         <label className="flex flex-col gap-1 md:col-span-2">
@@ -248,7 +256,7 @@ function QuestionForm({
                     onChange={(e) =>
                       setWeights((prev) => ({ ...prev, [o]: e.target.value }))
                     }
-                    className="min-h-[44px] w-16 border border-slate-300 px-2 py-2 text-sm"
+                    className="min-h-11 w-16 rounded-md border border-input bg-card px-2 py-2 text-sm"
                   />
                 </label>
               ))}
@@ -384,36 +392,101 @@ export default function CbtSoalPage({
 
   const total = data?.cbtQuestions.total ?? 0;
   const pageValid = useBoundedPage(page, setPage, PER_PAGE, loading ? undefined : data?.cbtQuestions.total);
-  const from = total === 0 ? 0 : (page - 1) * PER_PAGE + 1;
-  const to = Math.min(page * PER_PAGE, total);
+
+  const columns: ColumnDef<CbtQuestionData>[] = [
+    {
+      id: "id",
+      header: "#",
+      cell: ({ row: { original: q } }) => (
+        <span className="text-muted-foreground tabular-nums">{q.id}</span>
+      ),
+    },
+    { id: "category", header: "Kategori", cell: ({ row: { original: q } }) => q.category },
+    {
+      id: "stem",
+      header: "Pertanyaan",
+      cell: ({ row: { original: q } }) => (
+        <span className="block max-w-md whitespace-normal">
+          <span className="line-clamp-2">{q.stem}</span>
+          {q.imageUrl && (
+            <span className="ml-2 text-xs text-muted-foreground">(bergambar)</span>
+          )}
+        </span>
+      ),
+    },
+    {
+      id: "scoring",
+      header: "Penilaian",
+      cell: ({ row: { original: q } }) => (
+        <span className="whitespace-nowrap text-muted-foreground">{scoringSummary(q)}</span>
+      ),
+    },
+    {
+      id: "status",
+      header: "Status",
+      cell: ({ row: { original: q } }) => (
+        <StatusBadge
+          label={q.isActive ? "Aktif" : "Nonaktif"}
+          tone={q.isActive ? "success" : "neutral"}
+        />
+      ),
+    },
+  ];
+  if (canManage) {
+    columns.push({
+      id: "actions",
+      header: "Aksi",
+      cell: ({ row: { original: q } }) => (
+        <div className="flex items-center gap-x-3 gap-y-1">
+          <Button
+            type="button"
+            variant="link"
+            className="min-h-11"
+            onClick={() => {
+              setEditing(q);
+              setStatus(null);
+              setFormOpen(true);
+            }}
+          >
+            Ubah
+          </Button>
+          <Button
+            type="button"
+            variant="link"
+            className="min-h-11"
+            disabled={toggling}
+            onClick={() => void handleToggle(q)}
+          >
+            {q.isActive ? "Nonaktifkan" : "Aktifkan"}
+          </Button>
+        </div>
+      ),
+    });
+  }
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
       <PageHeader title="Bank soal" description={appSlug} />
       {!ready && <LoadingState />}
       {ready && !canView && (
-        <p className="mt-6 text-sm text-slate-600">
-          Anda tidak memiliki izin untuk melihat bank soal aplikasi ini.
-        </p>
+        <EmptyState>Anda tidak memiliki izin untuk melihat bank soal aplikasi ini.</EmptyState>
       )}
       {ready && canView && (
         <>
-          {!contextReady && (
-            <p className="mt-6 text-slate-900">Menyiapkan konteks…</p>
-          )}
+          {!contextReady && <LoadingState>Menyiapkan konteks…</LoadingState>}
           {contextReady && (
             <>
               <TableToolbar onSubmit={handleApply}>
                 <label className="flex flex-col gap-1">
                   <span className={LABEL_CLASS}>Pencarian</span>
-                  <input
+                  <Input
                     type="search"
                     placeholder="Cari pertanyaan…"
                     value={draft.search}
                     onChange={(e) =>
                       setDraft((prev) => ({ ...prev, search: e.target.value }))
                     }
-                    className={CONTROL_CLASS}
+                    className="min-h-11 bg-card"
                   />
                 </label>
                 <label className="flex flex-col gap-1">
@@ -448,32 +521,24 @@ export default function CbtSoalPage({
                   </select>
                 </label>
                 <div className="flex gap-2">
-                  <button
-                    type="submit"
-                    className="min-h-[44px] bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-                  >
-                    Terapkan filter
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleReset}
-                    className="min-h-[44px] border border-slate-300 px-4 py-2 text-sm text-slate-900"
-                  >
+                  <Button type="submit" className="min-h-11">Terapkan filter</Button>
+                  <Button type="button" variant="outline" className="min-h-11" onClick={handleReset}>
                     Atur ulang
-                  </button>
+                  </Button>
                 </div>
                 {canManage && (
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    className="min-h-11"
                     onClick={() => {
                       setEditing(null);
                       setStatus(null);
                       setFormOpen(true);
                     }}
-                    className="min-h-[44px] border border-slate-900 px-4 py-2 text-sm font-semibold text-slate-900"
                   >
                     Tambah soal
-                  </button>
+                  </Button>
                 )}
               </TableToolbar>
 
@@ -481,8 +546,8 @@ export default function CbtSoalPage({
                 <p
                   className={
                     status.kind === "sukses"
-                      ? "mt-4 text-sm text-green-700"
-                      : "mt-4 text-sm text-red-700"
+                      ? "mt-4 text-sm text-emerald-700"
+                      : "mt-4 text-sm text-destructive"
                   }
                 >
                   {status.text}
@@ -504,121 +569,26 @@ export default function CbtSoalPage({
                 </div>
               )}
 
-              {loading && <p className="mt-6 text-slate-900">Memuat…</p>}
+              {loading && <LoadingState />}
               {error && (
-                <div className="mt-6">
-                  <p className="text-sm text-red-700">
-                    {graphQLErrorMessage(error, "Gagal memuat bank soal.")}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => void refetch()}
-                    className="mt-2 min-h-[44px] underline"
-                  >
-                    Muat ulang
-                  </button>
-                </div>
+                <ErrorState onRetry={() => void refetch()}>
+                  {graphQLErrorMessage(error, "Gagal memuat bank soal.")}
+                </ErrorState>
               )}
               {data && total === 0 && (
-                <p className="mt-6 text-sm text-slate-600">
-                  Belum ada soal yang cocok. Tambah soal atau ubah filter.
-                </p>
+                <EmptyState>Belum ada soal yang cocok. Tambah soal atau ubah filter.</EmptyState>
               )}
-              {data && total > 0 && pageValid && (
-                <>
-                  <div className="mt-6 overflow-x-auto">
-                    <Table scrollLabel="Daftar soal CBT" className="min-w-max bg-card text-left">
-                      <thead>
-                        <tr className="border-b border-slate-200 text-slate-600">
-                          <th className="py-2 pr-4 font-semibold">#</th>
-                          <th className="py-2 pr-4 font-semibold">Kategori</th>
-                          <th className="py-2 pr-4 font-semibold">Pertanyaan</th>
-                          <th className="py-2 pr-4 font-semibold">Penilaian</th>
-                          <th className="py-2 pr-4 font-semibold">Status</th>
-                          {canManage && (
-                            <th className="py-2 font-semibold">Aksi</th>
-                          )}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {data.cbtQuestions.items.map((q) => (
-                          <tr key={q.id} className="border-b border-slate-100">
-                            <td className="py-2 pr-4 text-slate-600">{q.id}</td>
-                            <td className="py-2 pr-4 text-slate-900">
-                              {q.category}
-                            </td>
-                            <td className="max-w-md py-2 pr-4 text-slate-900">
-                              <span className="line-clamp-2">{q.stem}</span>
-                              {q.imageUrl && (
-                                <span className="ml-2 text-xs text-slate-500">
-                                  (bergambar)
-                                </span>
-                              )}
-                            </td>
-                            <td className="whitespace-nowrap py-2 pr-4 text-slate-600">
-                              {scoringSummary(q)}
-                            </td>
-                            <td className="py-2 pr-4">
-                              <span
-                                className={
-                                  q.isActive
-                                    ? "bg-green-100 px-2 py-1 text-xs font-semibold text-green-800"
-                                    : "bg-slate-200 px-2 py-1 text-xs font-semibold text-slate-700"
-                                }
-                              >
-                                {q.isActive ? "Aktif" : "Nonaktif"}
-                              </span>
-                            </td>
-                            {canManage && (
-                              <td className="whitespace-nowrap py-2">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditing(q);
-                                    setStatus(null);
-                                    setFormOpen(true);
-                                  }}
-                                  className="min-h-[44px] pr-3 underline"
-                                >
-                                  Ubah
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={toggling}
-                                  onClick={() => void handleToggle(q)}
-                                  className="min-h-[44px] underline disabled:opacity-50"
-                                >
-                                  {q.isActive ? "Nonaktifkan" : "Aktifkan"}
-                                </button>
-                              </td>
-                            )}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </Table>
-                  </div>
-                  <div className="mt-4 flex items-center gap-4 text-sm">
-                    <button
-                      type="button"
-                      disabled={page <= 1}
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      className="min-h-[44px] underline disabled:opacity-50"
-                    >
-                      Sebelumnya
-                    </button>
-                    <span className="text-slate-600">
-                      {`${from}–${to} dari ${total}`}
-                    </span>
-                    <button
-                      type="button"
-                      disabled={page * PER_PAGE >= total}
-                      onClick={() => setPage((p) => p + 1)}
-                      className="min-h-[44px] underline disabled:opacity-50"
-                    >
-                      Berikutnya
-                    </button>
-                  </div>
-                </>
+              {data && pageValid && (
+                <div className="mt-6">
+                  <DataTable
+                    rows={data.cbtQuestions.items}
+                    columns={columns}
+                    getRowId={(q) => q.id}
+                    label="Daftar soal CBT"
+                    emptyMessage={total === 0 ? "Belum ada soal yang cocok. Tambah soal atau ubah filter." : "Tidak ada soal pada halaman ini."}
+                    pagination={{ pageIndex: page - 1, pageSize: PER_PAGE, totalRows: total, onPageChange: (index) => setPage(index + 1) }}
+                  />
+                </div>
               )}
             </>
           )}
