@@ -2,16 +2,31 @@
 
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { TableToolbar } from "@/components/shared/table-toolbar";
 import { useBoundedPage } from "@/hooks/use-bounded-page";
-import { LoadingState } from "@/components/shared/page-state";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "@/components/shared/page-state";
+import { DataTable } from "@/components/shared/data-table";
 import { StatusBadge } from "@/components/shared/status-badge";
 import type { StatusTone } from "@/components/shared/status-badge";
-import { Table } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 import { useMutation, useQuery } from "@apollo/client/react";
-import { Fragment, use, useState } from "react";
+import { use, useState } from "react";
 import type { FormEvent, JSX } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { MediaPicker } from "../../../../components/shared/media-picker";
 import { graphQLErrorMessage } from "../../../../features/rbac/graphql/errors";
 import {
@@ -270,7 +285,7 @@ function CampaignForm({
 
   return (
     <section className="rounded-xl border border-border bg-card p-4">
-      <h2 className="text-sm font-semibold text-slate-900">
+      <h2 className="text-sm font-semibold">
         {initial === null ? "Buat kampanye" : `Ubah kampanye: ${initial.title}`}
       </h2>
       <form
@@ -279,7 +294,7 @@ function CampaignForm({
       >
         <label className="flex flex-col gap-1 md:col-span-2">
           <span className={LABEL_CLASS}>Judul (wajib)</span>
-          <input
+          <Input
             type="text"
             required
             value={title}
@@ -287,7 +302,7 @@ function CampaignForm({
             disabled={saving}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Judul notifikasi"
-            className={CONTROL_CLASS}
+            className="min-h-11 bg-card"
           />
         </label>
         <label className="flex flex-col gap-1 md:col-span-2">
@@ -306,23 +321,25 @@ function CampaignForm({
         <div className="flex flex-col gap-1 md:col-span-2">
           <span className={LABEL_CLASS}>Gambar (opsional)</span>
           <div className="flex flex-wrap items-center gap-2">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              className="min-h-11"
               disabled={saving}
               onClick={() => setPickerOpen(true)}
-              className="min-h-[44px] border border-slate-300 px-4 py-2 text-sm text-slate-900 disabled:opacity-50"
             >
               Pilih dari media
-            </button>
+            </Button>
             {imageUrl.trim() !== "" && (
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                className="min-h-11 text-destructive underline underline-offset-4"
                 disabled={saving}
                 onClick={() => setImageUrl("")}
-                className="min-h-[44px] px-2 py-2 text-sm text-red-700 underline disabled:opacity-50"
               >
                 Hapus gambar
-              </button>
+              </Button>
             )}
           </div>
           {imageUrl.trim() !== "" && (
@@ -331,20 +348,20 @@ function CampaignForm({
               alt=""
               width={160}
               height={90}
-              className="mt-1 h-auto w-40 border border-slate-200 object-cover"
+              className="mt-1 h-auto w-40 rounded-md border border-border object-cover"
             />
           )}
         </div>
         <label className="flex flex-col gap-1">
           <span className={LABEL_CLASS}>Target halaman (opsional)</span>
-          <input
+          <Input
             type="text"
             value={linkTarget}
             maxLength={512}
             disabled={saving}
             onChange={(e) => setLinkTarget(e.target.value)}
             placeholder="Contoh: /promo/ramadan"
-            className={CONTROL_CLASS}
+            className="min-h-11 bg-card"
           />
         </label>
         <label className="flex flex-col gap-1">
@@ -372,7 +389,7 @@ function CampaignForm({
         {targetType === "segment" && (
           <label className="flex flex-col gap-1">
             <span className={LABEL_CLASS}>Aktif dalam (hari, opsional)</span>
-            <input
+            <Input
               type="number"
               min={1}
               step={1}
@@ -380,11 +397,11 @@ function CampaignForm({
               disabled={saving}
               onChange={(e) => setLastActiveDays(e.target.value)}
               placeholder="Contoh: 30"
-              className={CONTROL_CLASS}
+              className="min-h-11 bg-card"
             />
           </label>
         )}
-        <p className="text-xs text-slate-600 md:col-span-2">
+        <p className="text-xs text-muted-foreground md:col-span-2">
           Kosongkan jadwal untuk menyimpan sebagai draf. Kampanye terjadwal
           dikirim otomatis pada waktunya; draf hanya terkirim lewat aksi
           Kirim sekarang.
@@ -423,17 +440,15 @@ function CampaignDetail({ campaign }: { campaign: CampaignData }): JSX.Element {
     <dl className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
       <div className="md:col-span-2">
         <dt className={LABEL_CLASS}>Isi</dt>
-        <dd className="mt-1 whitespace-pre-wrap text-slate-900">
-          {campaign.body}
-        </dd>
+        <dd className="mt-1 whitespace-pre-wrap">{campaign.body}</dd>
       </div>
       <div>
         <dt className={LABEL_CLASS}>Audiens</dt>
-        <dd className="mt-1 text-slate-900">{audienceLabel(campaign)}</dd>
+        <dd className="mt-1">{audienceLabel(campaign)}</dd>
       </div>
       <div>
         <dt className={LABEL_CLASS}>Target halaman</dt>
-        <dd className="mt-1 text-slate-900">{campaign.linkTarget ?? "–"}</dd>
+        <dd className="mt-1">{campaign.linkTarget ?? "–"}</dd>
       </div>
       {campaign.imageUrl !== null && (
         <div className="md:col-span-2">
@@ -444,32 +459,26 @@ function CampaignDetail({ campaign }: { campaign: CampaignData }): JSX.Element {
               alt=""
               width={320}
               height={180}
-              className="h-auto w-full max-w-xs border border-slate-200 object-cover"
+              className="h-auto w-full max-w-xs rounded-md border border-border object-cover"
             />
           </dd>
         </div>
       )}
       <div>
         <dt className={LABEL_CLASS}>Hasil pengiriman</dt>
-        <dd className="mt-1 text-slate-900">{resultLabel(campaign)}</dd>
+        <dd className="mt-1">{resultLabel(campaign)}</dd>
       </div>
       <div>
         <dt className={LABEL_CLASS}>Terkirim pada</dt>
-        <dd className="mt-1 text-slate-900">
-          {formatDateTime(campaign.sentAt)}
-        </dd>
+        <dd className="mt-1">{formatDateTime(campaign.sentAt)}</dd>
       </div>
       <div>
         <dt className={LABEL_CLASS}>Dibuat pada</dt>
-        <dd className="mt-1 text-slate-900">
-          {formatDateTime(campaign.createdAt)}
-        </dd>
+        <dd className="mt-1">{formatDateTime(campaign.createdAt)}</dd>
       </div>
       <div>
         <dt className={LABEL_CLASS}>Diubah pada</dt>
-        <dd className="mt-1 text-slate-900">
-          {formatDateTime(campaign.updatedAt)}
-        </dd>
+        <dd className="mt-1">{formatDateTime(campaign.updatedAt)}</dd>
       </div>
     </dl>
   );
@@ -499,7 +508,7 @@ export default function NotificationsPage({
   const [status, setStatus] = useState<StatusMessage | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<CampaignData | null>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
 
   const [sendNow, { loading: sending }] = useMutation(
     SEND_CAMPAIGN_NOW_MUTATION,
@@ -597,38 +606,123 @@ export default function NotificationsPage({
     }
   }
 
+  const campaigns = data?.campaigns.items ?? [];
   const total = data?.campaigns.total ?? 0;
   const pageValid = useBoundedPage(page, setPage, PER_PAGE, loading ? undefined : data?.campaigns.total);
-  const from = total === 0 ? 0 : (page - 1) * PER_PAGE + 1;
-  const to = Math.min(page * PER_PAGE, total);
+  const detail = campaigns.find((campaign) => campaign.id === detailId) ?? null;
+
+  const columns: ColumnDef<CampaignData>[] = [
+    {
+      id: "title",
+      header: "Judul",
+      cell: ({ row: { original: campaign } }) => (
+        <span className="block max-w-72 whitespace-normal font-medium wrap-anywhere">
+          {campaign.title}
+        </span>
+      ),
+    },
+    {
+      id: "status",
+      header: "Status",
+      cell: ({ row: { original: campaign } }) => (
+        <StatusBadge label={statusLabel(campaign.status)} tone={STATUS_TONES.get(campaign.status)} />
+      ),
+    },
+    {
+      id: "scheduledAt",
+      header: "Jadwal",
+      cell: ({ row: { original: campaign } }) => (
+        <span className="text-muted-foreground">{formatDateTime(campaign.scheduledAt)}</span>
+      ),
+    },
+    {
+      id: "result",
+      header: "Hasil",
+      cell: ({ row: { original: campaign } }) => (
+        <span className="max-w-96 block whitespace-normal text-muted-foreground wrap-anywhere">
+          {resultLabel(campaign)}
+        </span>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Aksi",
+      cell: ({ row: { original: campaign } }) => {
+        const editable =
+          campaign.status === "draft" || campaign.status === "scheduled";
+        const cancellable = campaign.status === "scheduled";
+        return (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <Button
+              type="button"
+              variant="link"
+              className="min-h-11"
+              onClick={() => setDetailId(campaign.id)}
+            >
+              Detail
+            </Button>
+            {canSend && editable && (
+              <Button
+                type="button"
+                variant="link"
+                className="min-h-11"
+                disabled={acting}
+                onClick={() => openEdit(campaign)}
+              >
+                Ubah
+              </Button>
+            )}
+            {canSend && editable && (
+              <Button
+                type="button"
+                variant="link"
+                className="min-h-11 font-semibold"
+                disabled={acting}
+                onClick={() => void handleSend(campaign)}
+              >
+                Kirim sekarang
+              </Button>
+            )}
+            {canSend && cancellable && (
+              <Button
+                type="button"
+                variant="link"
+                className="min-h-11 text-destructive"
+                disabled={acting}
+                onClick={() => void handleCancel(campaign)}
+              >
+                Batalkan
+              </Button>
+            )}
+          </div>
+        );
+      },
+    },
+  ];
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
       <PageHeader title="Kampanye notifikasi" description={appSlug} />
       {!ready && <LoadingState />}
       {ready && !canView && (
-        <p className="mt-6 text-sm text-slate-600">
-          Anda tidak memiliki izin untuk melihat kampanye aplikasi ini.
-        </p>
+        <EmptyState>Anda tidak memiliki izin untuk melihat kampanye aplikasi ini.</EmptyState>
       )}
       {ready && canView && (
         <>
-          {!contextReady && (
-            <p className="mt-6 text-slate-900">Menyiapkan konteks…</p>
-          )}
+          {!contextReady && <LoadingState>Menyiapkan konteks…</LoadingState>}
           {contextReady && (
             <>
               <TableToolbar onSubmit={handleApply}>
                 <label className="flex flex-col gap-1">
                   <span className={LABEL_CLASS}>Pencarian</span>
-                  <input
+                  <Input
                     type="search"
                     placeholder="Cari judul…"
                     value={draft.search}
                     onChange={(e) =>
                       setDraft((prev) => ({ ...prev, search: e.target.value }))
                     }
-                    className={CONTROL_CLASS}
+                    className="min-h-11 bg-card"
                   />
                 </label>
                 <label className="flex flex-col gap-1">
@@ -652,28 +746,15 @@ export default function NotificationsPage({
                   </select>
                 </label>
                 <div className="flex gap-2">
-                  <button
-                    type="submit"
-                    className="min-h-[44px] bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-                  >
-                    Terapkan filter
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleReset}
-                    className="min-h-[44px] border border-slate-300 px-4 py-2 text-sm text-slate-900"
-                  >
+                  <Button type="submit" className="min-h-11">Terapkan filter</Button>
+                  <Button type="button" variant="outline" className="min-h-11" onClick={handleReset}>
                     Atur ulang
-                  </button>
+                  </Button>
                 </div>
                 {canSend && (
-                  <button
-                    type="button"
-                    onClick={openCreate}
-                    className="min-h-[44px] border border-slate-900 px-4 py-2 text-sm font-semibold text-slate-900"
-                  >
+                  <Button type="button" variant="outline" className="min-h-11" onClick={openCreate}>
                     Buat kampanye
-                  </button>
+                  </Button>
                 )}
               </TableToolbar>
 
@@ -681,8 +762,8 @@ export default function NotificationsPage({
                 <p
                   className={
                     status.kind === "sukses"
-                      ? "mt-4 text-sm text-green-700"
-                      : "mt-4 text-sm text-red-700"
+                      ? "mt-4 text-sm text-emerald-700"
+                      : "mt-4 text-sm text-destructive"
                   }
                 >
                   {status.text}
@@ -706,153 +787,50 @@ export default function NotificationsPage({
                 </div>
               )}
 
-              {loading && <p className="mt-6 text-slate-900">Memuat…</p>}
+              {loading && <LoadingState />}
               {error && (
-                <div className="mt-6">
-                  <p className="text-sm text-red-700">
-                    {graphQLErrorMessage(error, "Gagal memuat kampanye.")}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => void refetch()}
-                    className="mt-2 min-h-[44px] underline"
-                  >
-                    Muat ulang
-                  </button>
-                </div>
+                <ErrorState onRetry={() => void refetch()}>
+                  {graphQLErrorMessage(error, "Gagal memuat kampanye.")}
+                </ErrorState>
               )}
               {data && total === 0 && !isFiltered(applied) && (
-                <p className="mt-6 text-sm text-slate-600">
+                <EmptyState>
                   Belum ada kampanye di aplikasi ini. Buat kampanye pertama
                   lewat tombol Buat kampanye.
-                </p>
+                </EmptyState>
               )}
               {data && total === 0 && isFiltered(applied) && (
-                <p className="mt-6 text-sm text-slate-600">
-                  Tidak ada kampanye yang cocok dengan filter.
-                </p>
+                <EmptyState>Tidak ada kampanye yang cocok dengan filter.</EmptyState>
               )}
-              {data && total > 0 && pageValid && (
-                <>
-                  <div className="mt-6 overflow-x-auto">
-                    <Table scrollLabel="Daftar kampanye" className="min-w-max bg-card text-left">
-                      <thead>
-                        <tr className="border-b border-slate-200 text-slate-600">
-                          <th className="py-2 pr-4 font-semibold">Judul</th>
-                          <th className="py-2 pr-4 font-semibold">Status</th>
-                          <th className="py-2 pr-4 font-semibold">Jadwal</th>
-                          <th className="py-2 pr-4 font-semibold">Hasil</th>
-                          <th className="py-2 font-semibold">Aksi</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {data.campaigns.items.map((campaign) => {
-                          const expanded = expandedId === campaign.id;
-                          const editable =
-                            campaign.status === "draft" ||
-                            campaign.status === "scheduled";
-                          const cancellable =
-                            campaign.status === "scheduled";
-                          return (
-                            <Fragment key={campaign.id}>
-                              <tr className="border-b border-slate-100">
-                                <td className="py-2 pr-4 font-semibold text-slate-900">
-                                  {campaign.title}
-                                </td>
-                                <td className="py-2 pr-4">
-                                  <StatusBadge label={statusLabel(campaign.status)} tone={STATUS_TONES.get(campaign.status)} />
-                                </td>
-                                <td className="py-2 pr-4 text-slate-600">
-                                  {formatDateTime(campaign.scheduledAt)}
-                                </td>
-                                <td className="py-2 pr-4 text-slate-600">
-                                  {resultLabel(campaign)}
-                                </td>
-                                <td className="py-2">
-                                  <span className="flex flex-wrap gap-x-3 gap-y-1">
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        setExpandedId(
-                                          expanded ? null : campaign.id,
-                                        )
-                                      }
-                                      aria-expanded={expanded}
-                                      className="min-h-[44px] text-sm text-slate-900 underline"
-                                    >
-                                      {expanded ? "Tutup" : "Detail"}
-                                    </button>
-                                    {canSend && editable && (
-                                      <button
-                                        type="button"
-                                        disabled={acting}
-                                        onClick={() => openEdit(campaign)}
-                                        className="min-h-[44px] text-sm text-slate-900 underline disabled:opacity-50"
-                                      >
-                                        Ubah
-                                      </button>
-                                    )}
-                                    {canSend && editable && (
-                                      <button
-                                        type="button"
-                                        disabled={acting}
-                                        onClick={() => void handleSend(campaign)}
-                                        className="min-h-[44px] text-sm font-semibold text-slate-900 underline disabled:opacity-50"
-                                      >
-                                        Kirim sekarang
-                                      </button>
-                                    )}
-                                    {canSend && cancellable && (
-                                      <button
-                                        type="button"
-                                        disabled={acting}
-                                        onClick={() =>
-                                          void handleCancel(campaign)
-                                        }
-                                        className="min-h-[44px] text-sm text-red-700 underline disabled:opacity-50"
-                                      >
-                                        Batalkan
-                                      </button>
-                                    )}
-                                  </span>
-                                </td>
-                              </tr>
-                              {expanded && (
-                                <tr className="border-b border-slate-100 bg-slate-50">
-                                  <td colSpan={5} className="px-4 py-4">
-                                    <CampaignDetail campaign={campaign} />
-                                  </td>
-                                </tr>
-                              )}
-                            </Fragment>
-                          );
-                        })}
-                      </tbody>
-                    </Table>
-                  </div>
-                  <div className="mt-4 flex items-center gap-4 text-sm">
-                    <button
-                      type="button"
-                      disabled={page <= 1}
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      className="min-h-[44px] underline disabled:opacity-50"
-                    >
-                      Sebelumnya
-                    </button>
-                    <span className="text-slate-600">
-                      {`${from}–${to} dari ${total}`}
-                    </span>
-                    <button
-                      type="button"
-                      disabled={page * PER_PAGE >= total}
-                      onClick={() => setPage((p) => p + 1)}
-                      className="min-h-[44px] underline disabled:opacity-50"
-                    >
-                      Berikutnya
-                    </button>
-                  </div>
-                </>
+              {data && pageValid && (
+                <div className="mt-6">
+                  <DataTable
+                    rows={campaigns}
+                    columns={columns}
+                    getRowId={(campaign) => campaign.id}
+                    label="Daftar kampanye"
+                    emptyMessage={isFiltered(applied) ? "Tidak ada kampanye yang cocok dengan filter." : "Belum ada kampanye di aplikasi ini."}
+                    pagination={{ pageIndex: page - 1, pageSize: PER_PAGE, totalRows: total, onPageChange: (index) => setPage(index + 1) }}
+                  />
+                </div>
               )}
+
+              <Dialog open={detail !== null} onOpenChange={(open) => { if (!open) setDetailId(null); }}>
+                {detail !== null && (
+                  <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle className="wrap-anywhere">{detail.title}</DialogTitle>
+                      <DialogDescription>Detail kampanye notifikasi.</DialogDescription>
+                    </DialogHeader>
+                    <CampaignDetail campaign={detail} />
+                    <DialogFooter>
+                      <DialogClose render={<Button type="button" variant="outline" className="min-h-11" />}>
+                        Tutup
+                      </DialogClose>
+                    </DialogFooter>
+                  </DialogContent>
+                )}
+              </Dialog>
             </>
           )}
         </>
