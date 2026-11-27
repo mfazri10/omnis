@@ -1,6 +1,6 @@
-# Peta implementasi UI saat ini (baseline sebelum redesign)
+# Peta implementasi UI CMS (kondisi pascaredesign 2026-11-28)
 
-Dokumen ini memetakan **kondisi nyata** di `apps/cms` pada branch `main-features` (per 2026-11-28), bukan rencana. Tujuannya menjadi baseline agar pekerjaan redesign tahu apa yang sudah ada, di mana lokasinya, dan celah mana yang perlu diseragamkan. Dokumen [peta-komponen.md](peta-komponen.md) masih berisi beberapa pernyataan kedaluwarsa (misalnya "shadcn/ui belum diinisialisasi"); bagian yang sudah berubah ditandai di sini.
+Dokumen ini memetakan **kondisi nyata** di `apps/cms` pada branch `main-features` setelah redesign UI (pendekatan C hybrid, spec `docs/superpowers/specs/2026-11-28-cms-ui-redesign-design.md`) selesai dikerjakan. Baseline pra-redesign ada di riwayat git dokumen ini. Dokumen [peta-komponen.md](peta-komponen.md) masih berisi beberapa pernyataan kedaluwarsa (misalnya "shadcn/ui belum diinisialisasi").
 
 ## 1. Kerangka aplikasi dan rute
 
@@ -30,11 +30,14 @@ Struktur `app/`: `(public)` landing di `/`, `(auth)` halaman masuk, `(shell)` be
 
 File: `apps/cms/components/shared/shell-header.tsx`.
 
-- `<header>` dengan grid: `grid-cols-[auto_minmax(0,1fr)_auto]` di mobile (app switcher turun ke baris 2), `sm:grid-cols-[auto_auto_minmax(0,1fr)_auto]` di layar lebar. `border-b border-border bg-card px-4 py-2.5 sm:px-6`.
-- Kolom 1: `SidebarTrigger` dari `components/ui/sidebar.tsx` (`size-11`, `aria-label="Menu utama"`, `aria-expanded` mengikuti state sidebar/mobile).
-- Kolom 2: link brand "CMS Platform" ke `/platform/pilih-aplikasi` (`text-sm font-semibold tracking-tight`, `min-h-11`).
-- Kolom 3: `AppSwitcher`.
-- Kolom 4: `DropdownMenu` tombol "Akun" (`variant="outline"`) berisi label email admin, item `Ubah kata sandi` (link ke `/profile/change-password`), dan `Keluar` (signOut better-auth, reset store, push `/login`).
+- `<header className="sticky top-0 z-50 border-b border-border bg-card">`; baris tunggal `flex min-h-11 items-center gap-2 px-4 py-2 sm:px-6` (pola site-header `sidebar-16`). Sticky dipilih karena halaman tabel panjang.
+- Kolom 1: `SidebarTrigger` (`size-11`, `aria-label="Menu utama"`, `aria-expanded` mengikuti state sidebar/mobile).
+- Kolom 2: `Separator` vertikal, lalu `Breadcrumbs` di dalam `div hidden sm:flex` (breadcrumb disembunyikan di layar < `sm`).
+- Kolom 3: spacer `flex-1`, lalu `AppSwitcher` di ujung kanan. Menu akun tidak lagi di header (pindah ke footer sidebar).
+- `#cms-content` diberi `scroll-mt-20` agar anchor/skip link tidak tertutup header sticky.
+
+`Breadcrumbs` (`components/shared/breadcrumbs.tsx`): dua tingkat, konteks (Platform/nama aplikasi, link ke picker atau `/{slug}`) dan halaman (label item menu aktif dicocokkan dari `usePathname` terhadap `GLOBAL_MENU`/`appMenu`; halaman tanpa item menu memakai peta label statis/prefiks detail dinamis). `buildBreadcrumb(pathname, apps)` menerima `modules` per aplikasi dan diuji unit di `breadcrumbs.test.ts` (11 test). Primitif `components/ui/breadcrumb.tsx` ditambahkan via `bunx shadcn add breadcrumb`.
+
 - `AppSwitcher` (`components/shared/app-switcher.tsx`): `Select` dari `components/ui/select` dengan nilai `activeSlug` atau `__all` ("Semua aplikasi"); saat berubah, `setActiveSlug` + `router.push` ke `/{slug}` atau `/platform/pilih-aplikasi`. `SelectTrigger` punya `aria-label="Pilih aplikasi"`, `max-w-52 bg-card min-h-11`.
 
 Header publik (landing) ada di tempat berbeda: `features/landing/components/public-chrome.tsx` → `PublicHeader` (brand dengan bar `bg-primary` + nav berisi `ButtonLink` "Masuk CMS" ke `/login`) dan `PublicFooter` (identitas produk). Ini sengaja terpisah dari `ShellHeader`.
@@ -50,10 +53,12 @@ Fondasi: `apps/cms/components/ui/sidebar.tsx` (730 baris, shadcn base-nova denga
 
 Komponen produk: `components/shared/sidebar.tsx` → `CmsSidebar`.
 
-- `SidebarHeader`: link "Pilih aplikasi" (dengan bar `h-4 w-1 bg-primary`) ke picker; di mobile ada tombol "Tutup menu". `border-b border-sidebar-border`.
+- `SidebarHeader`: link brand "CMS Platform" (dengan bar `h-4 w-1 bg-primary`) ke `/platform/pilih-aplikasi`; di mobile ada tombol "Tutup menu". `border-b border-sidebar-border`. Fungsi "pilih aplikasi" dicakup `AppSwitcher` dan breadcrumb, jadi link lama diganti identitas produk.
 - `SidebarContent` berisi `<nav aria-label="Menu utama">` dengan dua `SidebarGroup`: grup "Platform" (`GLOBAL_MENU`) dan grup berlabel nama aplikasi aktif (`appMenu(slug, modules)`).
-- `MenuList` (lokal di file itu): memetakan item ke `SidebarMenuItem` + `SidebarMenuButton` dengan `render={<Link href>}`, `isActive` (exact match, atau prefix kecuali key `dashboard`), `aria-current="page"` saat exact, `min-h-11 rounded-md`, dan `onClick` menutup menu mobile.
-- Sumber menu dan aturan tampil: `features/shell/menu.ts`. `GLOBAL_MENU`: Dasbor, Aplikasi, Admin, Role, Audit Log (masing-masing `requires: platform.*.view`). `appMenu(slug, modules)`: Dasbor, Pengguna, Media, Notifikasi, Pengaturan, plus 4 item CBT (Soal, Paket, Sesi, Hasil) bila `modules` memuat `cbt`. `isVisible`: super admin lolos semua, selain itu wajib punya permission; penyaringan juga memperhitungkan `permissionsContext` dari `useSessionStore`.
+- `MenuList` (lokal di file itu): memetakan item ke `SidebarMenuItem` + `SidebarMenuButton` dengan `render={<Link href>}`, `isActive` (exact match, atau prefix kecuali key `dashboard`), `aria-current="page"` saat exact, `min-h-11 rounded-md`, ikon lucide per item (`aria-hidden`), dan `onClick` menutup menu mobile.
+- Sumber menu dan aturan tampil: `features/shell/menu.ts`. Setiap `MenuItem` kini punya field `icon: LucideIcon` (Dasbor `LayoutDashboard`, Aplikasi `Smartphone`, Admin `UserCog`, Role `ShieldCheck`, Audit Log `ScrollText`, Pengguna `Users`, Media `Images`, Notifikasi `Bell`, Pengaturan `Settings`, Soal CBT `FileQuestion`, Paket CBT `Package`, Sesi CBT `CalendarClock`, Hasil CBT `ClipboardCheck`). `isVisible`: super admin lolos semua, selain itu wajib punya permission; penyaringan juga memperhitungkan `permissionsContext` dari `useSessionStore`.
+- `SidebarFooter` baru berisi `NavUser` (`components/shared/nav-user.tsx`, pola nav-user `sidebar-16`): trigger `SidebarMenuButton size="lg"` dengan `aria-label="Akun"` (dikunci stabil, bukan email), avatar fallback inisial email, email admin, chevron; dropdown berisi label email, `Ubah kata sandi` (link `/profile/change-password`), `Keluar` (signOut better-auth, reset store, push `/login`). Di mobile, footer ikut dirender di dalam drawer.
+- `collapsible` tetap `offcanvas`; mode icon tidak diaktifkan. Cookie state `sidebar_state` dan shortcut Ctrl/Cmd+B tetap.
 
 ## 5. Pola halaman, state, dan kontrol bersama (`components/shared/`)
 
@@ -71,19 +76,18 @@ Komponen produk: `components/shared/sidebar.tsx` → `CmsSidebar`.
 
 Pola wadah halaman: `<main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">` (picker memakai `max-w-4xl`, state sesi `max-w-xl`). `PermissionGate` (`features/rbac/components/permission-gate.tsx`) membungkus aksi per permission.
 
-## 6. Tabel data: dua pola yang berjalan bersamaan
 
-**Pola A, `DataTable`** (`components/shared/data-table.tsx`), dipakai 3 halaman: `platform/admins`, `platform/audit`, `[appSlug]/users`.
+## 6. Tabel data: satu pola (`DataTable`)
+
+`DataTable` (`components/shared/data-table.tsx`) kini menjadi satu-satunya pola tabel, dipakai seluruh 10 halaman daftar: `platform/admins`, `platform/apps`, `platform/roles`, `platform/audit`, `[appSlug]/users`, `[appSlug]/notifications`, dan `cbt/soal`, `cbt/paket`, `cbt/sesi`, `cbt/hasil`.
 
 - Memakai TanStack Table: `useReactTable` dengan `getCoreRowModel`, `manualPagination` saat `pagination` ada, `rowCount` dari total.
 - Merender `Table` dari `components/ui/table` dengan `scrollLabel` (region scrollable dengan `aria-label` dan `tabIndex={0}`), header `bg-muted`, sel `px-3`, `EmptyState` bila `rows` kosong, dan `Pagination` opsional di bawah tabel.
-- Pemanggil menyuplai `columns: ColumnDef<T>[]` (mis. kolom aksi dengan tombol Ubah/Nonaktifkan di `users/page.tsx`), `getRowId`, `label`, dan `emptyMessage`.
+- Pemanggil menyuplai `columns: ColumnDef<T>[]`, `getRowId`, `label`, dan `emptyMessage`. Kolom aksi memakai `Button variant="link"` dengan `min-h-11`. Halaman tanpa pagination server (apps, roles) memakai `DataTable` tanpa prop `pagination`. Baris detail kampanye notifikasi (dulu baris expandable) menjadi Dialog "Detail" karena DataTable core tidak mendukung ekspansi baris dan API-nya tidak boleh berubah.
 
-**Pola B, tabel mentah** (`components/ui/table` langsung), dipakai 7 halaman: `platform/apps`, `platform/roles`, `[appSlug]/notifications`, dan `cbt/soal`, `cbt/paket`, `cbt/sesi`, `cbt/hasil`. Header dan kolom ditulis inline di halaman; `className="min-w-max bg-card"` agar tabel scroll horizontal di layar sempit.
+`components/ui/table.tsx`: `Table` membungkus `div` `overflow-x-auto rounded-lg border border-border` (menjadi `role="region"` bila `scrollLabel` diisi); `TableRow` punya `hover:bg-muted/50`; `TableHead` `h-10 px-2`; `TableCell` `p-2 whitespace-nowrap`. Baris tetap `role="row"` semantik sehingga selektor e2e `getByRole("row", ...)` bekerja.
 
-`components/ui/table.tsx`: `Table` membungkus `div` `overflow-x-auto rounded-lg border border-border` (menjadi `role="region"` bila `scrollLabel` diisi); `TableRow` punya `hover:bg-muted/50`; `TableHead` `h-10 px-2`; `TableCell` `p-2 whitespace-nowrap`.
-
-**Catatan celah:** beberapa halaman (mis. `[appSlug]/users/page.tsx` bagian form/filter, dan pesan 403 di `[appSlug]/layout.tsx`) masih memakai kelas mentah seperti `text-slate-900`, `bg-slate-900`, `border-slate-300`, bukan token atau primitif `Input`/`Button`. Ini belum seragam.
+Kelas mentah (`slate-*`, `red-700`, `green-700`) sudah nol di seluruh `app/`, `features/`, dan `components/shared/`; kontrol memakai primitif `Input`/`Button` atau konstanta bertoken (`CONTROL_CLASS`), state memakai `LoadingState`/`EmptyState`/`ErrorState`, status sukses `text-emerald-700`, gagal `text-destructive`.
 
 ## 7. Dashboard
 
@@ -106,16 +110,17 @@ Pemakaian:
 ## 8. Landing publik
 
 - `app/(public)/page.tsx`: grid dua kolom (`md:grid-cols-[1.15fr_0.85fr]`) berisi `LandingHero` dan `ProductExplanation`.
-- `features/landing/components/landing-sections.tsx`: `LandingHero` = `h1` besar `text-balance` ("Kelola banyak aplikasi dari satu CMS"), subjudul, `ButtonLink` "Masuk CMS"; `ProductExplanation` = kartu berborder dengan `dl` tiga alur kerja (Aplikasi dan akses, Media dan notifikasi, Modul CBT).
+- `features/landing/components/landing-sections.tsx`: `LandingHero` = `h1` besar `text-balance` ("Kelola banyak aplikasi dari satu CMS"), subjudul, `ButtonLink` "Masuk CMS"; `ProductExplanation` = kartu berborder dengan `dl` tiga alur kerja (Aplikasi dan akses, Media dan notifikasi, Modul CBT). Tidak diubah oleh redesign (sudut desainnya selesai lebih awal).
 
-## 9. Celah yang relevan untuk redesign (ringkasan)
+## 9. Status pascaredesign (ringkasan)
 
-1. shadcn/ui sudah terpasang penuh (21 primitif di `components/ui/`), style `base-nova` dengan Base UI; `peta-komponen.md` lama yang masih bilang "belum diinisialisasi" sudah kedaluwarsa.
-2. Sidebar sudah memakai primitif shadcn apa adanya (provider, cookie, drawer mobile via Sheet, shortcut Ctrl+B, tooltip saat collapsed). Header masih grid custom dan app switcher masih `Select`.
-3. `DataTable` baru dipakai 3 dari 10 halaman bertabel; 7 halaman masih tabel mentah tanpa `EmptyState`/pagination terpadu. Ini kandidat utama penyeragaman.
-4. Masih ada kelas mentah (slate) di beberapa halaman, sehingga belum 100% token tema.
-5. Tema `.dark` masih default shadcn; light sudah brand teal (`#0c6156`).
-6. Aksesibilitas yang sudah berjalan: skip link, `aria-current` menu aktif, `aria-label` region tabel/pagination/switcher, `role="status"` loading/toast, fokus visible via `--ring`, reduced-motion, target sentuh `min-h-11` (44px) pada kontrol utama.
+1. shadcn/ui terpasang penuh (22 primitif di `components/ui/`, termasuk `breadcrumb`), style `base-nova` dengan Base UI.
+2. Shell memakai satu bahasa: header sticky dengan breadcrumb penanda lokasi + `AppSwitcher`, sidebar dengan ikon lucide per item dan menu akun `NavUser` di footer. Cookie state, shortcut Ctrl/Cmd+B, drawer mobile, dan fokus balik ke trigger tetap utuh.
+3. `DataTable` dipakai seluruh 10 halaman daftar; tidak ada lagi tabel mentah inline.
+4. Kelas mentah nol: seluruh halaman memakai token tema dan primitif; kontras pasangan teks/latar utama diverifikasi WCAG AA (foreground/card 15.35:1, muted-foreground/card 6.21:1, muted-foreground/muted 5.48:1, foreground/background 14.52:1, muted-foreground/background 5.87:1).
+5. Tema `.dark` tetap default shadcn dan tidak diaktifkan (keputusan desain); light brand teal (`#0c6156`).
+6. Aksesibilitas yang berjalan: skip link, `aria-current` menu aktif dan breadcrumb, `aria-label` region tabel/pagination/switcher, `role="status"` loading/toast, fokus visible via `--ring`, reduced-motion, target sentuh `min-h-11` (44px).
+7. Nama aksesibel yang diikat e2e tidak berubah; satu pengecualian disanksikan spec: alur `production-readiness.test.ts` kini membuka drawer `Menu utama` dulu sebelum mengeklik `Akun` (lokasi baru menu akun di footer sidebar). E2e milik tester dan belum dijalankan pada pekerjaan ini.
 
 ## 10. Daftar file acuan cepat
 
@@ -123,10 +128,10 @@ Pemakaian:
 | --- | --- |
 | Tema/token | `apps/cms/app/globals.css`, `apps/cms/components.json` |
 | Shell + sesi | `apps/cms/app/(shell)/layout.tsx`, `apps/cms/stores/use-session-store.ts`, `apps/cms/stores/use-toast-store.ts` |
-| Header/navbar | `apps/cms/components/shared/shell-header.tsx`, `app-switcher.tsx` |
-| Sidebar | `apps/cms/components/shared/sidebar.tsx`, `apps/cms/components/ui/sidebar.tsx`, `apps/cms/features/shell/menu.ts`, `apps/cms/features/shell/routes.ts` |
+| Header/navbar | `apps/cms/components/shared/shell-header.tsx`, `app-switcher.tsx`, `breadcrumbs.tsx` + `breadcrumbs.test.ts`, `apps/cms/components/ui/breadcrumb.tsx` |
+| Sidebar | `apps/cms/components/shared/sidebar.tsx`, `nav-user.tsx`, `apps/cms/components/ui/sidebar.tsx`, `apps/cms/features/shell/menu.ts`, `apps/cms/features/shell/routes.ts` |
 | Halaman umum | `apps/cms/components/shared/page-header.tsx`, `page-state.tsx`, `table-toolbar.tsx`, `pagination.tsx`, `status-badge.tsx`, `button-link.tsx`, `toaster.tsx` |
-| Tabel | `apps/cms/components/shared/data-table.tsx`, `apps/cms/components/ui/table.tsx`, contoh pemai: `app/(shell)/[appSlug]/users/page.tsx` (DataTable) dan `app/(shell)/platform/apps/page.tsx` (tabel mentah) |
+| Tabel | `apps/cms/components/shared/data-table.tsx`, `apps/cms/components/ui/table.tsx`, contoh pemakai lengkap: `app/(shell)/[appSlug]/notifications/page.tsx` (DataTable + Dialog detail) dan `app/(shell)/[appSlug]/cbt/sesi/page.tsx` (DataTable + panel form) |
 | Dashboard | `apps/cms/features/dashboard/components/dashboard-sections.tsx`, `app/(shell)/platform/dashboard/page.tsx`, `app/(shell)/[appSlug]/page.tsx` |
 | Landing | `apps/cms/app/(public)/`, `apps/cms/features/landing/components/` |
 | Konteks aplikasi/403 | `apps/cms/app/(shell)/[appSlug]/layout.tsx` |
