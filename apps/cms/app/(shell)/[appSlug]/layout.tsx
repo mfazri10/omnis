@@ -6,6 +6,7 @@ import type { JSX, ReactNode } from "react";
 import { useEffect } from "react";
 import { useToastStore } from "../../../stores/use-toast-store";
 import { useSessionStore } from "../../../stores/use-session-store";
+import { CMS_PICKER_PATH } from "@/features/shell/routes";
 
 export default function AppSlugLayout({
   children,
@@ -59,7 +60,7 @@ export default function AppSlugLayout({
           onClick={() => {
             setActiveSlug(null);
             pushToast("Kembali ke pemilih aplikasi.");
-            router.replace("/");
+            router.replace(CMS_PICKER_PATH);
           }}
         >
           Kembali ke pemilih aplikasi

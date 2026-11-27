@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@apollo/client/react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import type { JSX, ReactNode } from "react";
 import { CURRENT_ADMIN_QUERY } from "../../features/rbac/graphql/admins.graphql";
@@ -10,26 +10,38 @@ import {
   MY_PERMISSIONS_QUERY,
 } from "../../features/shell/graphql/session.graphql";
 import { ShellHeader } from "../../components/shared/shell-header";
-import { Sidebar } from "../../components/shared/sidebar";
+import { CmsSidebar } from "@/components/shared/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { ApolloProvider } from "@/lib/apollo-provider";
+import { Toaster } from "@/components/shared/toaster";
+import { ErrorState, LoadingState } from "@/components/shared/page-state";
+import { CMS_PICKER_PATH } from "@/features/shell/routes";
 import { useToastStore } from "../../stores/use-toast-store";
 import { useSessionStore } from "../../stores/use-session-store";
 
-export default function ShellLayout({
+function CmsSession({
   children,
 }: {
   children: ReactNode;
 }): JSX.Element {
   const router = useRouter();
+  const { appSlug: routeSlug } = useParams<{ appSlug?: string }>();
+  const globalRoute = routeSlug === undefined;
   const setSession = useSessionStore((state) => state.setSession);
   const activeSlug = useSessionStore((state) => state.activeSlug);
   const setActiveSlug = useSessionStore((state) => state.setActiveSlug);
   const setPermissions = useSessionStore((state) => state.setPermissions);
   const setReady = useSessionStore((state) => state.setReady);
   const ready = useSessionStore((state) => state.ready);
+  const permissionsContext = useSessionStore((state) => state.permissionsContext);
   const pushToast = useToastStore((state) => state.push);
 
-  const adminQuery = useQuery(CURRENT_ADMIN_QUERY);
-  const appsQuery = useQuery(MY_APPS_QUERY);
+  const adminQuery = useQuery(CURRENT_ADMIN_QUERY, {
+    context: { appSlug: null },
+  });
+  const appsQuery = useQuery(MY_APPS_QUERY, {
+    context: { appSlug: null },
+  });
 
   useEffect(() => {
     if (adminQuery.data && appsQuery.data) {
@@ -54,63 +66,74 @@ export default function ShellLayout({
     if (!known) {
       setActiveSlug(null);
       pushToast("Aplikasi tidak lagi tersedia. Silakan pilih aplikasi.");
-      router.replace("/");
+      if (routeSlug === activeSlug) router.replace(CMS_PICKER_PATH);
     }
-  }, [appsQuery.data, activeSlug, setActiveSlug, pushToast, router]);
+  }, [appsQuery.data, activeSlug, routeSlug, setActiveSlug, pushToast, router]);
 
-  const activeAppId =
-    appsQuery.data?.myApps.find((app) => app.slug === activeSlug)?.id ??
-    null;
+  const routeApp = appsQuery.data?.myApps.find((app) => app.slug === routeSlug);
+  const activeRouteSlug = routeApp?.slug ?? null;
+  const context = activeRouteSlug ?? "global";
+  useEffect(() => {
+    if (sessionLoaded && (globalRoute || routeApp)) setActiveSlug(activeRouteSlug);
+  }, [sessionLoaded, globalRoute, routeApp, activeRouteSlug, setActiveSlug]);
+
   const permsQuery = useQuery(MY_PERMISSIONS_QUERY, {
-    variables: { appId: activeAppId },
+    variables: { appId: routeApp?.id ?? null },
+    context: { appSlug: routeApp?.slug ?? null },
     skip: !sessionLoaded,
   });
 
   useEffect(() => {
-    if (permsQuery.data && sessionLoaded) {
+    if (permsQuery.data && !permsQuery.loading && sessionLoaded) {
       setPermissions(
         permsQuery.data.myPermissions,
-        activeSlug ?? "global",
+        context,
       );
       setReady();
     }
-  }, [permsQuery.data, sessionLoaded, activeSlug, setPermissions, setReady]);
+  }, [permsQuery.data, permsQuery.loading, sessionLoaded, context, setPermissions, setReady]);
 
   const loadError =
     adminQuery.error ?? appsQuery.error ?? permsQuery.error;
   if (loadError) {
     return (
       <main className="mx-auto max-w-xl px-6 py-8 font-sans">
-        <h1 className="text-2xl font-bold text-slate-900">
-          Gagal memuat sesi
-        </h1>
-        <p className="mt-2 text-sm text-slate-600">{loadError.message}</p>
-        <button
-          type="button"
-          className="mt-4 bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-          onClick={() => window.location.reload()}
-        >
-          Muat ulang
-        </button>
+        <ErrorState title="Gagal memuat sesi" onRetry={() => window.location.reload()}>
+          {loadError.message}
+        </ErrorState>
       </main>
     );
   }
-  if (!ready) {
+  if (!ready || !sessionLoaded) {
     return (
       <main className="mx-auto max-w-xl px-6 py-8 font-sans">
-        <p className="text-slate-900">Menyiapkan sesi…</p>
+        <LoadingState>Menyiapkan sesi…</LoadingState>
       </main>
     );
   }
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 font-sans md:px-6">
-      <ShellHeader />
-      <div className="mt-6 flex flex-col gap-6 md:flex-row md:gap-8">
-        <aside className="w-full md:w-56 md:shrink-0">
-          <Sidebar />
-        </aside>
-        <div className="min-w-0 flex-1 overflow-x-auto">{children}</div>
+    <SidebarProvider>
+      <a href="#cms-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-card focus:p-3">
+        Lewati ke konten
+      </a>
+      <CmsSidebar />
+      <div className="min-w-0 flex-1">
+        <ShellHeader />
+        <div id="cms-content" tabIndex={-1} className="min-w-0">
+          {permsQuery.loading || permissionsContext !== context || (globalRoute && activeSlug !== null)
+            ? <main className="px-4 py-6 sm:px-6"><LoadingState>Menyiapkan ruang kerja…</LoadingState></main>
+            : children}
+        </div>
       </div>
-    </div>
+    </SidebarProvider>
+  );
+}
+
+export default function ShellLayout({ children }: { children: ReactNode }): JSX.Element {
+  return (
+    <ApolloProvider>
+      <CmsSession>{children}</CmsSession>
+      <Toaster />
+    </ApolloProvider>
   );
 }

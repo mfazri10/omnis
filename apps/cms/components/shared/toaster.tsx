@@ -24,17 +24,17 @@ export function Toaster(): JSX.Element {
     return <></>;
   }
   return (
-    <div className="fixed right-4 top-4 z-50 flex w-80 flex-col gap-2">
+    <div className="fixed inset-x-4 top-4 z-50 ml-auto flex max-w-80 flex-col gap-2">
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className="flex items-start justify-between gap-2 border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-lg"
+          className="flex items-center justify-between gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm shadow-md"
         >
-          <p>{toast.message}</p>
+          <p role="status">{toast.message}</p>
           <button
             type="button"
             aria-label="Tutup notifikasi"
-            className="text-slate-500 underline"
+            className="min-h-11 shrink-0 text-primary underline underline-offset-4"
             onClick={() => dismiss(toast.id)}
           >
             Tutup

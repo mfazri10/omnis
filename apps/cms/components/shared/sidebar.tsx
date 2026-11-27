@@ -1,9 +1,14 @@
 "use client";
 
 import type { JSX } from "react";
+import Link from "next/link";
+import { useParams, usePathname } from "next/navigation";
 import { GLOBAL_MENU, appMenu } from "../../features/shell/menu";
 import type { MenuItem } from "../../features/shell/menu";
 import { useSessionStore } from "../../stores/use-session-store";
+import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
+import { CMS_PICKER_PATH } from "@/features/shell/routes";
+import { Button } from "@/components/ui/button";
 
 function isVisible(
   item: MenuItem,
@@ -17,65 +22,74 @@ function isVisible(
 }
 
 function MenuList({ items }: { items: MenuItem[] }): JSX.Element {
+  const pathname = usePathname();
+  const { setOpenMobile } = useSidebar();
   return (
-    <ul className="flex flex-col gap-1">
-      {items.map((item) => (
-        <li key={item.key}>
-          {item.href === null ? (
-            <span className="flex min-h-[44px] items-center justify-between px-3 py-2 text-sm text-slate-400">
-              {item.label}
-              <span className="text-xs">Segera</span>
-            </span>
-          ) : (
-            <a
-              className="flex min-h-[44px] items-center px-3 py-2 text-sm text-slate-900 hover:bg-slate-100"
-              href={item.href}
+    <SidebarMenu>
+      {items.map(({ href, key, label }) => {
+        if (href === null) return null;
+        const exact = pathname === href;
+        const active = exact || (key !== "dashboard" && pathname.startsWith(`${href}/`));
+        return (
+          <SidebarMenuItem key={key}>
+            <SidebarMenuButton
+              isActive={active}
+              className="min-h-11 rounded-md"
+              render={<Link href={href} aria-current={exact ? "page" : undefined}
+                onClick={() => setOpenMobile(false)} />}
             >
-              {item.label}
-            </a>
-          )}
-        </li>
-      ))}
-    </ul>
+              {label}
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        );
+      })}
+    </SidebarMenu>
   );
 }
 
-export function Sidebar(): JSX.Element {
+export function CmsSidebar(): JSX.Element {
+  const { isMobile, open, setOpenMobile } = useSidebar();
+  const { appSlug } = useParams<{ appSlug?: string }>();
   const admin = useSessionStore((state) => state.admin);
   const permissions = useSessionStore((state) => state.permissions);
   const activeSlug = useSessionStore((state) => state.activeSlug);
   const apps = useSessionStore((state) => state.accessibleApps);
+  const permissionsContext = useSessionStore((state) => state.permissionsContext);
   const isSuperAdmin = admin?.isSuperAdmin ?? false;
-  const globalItems = GLOBAL_MENU.filter((item) =>
-    isVisible(item, isSuperAdmin, permissions),
-  );
-  const activeApp = apps.find((app) => app.slug === activeSlug) ?? null;
+  const currentPermissions = permissionsContext === (appSlug ?? "global") ? permissions : [];
+  const globalItems = GLOBAL_MENU.filter((item) => isVisible(item, isSuperAdmin, currentPermissions));
+  const activeApp = appSlug === activeSlug && activeSlug === permissionsContext
+    ? apps.find((app) => app.slug === activeSlug) ?? null : null;
   const contextItems =
-    activeSlug === null
+    activeApp === null
       ? []
-      : appMenu(activeSlug, activeApp?.modules ?? []).filter((item) =>
+      : appMenu(activeApp.slug, activeApp.modules).filter((item) =>
           isVisible(item, isSuperAdmin, permissions),
         );
   return (
-    <nav aria-label="Menu utama" className="flex flex-col gap-6">
-      <section>
-        <h2 className="px-3 text-xs font-semibold uppercase text-slate-500">
-          Platform
-        </h2>
-        <div className="mt-2">
-          <MenuList items={globalItems} />
-        </div>
-      </section>
-      {activeApp !== null && (
-        <section>
-          <h2 className="px-3 text-xs font-semibold uppercase text-slate-500">
-            {activeApp.name}
-          </h2>
-          <div className="mt-2">
+    <Sidebar mobileTitle="Menu utama" mobileDescription="Navigasi platform dan aplikasi"
+      mobileFinalFocus={() => document.getElementById("cms-sidebar-trigger")}>
+      <SidebarHeader inert={!isMobile && !open} className="flex-row items-center justify-between border-b border-sidebar-border px-4 py-2">
+        <Link href={CMS_PICKER_PATH} className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold"
+          onClick={() => setOpenMobile(false)}>
+          <span aria-hidden="true" className="h-4 w-1 rounded-sm bg-primary" />
+          Pilih aplikasi
+        </Link>
+        {isMobile && <Button type="button" variant="ghost" className="min-h-11"
+          onClick={() => setOpenMobile(false)}>Tutup menu</Button>}
+      </SidebarHeader>
+      <SidebarContent inert={!isMobile && !open}>
+        <nav aria-label="Menu utama">
+          {globalItems.length > 0 && <SidebarGroup>
+            <SidebarGroupLabel>Platform</SidebarGroupLabel>
+            <MenuList items={globalItems} />
+          </SidebarGroup>}
+          {activeApp && <SidebarGroup>
+            <SidebarGroupLabel className="h-auto min-h-8 whitespace-normal wrap-anywhere">{activeApp.name}</SidebarGroupLabel>
             <MenuList items={contextItems} />
-          </div>
-        </section>
-      )}
-    </nav>
+          </SidebarGroup>}
+        </nav>
+      </SidebarContent>
+    </Sidebar>
   );
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { PageHeader } from "@/components/shared/page-header";
+
 import { useMutation, useQuery } from "@apollo/client/react";
 import { useParams } from "next/navigation";
 import { useState } from "react";
@@ -20,7 +22,7 @@ import {
 } from "../../../../../features/rbac/graphql/roles.graphql";
 import { useEffectivePermissions } from "../../../../../features/rbac/hooks/use-effective-permissions";
 
-const inputClass = "border border-slate-300 px-3 py-2 text-slate-900";
+const inputClass = "min-h-11 max-w-full rounded-md border border-input bg-card px-3 py-2 text-sm";
 
 function AssignForm({ adminId }: { adminId: string }): JSX.Element {
   const { data: rolesData } = useQuery(ROLES_QUERY);
@@ -216,9 +218,8 @@ export default function AdminDetailPage(): JSX.Element {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-8 font-sans">
-      <p className="text-sm text-slate-600">Platform CMS Multi-Aplikasi</p>
-      <h1 className="mt-2 text-2xl font-bold text-slate-900">Kelola admin</h1>
+    <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
+      <PageHeader title="Kelola admin" />
       {loading && <p className="mt-6 text-slate-900">Memuat…</p>}
       {queryError && (
         <p className="mt-6 text-sm text-red-700">

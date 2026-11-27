@@ -1,5 +1,7 @@
 "use client";
 
+import { PageHeader } from "@/components/shared/page-header";
+
 import { useMutation, useQuery } from "@apollo/client/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -13,7 +15,7 @@ import { CREATE_ROLE_MUTATION } from "../../../../../features/rbac/graphql/roles
 
 type Scope = "global" | "app";
 
-const inputClass = "border border-slate-300 px-3 py-2 text-slate-900";
+const inputClass = "min-h-11 max-w-full rounded-md border border-input bg-card px-3 py-2 text-sm";
 
 export default function NewRolePage(): JSX.Element {
   const router = useRouter();
@@ -70,11 +72,8 @@ export default function NewRolePage(): JSX.Element {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-8 font-sans">
-      <p className="text-sm text-slate-600">Platform CMS Multi-Aplikasi</p>
-      <h1 className="mt-2 text-2xl font-bold text-slate-900">
-        Tambah role
-      </h1>
+    <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
+      <PageHeader title="Tambah role" />
       <form
         className="mt-6 flex flex-col gap-4"
         onSubmit={(e) => void handleSubmit(e)}

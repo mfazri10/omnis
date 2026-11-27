@@ -1,11 +1,18 @@
 "use client";
 
+import { PageHeader } from "@/components/shared/page-header";
+import { TableToolbar } from "@/components/shared/table-toolbar";
+import { ErrorState, LoadingState } from "@/components/shared/page-state";
+import { DataTable } from "@/components/shared/data-table";
+import type { ColumnDef } from "@tanstack/react-table";
+
 import { useQuery } from "@apollo/client/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent, JSX } from "react";
 import { graphQLErrorMessage } from "../../../../features/rbac/graphql/errors";
 import {
   ACTIVITY_LOGS_QUERY,
+  type ActivityLogData,
   type ActivityLogsFilter,
 } from "../../../../features/audit/graphql/audit.graphql";
 import { ExportButton } from "../../../../features/exports/components/export-button";
@@ -13,6 +20,17 @@ import { EXPORT_ACTIVITY_LOGS_MUTATION } from "../../../../features/exports/grap
 import { useSessionStore } from "../../../../stores/use-session-store";
 
 const PER_PAGE = 20;
+const columns: ColumnDef<ActivityLogData>[] = [
+  { id: "time", header: "Waktu", cell: ({ row }) => formatDateTime(row.original.createdAt) },
+  { id: "actor", header: "Aktor", cell: ({ row: { original: log } }) => log.adminName ?? `Admin #${log.adminId}` },
+  { id: "app", header: "Aplikasi", cell: ({ row: { original: log } }) =>
+    log.appId === null ? "Global" : log.appName ?? log.appSlug ?? "–" },
+  { accessorKey: "action", header: "Aksi" },
+  { id: "entity", header: "Entitas", cell: ({ row: { original: log } }) => formatEntity(log.entityType, log.entityId) },
+  { id: "summary", header: "Ringkasan", cell: ({ row }) =>
+    <p className="min-w-40 max-w-80 whitespace-normal wrap-anywhere">{row.original.summary}</p> },
+  { id: "ip", header: "IP", cell: ({ row }) => row.original.ipAddress ?? "–" },
+];
 
 /** Aksi yang dikenal backend; filter aksi memakai perbandingan persis. */
 const ACTIONS = [
@@ -106,8 +124,8 @@ function toFilterInput(draft: FilterDraft): ActivityLogsFilter | null {
 }
 
 const CONTROL_CLASS =
-  "min-h-[44px] border border-slate-300 px-3 py-2 text-sm text-slate-900";
-const LABEL_CLASS = "text-xs font-semibold text-slate-600";
+  "min-h-11 max-w-full rounded-md border border-input bg-card px-3 py-2 text-sm";
+const LABEL_CLASS = "text-sm font-medium text-muted-foreground";
 
 export default function AuditPage(): JSX.Element {
   const ready = useSessionStore((state) => state.ready);
@@ -123,7 +141,7 @@ export default function AuditPage(): JSX.Element {
   const [applied, setApplied] = useState<FilterDraft>(EMPTY_FILTER);
   const [page, setPage] = useState(1);
 
-  const { data, loading, error } = useQuery(ACTIVITY_LOGS_QUERY, {
+  const { data, loading, error, refetch } = useQuery(ACTIVITY_LOGS_QUERY, {
     variables: {
       page,
       perPage: PER_PAGE,
@@ -149,14 +167,15 @@ export default function AuditPage(): JSX.Element {
   }
 
   const total = data?.activityLogs.total ?? 0;
-  const from = total === 0 ? 0 : (page - 1) * PER_PAGE + 1;
-  const to = Math.min(page * PER_PAGE, total);
+  const lastPage = Math.max(1, Math.ceil(total / PER_PAGE));
+  useEffect(() => {
+    if (data && !loading && page > lastPage) setPage(lastPage);
+  }, [data, lastPage, loading, page]);
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-8 font-sans">
-      <p className="text-sm text-slate-600">Platform CMS Multi-Aplikasi</p>
-      <h1 className="mt-2 text-2xl font-bold text-slate-900">Audit Log</h1>
-      {!ready && <p className="mt-6 text-slate-900">Memuat…</p>}
+    <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+      <PageHeader title="Audit Log" />
+      {!ready && <LoadingState />}
       {ready && !canView && (
         <p className="mt-6 text-sm text-slate-600">
           Anda tidak memiliki izin untuk melihat Audit Log.
@@ -164,10 +183,7 @@ export default function AuditPage(): JSX.Element {
       )}
       {ready && canView && (
         <>
-          <form
-            className="mt-6 flex flex-wrap items-end gap-3"
-            onSubmit={handleApply}
-          >
+          <TableToolbar onSubmit={handleApply}>
             <label className="flex flex-col gap-1">
               <span className={LABEL_CLASS}>Dari tanggal</span>
               <input
@@ -246,93 +262,15 @@ export default function AuditPage(): JSX.Element {
               filter={toFilterInput(applied)}
               labelSumber="log audit"
             />
-          </form>
-          {loading && <p className="mt-6 text-slate-900">Memuat…</p>}
-          {error && (
-            <p className="mt-6 text-sm text-red-700">
-              {graphQLErrorMessage(error, "Gagal memuat log audit.")}
-            </p>
-          )}
-          {data && total === 0 && !isFiltered(applied) && (
-            <p className="mt-6 text-sm text-slate-600">Belum ada log audit.</p>
-          )}
-          {data && total === 0 && isFiltered(applied) && (
-            <p className="mt-6 text-sm text-slate-600">
-              Tidak ada log audit yang cocok dengan filter.
-            </p>
-          )}
-          {data && total > 0 && (
-            <>
-              <div className="mt-6 overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-slate-600">
-                      <th className="py-2 pr-4 font-semibold">Waktu</th>
-                      <th className="py-2 pr-4 font-semibold">Aktor</th>
-                      <th className="py-2 pr-4 font-semibold">Aplikasi</th>
-                      <th className="py-2 pr-4 font-semibold">Aksi</th>
-                      <th className="py-2 pr-4 font-semibold">Entitas</th>
-                      <th className="py-2 pr-4 font-semibold">Ringkasan</th>
-                      <th className="py-2 font-semibold">IP</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.activityLogs.items.map((log) => (
-                      <tr
-                        key={log.id}
-                        className="border-b border-slate-100"
-                      >
-                        <td className="whitespace-nowrap py-2 pr-4 text-slate-900">
-                          {formatDateTime(log.createdAt)}
-                        </td>
-                        <td className="py-2 pr-4 text-slate-900">
-                          {log.adminName ?? `Admin #${log.adminId}`}
-                        </td>
-                        <td className="py-2 pr-4 text-slate-600">
-                          {log.appId === null
-                            ? "Global"
-                            : (log.appName ?? log.appSlug ?? "–")}
-                        </td>
-                        <td className="py-2 pr-4 text-slate-600">
-                          {log.action}
-                        </td>
-                        <td className="whitespace-nowrap py-2 pr-4 text-slate-600">
-                          {formatEntity(log.entityType, log.entityId)}
-                        </td>
-                        <td className="py-2 pr-4 text-slate-600">
-                          {log.summary}
-                        </td>
-                        <td className="whitespace-nowrap py-2 text-slate-600">
-                          {log.ipAddress ?? "–"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="mt-4 flex items-center gap-4 text-sm">
-                <button
-                  type="button"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className="min-h-[44px] underline disabled:opacity-50"
-                >
-                  Sebelumnya
-                </button>
-                <span className="text-slate-600">
-                  {`${from}–${to} dari ${total}`}
-                </span>
-                <button
-                  type="button"
-                  disabled={page * PER_PAGE >= total}
-                  onClick={() => setPage((p) => p + 1)}
-                  className="min-h-[44px] underline disabled:opacity-50"
-                >
-                  Berikutnya
-                </button>
-              </div>
-            </>
-          )}
+          </TableToolbar>
+          {(loading || page > lastPage) && <LoadingState />}
+          {error && <ErrorState onRetry={() => void refetch()}>{graphQLErrorMessage(error, "Gagal memuat log audit.")}</ErrorState>}
+          {data && !loading && !error && page <= lastPage && <DataTable
+            rows={data.activityLogs.items} columns={columns} getRowId={(log) => log.id}
+            label="Daftar log audit"
+            emptyMessage={isFiltered(applied) ? "Tidak ada log audit yang cocok dengan filter." : "Belum ada log audit."}
+            pagination={{ pageIndex: page - 1, pageSize: PER_PAGE, totalRows: total, onPageChange: (index) => setPage(index + 1) }}
+          />}
         </>
       )}
     </main>

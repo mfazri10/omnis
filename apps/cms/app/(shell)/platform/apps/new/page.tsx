@@ -1,5 +1,11 @@
 "use client";
 
+import { PageHeader } from "@/components/shared/page-header";
+import { ButtonLink } from "@/components/shared/button-link";
+import { ErrorState, LoadingState } from "@/components/shared/page-state";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
 import { useMutation } from "@apollo/client/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -8,7 +14,7 @@ import { graphQLErrorMessage } from "../../../../../features/rbac/graphql/errors
 import { MY_APPS_QUERY } from "../../../../../features/shell/graphql/session.graphql";
 import { PROVISION_APP_MUTATION } from "../../../../../features/apps/graphql/apps.graphql";
 
-const inputClass = "border border-slate-300 px-3 py-2 text-slate-900";
+const inputClass = "min-h-11 bg-card";
 
 export default function NewAppPage(): JSX.Element {
   const router = useRouter();
@@ -48,22 +54,16 @@ export default function NewAppPage(): JSX.Element {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-8 font-sans">
-      <p className="text-sm text-slate-600">Platform CMS Multi-Aplikasi</p>
-      <h1 className="mt-2 text-2xl font-bold text-slate-900">
-        Tambah aplikasi
-      </h1>
-      <p className="mt-2 text-sm text-slate-600">
-        Menyimpan formulir ini langsung memprovisioning: database dibuat,
-        dimigrasi, dan diisi config awal.
-      </p>
+    <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
+      <PageHeader title="Tambah aplikasi" description="CMS akan membuat database dan menyiapkan konfigurasi awal." />
       <form
         className="mt-6 flex flex-col gap-4"
         onSubmit={(e) => void handleSubmit(e)}
+        aria-busy={provisioning}
       >
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-slate-900">Nama</span>
-          <input
+          <Input
             type="text"
             required
             value={name}
@@ -75,7 +75,7 @@ export default function NewAppPage(): JSX.Element {
           <span className="text-slate-900">
             Slug (huruf kecil/angka/strip, 3–64 karakter)
           </span>
-          <input
+          <Input
             type="text"
             required
             pattern="[a-z0-9][a-z0-9-]{1,62}[a-z0-9]"
@@ -86,14 +86,14 @@ export default function NewAppPage(): JSX.Element {
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-slate-900">Catatan (opsional)</span>
-          <input
+          <Input
             type="text"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             className={inputClass}
           />
         </label>
-        <fieldset className="border border-slate-200 p-3">
+        <fieldset className="rounded-lg border border-border bg-card p-3">
           <legend className="px-1 text-sm font-semibold text-slate-900">
             Modul domain
           </legend>
@@ -111,23 +111,17 @@ export default function NewAppPage(): JSX.Element {
             provisioning.
           </p>
         </fieldset>
-        {provisioning && (
-          <p className="text-sm text-slate-600">
-            Memprovisioning: membuat database dan menjalankan migrasi…
-          </p>
-        )}
-        {error && <p className="text-sm text-red-700">{error}</p>}
-        <div className="flex gap-4">
-          <button
+        {provisioning && <LoadingState>Membuat database dan menjalankan migrasi…</LoadingState>}
+        {error && <ErrorState>{error}</ErrorState>}
+        <div className="flex flex-wrap gap-2">
+          <Button
             type="submit"
             disabled={provisioning}
-            className="bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            className="min-h-11"
           >
             {provisioning ? "Memprovisioning…" : "Buat + Provisioning"}
-          </button>
-          <a className="px-4 py-2 text-sm underline" href="/platform/apps">
-            Batal
-          </a>
+          </Button>
+          <ButtonLink variant="outline" href="/platform/apps">Batal</ButtonLink>
         </div>
       </form>
     </main>

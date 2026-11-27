@@ -9,6 +9,7 @@ import {
 import { onError } from "@apollo/client/link/error";
 import { useSessionStore } from "../stores/use-session-store";
 import { useToastStore } from "../stores/use-toast-store";
+import { CMS_PICKER_PATH } from "@/features/shell/routes";
 
 function errorCodes(error: unknown): string[] {
   if (!CombinedGraphQLErrors.is(error)) {
@@ -46,20 +47,31 @@ const errorLink = onError(({ error }) => {
     useToastStore
       .getState()
       .push("Aplikasi tidak tersedia atau aksesnya berubah. Silakan pilih aplikasi.");
-    navigate("/");
+    navigate(CMS_PICKER_PATH);
   }
 });
 
 const appContextLink = new ApolloLink((operation, forward) => {
-  const slug = useSessionStore.getState().activeSlug;
   const prev = operation.getContext() as {
+    appSlug?: string | null;
     headers?: Record<string, string>;
   };
+  const hasAppSlug = Object.prototype.hasOwnProperty.call(prev, "appSlug");
+  const slug = hasAppSlug
+    ? prev.appSlug
+    : useSessionStore.getState().activeSlug;
+  const headers = { ...prev.headers };
+
+  if (hasAppSlug && slug === null) {
+    for (const key of Object.keys(headers)) {
+      if (key.toLowerCase() === "x-app-slug") delete headers[key];
+    }
+  } else if (slug !== null && slug !== undefined) {
+    headers["X-App-Slug"] = slug;
+  }
+
   operation.setContext({
-    headers: {
-      ...prev.headers,
-      ...(slug === null ? {} : { "X-App-Slug": slug }),
-    },
+    headers,
   });
   return forward(operation);
 });

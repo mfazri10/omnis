@@ -2,7 +2,7 @@
 
 CMS adalah dashboard admin berbahasa Indonesia: app switcher, menu global/konteks, tabel server-paginated, form, dan upload. Acuan: [03-A](../docs/03-fitur-dan-modul.md), [07-api](../docs/07-api-design.md), [F02](../features/F02-kerangka-cms-app-switcher.md).
 
-Stack: Next.js (App Router) + Apollo Client + Tailwind + React Hook Form + Zod + Zustand. Tipe operasi GraphQL di-generate (codegen), bukan ditulis manual.
+Stack CMS saat ini memakai Next.js App Router, Apollo Client, Zustand, Tailwind v4, serta shadcn/ui dengan Base UI. Dokumen dan tipe operasi GraphQL tinggal di masing-masing fitur.
 
 ## 1. Struktur Direktori & Routing Konteks Aplikasi
 
@@ -11,24 +11,25 @@ Slug aplikasi aktif adalah **bagian dari URL** agar bisa di-bookmark dan di-shar
 ```text
 apps/cms/
 ├── app/
+│   ├── (public)/               # Landing di /, tanpa sesi CMS
 │   ├── (auth)/                 # Tanpa shell: login, forgot-password, reset-password
 │   ├── (shell)/
-│   │   ├── layout.tsx          # Shell: sidebar + header + app switcher
-│   │   ├── platform/           # Menu GLOBAL: apps, admins, roles, audit-log
+│   │   ├── layout.tsx          # Apollo, toaster, sesi, sidebar, header dan pemilih
+│   │   ├── platform/           # Pemilih /platform/pilih-aplikasi dan pengelolaan global
 │   │   │   ├── apps/page.tsx   # + [slug]/page.tsx (detail aplikasi)
-│   │   │   ├── admins/..., roles/..., audit-log/...
+│   │   │   ├── admins/..., roles/..., audit/...
 │   │   └── [appSlug]/          # Menu KONTEKS aplikasi (F02)
 │   │       ├── layout.tsx      # Validasi slug vs hak admin; 403 bila tak berhak
 │   │       ├── page.tsx        # Dashboard aplikasi (F07)
 │   │       ├── users/...       # F08
 │   │       ├── media/...       # F09
-│   │       ├── campaigns/...   # F10
+│   │       ├── notifications/  # F10
 │   │       ├── settings/...    # Remote config (F04)
-│   │       └── questions/...   # Modul domain (F12) — rute per modul
-│   └── layout.tsx              # Root: Apollo provider, toaster, theme
+│   │       └── cbt/...         # Modul domain (F12)
+│   └── layout.tsx              # Bahasa, metadata dasar, dan tema
 ├── components/
-│   ├── ui/                     # Primitif desain (Button, Input, Card, Dialog, Table)
-│   └── shared/                 # AppSwitcher, Sidebar, DataTable, EmptyState, ErrorView
+│   ├── ui/                     # Primitif shadcn/ui (Button, Input, Card, Dialog, Table)
+│   └── shared/                 # AppSwitcher, CmsSidebar, PageHeader, DataTable, page state
 ├── features/<area>/            # Satu folder per area: auth, apps, roles,
 │   ├── components/             # users, media, campaigns, questions, ...
 │   ├── hooks/                  # questions/ (modul) mengikuti pola yang sama
@@ -65,7 +66,7 @@ apps/cms/
 ## 3. Auth, Proxy & PermissionGate
 
 - Login/logout/reset memakai better-auth client ke API (`/api/auth/*`); sesi berupa cookie httpOnly — frontend tidak menyimpan token.
-- `proxy.ts`: `/login` dkk. terbuka; seluruh `/(shell)` butuh sesi; route `/platform/*` butuh hak global (cek ringan di proxy, penegakan final tetap di API).
+- `proxy.ts` mengizinkan landing tepat di `/` dan halaman auth. Rute CMS memerlukan cookie sesi; API memvalidasi sesi dan permission. Login mengarahkan sesi yang valid ke `CMS_PICKER_PATH` (`/platform/pilih-aplikasi`).
 - Layout `[appSlug]`: validasi slug terhadap `accessibleApps` di store → slug asing/tak berhak = halaman 403, bukan redirect diam-diam.
 
 ```tsx
@@ -79,11 +80,14 @@ apps/cms/
 
 Sidebar/menu juga dirender dari permission efektif — satu sumber (`stores/use-session-store.ts`) untuk menu dan gate.
 
-## 4. Tabel, Form, Upload
+## 4. Komponen, Tabel, Form, dan Upload
 
-- **Tabel:** komponen `DataTable` bersama — pagination server (`skip/take` + `totalCount`), loading skeleton, empty state jujur ("Belum ada data"), pencarian & filter sebagai argumen query.
+- **Primitif.** Tambahkan komponen Base UI melalui registry shadcn di `apps/cms`. Token warna, fokus, radius, dan CSS berada di `app/globals.css`. Panggil `Button` untuk aksi dan `ButtonLink` dengan `href` untuk navigasi. `PageHeader` menerima judul, deskripsi, dan aksi halaman.
+- **Tabel.** Gunakan `Table` untuk markup sederhana dan `DataTable<T>` untuk kolom TanStack yang dikontrol fitur. Kirim baris dari satu halaman API, kolom, ID baris dan nama area gulir. Untuk pagination, isi `pageIndex` mulai nol, `pageSize`, total server, dan callback. Admin memakai `skip/take`, sedangkan pengguna serta audit memakai `page/perPage`. Filter baru kembali ke halaman pertama.
+- **Status.** Peta label dan warna tinggal di fitur. `StatusBadge` menerima label dan tone. Gunakan `LoadingState`, `EmptyState`, atau `ErrorState` untuk memberi tahu pengguna apa yang terjadi, dengan aksi coba lagi jika ada.
+- **Dialog.** Gunakan judul dan deskripsi, fokus awal yang sesuai, serta fokus kembali ke pemicu. Tentukan batas penutupan jika unggahan sedang berjalan. Form dan validasinya tetap berada di fitur.
 - **Form:** React Hook Form + `zodResolver(schemas.ts)`; error validasi server (`BAD_USER_INPUT.fields`) dipetakan ke field form; tombol submit disable saat mutation berjalan.
-- **Upload:** `fetch` multipart ke `POST /uploads` (bukan GraphQL) dengan cookie + slug; pakai komponen pemilih media bersama (F09) di semua form yang butuh gambar.
+- **Upload.** Gunakan klien multipart ke `POST /uploads` dengan cookie dan slug. Pakai `MediaPicker` untuk memilih berkas yang sudah tersimpan.
 
 ## 5. Server vs Client Component
 

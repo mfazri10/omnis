@@ -6,14 +6,13 @@ import { CurrentAdmin } from "../../../common/decorators/current-admin.decorator
 import { RequirePermissions } from "../../../common/decorators/require-permissions.decorator";
 import { AuthGuard } from "../../../common/guards/auth.guard";
 import { PermissionGuard } from "../../../common/guards/permission.guard";
-import { PaginationArgs } from "../../../common/types/pagination";
 import { ActivityLogService } from "../activity-logs/activity-log.service";
 import { AssignmentsService } from "../rbac/assignments.service";
 import { RbacService } from "../rbac/rbac.service";
 import { RoleAssignmentType } from "../rbac/types/assignment.type";
 import { AdminsService } from "./admins.service";
 import type { AdminListItem, AdminProfile } from "./admins.service";
-import { CreateAdminInput, UpdateAdminInput } from "./dto/admin.input";
+import { CreateAdminInput, ListAdminsArgs, UpdateAdminInput } from "./dto/admin.input";
 import { AdminConnection, AdminType } from "./types/admin.type";
 
 function toAdminType(item: AdminListItem | AdminProfile): AdminType {
@@ -42,13 +41,12 @@ export class AdminsResolver {
   @Query(() => AdminConnection)
   @RequirePermissions("platform.admins.view")
   async admins(
-    @Args({ type: () => PaginationArgs }) pagination: PaginationArgs,
-    @Args("search", { type: () => String, nullable: true }) search?: string,
+    @Args() { search, skip, take }: ListAdminsArgs,
   ): Promise<AdminConnection> {
     const { items, totalCount } = await this.adminsService.listAdmins({
       search: search ?? undefined,
-      skip: pagination.skip,
-      take: pagination.take,
+      skip,
+      take,
     });
     const connection = new AdminConnection();
     connection.items = items.map(toAdminType);

@@ -1,5 +1,12 @@
 "use client";
 
+import { PageHeader } from "@/components/shared/page-header";
+import { Button } from "@/components/ui/button";
+import { TableToolbar } from "@/components/shared/table-toolbar";
+import { useBoundedPage } from "@/hooks/use-bounded-page";
+import { LoadingState } from "@/components/shared/page-state";
+import { Table } from "@/components/ui/table";
+
 import { useMutation, useQuery } from "@apollo/client/react";
 import { use, useState } from "react";
 import type { FormEvent, JSX } from "react";
@@ -22,8 +29,8 @@ import { useSessionStore } from "../../../../../stores/use-session-store";
 
 const PER_PAGE = 20;
 const CONTROL_CLASS =
-  "min-h-[44px] border border-slate-300 px-3 py-2 text-sm text-slate-900";
-const LABEL_CLASS = "text-xs font-semibold text-slate-600";
+  "min-h-11 max-w-full rounded-md border border-input bg-card px-3 py-2 text-sm";
+const LABEL_CLASS = "text-sm font-medium text-muted-foreground";
 
 type StatusMessage = { kind: "sukses" | "gagal"; text: string };
 
@@ -81,13 +88,15 @@ function PackageForm({ initial, onDone, onCancel }: PackageFormProps): JSX.Eleme
       if (initial === null) {
         await createPackage({
           variables: { input },
-          refetchQueries: [{ query: CBT_PACKAGES_QUERY }],
+          refetchQueries: [CBT_PACKAGES_QUERY],
+          awaitRefetchQueries: true,
         });
         onDone({ kind: "sukses", text: "Paket dibuat. Susun komposisi soalnya." });
       } else {
         await updatePackage({
           variables: { id: initial.id, input },
-          refetchQueries: [{ query: CBT_PACKAGES_QUERY }],
+          refetchQueries: [CBT_PACKAGES_QUERY],
+          awaitRefetchQueries: true,
         });
         onDone({ kind: "sukses", text: "Perubahan paket tersimpan." });
       }
@@ -97,7 +106,7 @@ function PackageForm({ initial, onDone, onCancel }: PackageFormProps): JSX.Eleme
   }
 
   return (
-    <section className="border border-slate-200 p-4">
+    <section className="rounded-xl border border-border bg-card p-4">
       <h2 className="text-sm font-semibold text-slate-900">
         {initial === null ? "Tambah paket" : `Ubah paket: ${initial.title}`}
       </h2>
@@ -187,21 +196,22 @@ function PackageForm({ initial, onDone, onCancel }: PackageFormProps): JSX.Eleme
           </p>
         </fieldset>
         <div className="flex gap-2 md:col-span-2">
-          <button
+          <Button
             type="submit"
             disabled={saving}
-            className="min-h-[44px] bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            className="min-h-11"
           >
             {saving ? "Menyimpan…" : "Simpan"}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             disabled={saving}
             onClick={onCancel}
-            className="min-h-[44px] border border-slate-300 px-4 py-2 text-sm text-slate-900 disabled:opacity-50"
+            variant="outline"
+            className="min-h-11"
           >
             Batal
-          </button>
+          </Button>
         </div>
       </form>
     </section>
@@ -248,7 +258,8 @@ function CompositionEditor({ pkg, onDone, onClose }: CompositionEditorProps): JS
     try {
       await setQuestions({
         variables: { id: pkg.id, questionIds: current },
-        refetchQueries: [{ query: CBT_PACKAGES_QUERY }],
+        refetchQueries: [CBT_PACKAGES_QUERY],
+        awaitRefetchQueries: true,
       });
       onDone({
         kind: "sukses",
@@ -398,7 +409,8 @@ export default function CbtPaketPage({
     try {
       await updatePackage({
         variables: { id: pkg.id, input: { isActive: !pkg.isActive } },
-        refetchQueries: [{ query: CBT_PACKAGES_QUERY }],
+        refetchQueries: [CBT_PACKAGES_QUERY],
+        awaitRefetchQueries: true,
       });
       setStatus({
         kind: "sukses",
@@ -413,14 +425,14 @@ export default function CbtPaketPage({
   }
 
   const total = data?.cbtPackages.total ?? 0;
+  const pageValid = useBoundedPage(page, setPage, PER_PAGE, loading ? undefined : data?.cbtPackages.total);
   const from = total === 0 ? 0 : (page - 1) * PER_PAGE + 1;
   const to = Math.min(page * PER_PAGE, total);
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-8 font-sans">
-      <p className="text-sm text-slate-600">Modul CBT {appSlug}</p>
-      <h1 className="mt-2 text-2xl font-bold text-slate-900">Paket ujian</h1>
-      {!ready && <p className="mt-6 text-slate-900">Memuat…</p>}
+    <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+      <PageHeader title="Paket ujian" description={appSlug} />
+      {!ready && <LoadingState />}
       {ready && !canView && (
         <p className="mt-6 text-sm text-slate-600">
           Anda tidak memiliki izin untuk melihat paket ujian aplikasi ini.
@@ -433,10 +445,7 @@ export default function CbtPaketPage({
           )}
           {contextReady && (
             <>
-              <form
-                className="mt-6 flex flex-wrap items-end gap-3"
-                onSubmit={handleApply}
-              >
+              <TableToolbar onSubmit={handleApply}>
                 <label className="flex flex-col gap-1">
                   <span className={LABEL_CLASS}>Pencarian</span>
                   <input
@@ -491,7 +500,7 @@ export default function CbtPaketPage({
                     Tambah paket
                   </button>
                 )}
-              </form>
+              </TableToolbar>
 
               {status && (
                 <p
@@ -550,10 +559,10 @@ export default function CbtPaketPage({
                   Belum ada paket yang cocok. Tambah paket atau ubah filter.
                 </p>
               )}
-              {data && total > 0 && (
+              {data && total > 0 && pageValid && (
                 <>
                   <div className="mt-6 overflow-x-auto">
-                    <table className="w-full text-left text-sm">
+                    <Table scrollLabel="Daftar paket CBT" className="min-w-max bg-card text-left">
                       <thead>
                         <tr className="border-b border-slate-200 text-slate-600">
                           <th className="py-2 pr-4 font-semibold">Judul</th>
@@ -630,7 +639,7 @@ export default function CbtPaketPage({
                           </tr>
                         ))}
                       </tbody>
-                    </table>
+                    </Table>
                   </div>
                   <div className="mt-4 flex items-center gap-4 text-sm">
                     <button

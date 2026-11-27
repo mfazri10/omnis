@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import type { FormEvent, JSX } from "react";
-import { authClient } from "../../../../lib/auth-client";
+import { Button } from "@/components/ui/button";
+import { ButtonLink } from "@/components/shared/button-link";
+import { PageHeader } from "@/components/shared/page-header";
+import { ErrorState } from "@/components/shared/page-state";
+import { AuthField } from "@/features/auth/components/auth-panel";
+import { CMS_PICKER_PATH } from "@/features/shell/routes";
+import { authClient } from "@/lib/auth-client";
 
 export default function ChangePasswordPage(): JSX.Element {
   const [current, setCurrent] = useState("");
@@ -12,9 +18,7 @@ export default function ChangePasswordPage(): JSX.Element {
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  async function handleSubmit(
-    event: FormEvent<HTMLFormElement>,
-  ): Promise<void> {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     if (password.length < 8) {
       setError("Kata sandi baru minimal 8 karakter.");
@@ -37,71 +41,31 @@ export default function ChangePasswordPage(): JSX.Element {
         return;
       }
       setDone(true);
+    } catch {
+      setError("Kata sandi belum bisa diubah. Coba lagi.");
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <main className="mx-auto max-w-sm px-6 py-16 font-sans">
-      <p className="text-sm text-slate-600">Profil</p>
-      <h1 className="mt-2 text-2xl font-bold text-slate-900">
-        Ubah kata sandi
-      </h1>
+    <main className="mx-auto max-w-lg px-4 py-6 sm:px-6">
+      <PageHeader title="Ubah kata sandi" />
       {done ? (
-        <p className="mt-6 text-sm text-slate-900">
-          Kata sandi berhasil diubah.{" "}
-          <a className="underline" href="/">
-            Kembali beranda
-          </a>
-          .
-        </p>
+        <>
+          <p className="mt-4 text-sm" role="status">Kata sandi berhasil diubah.</p>
+          <ButtonLink href={CMS_PICKER_PATH} className="mt-4">Kembali ke pemilih aplikasi</ButtonLink>
+        </>
       ) : (
-        <form
-          className="mt-6 flex flex-col gap-4"
-          onSubmit={(e) => void handleSubmit(e)}
-        >
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-slate-900">Kata sandi saat ini</span>
-            <input
-              type="password"
-              required
-              autoComplete="current-password"
-              value={current}
-              onChange={(e) => setCurrent(e.target.value)}
-              className="border border-slate-300 px-3 py-2 text-slate-900"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-slate-900">Kata sandi baru</span>
-            <input
-              type="password"
-              required
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="border border-slate-300 px-3 py-2 text-slate-900"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-slate-900">Konfirmasi kata sandi</span>
-            <input
-              type="password"
-              required
-              autoComplete="new-password"
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              className="border border-slate-300 px-3 py-2 text-slate-900"
-            />
-          </label>
-          {error && <p className="text-sm text-red-700">{error}</p>}
-          <button
-            type="submit"
-            disabled={busy}
-            className="bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-          >
-            {busy ? "Menyimpan…" : "Simpan kata sandi"}
-          </button>
+        <form className="mt-6 flex flex-col gap-4" aria-busy={busy} onSubmit={(e) => void handleSubmit(e)}>
+          <AuthField id="change-current" label="Kata sandi saat ini" type="password" required autoComplete="current-password"
+            value={current} onChange={(e) => setCurrent(e.target.value)} />
+          <AuthField id="change-new" label="Kata sandi baru" type="password" required autoComplete="new-password"
+            value={password} onChange={(e) => setPassword(e.target.value)} />
+          <AuthField id="change-confirm" label="Konfirmasi kata sandi" type="password" required autoComplete="new-password"
+            value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+          {error && <ErrorState>{error}</ErrorState>}
+          <Button className="min-h-11" type="submit" disabled={busy}>{busy ? "Menyimpan…" : "Ubah kata sandi"}</Button>
         </form>
       )}
     </main>

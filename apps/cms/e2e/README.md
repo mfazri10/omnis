@@ -1,6 +1,6 @@
 # CMS browser smoke test
 
-The smoke test logs in as a temporary Super Admin, provisions a CBT app through the CMS, selects it from the app switcher, and visits platform and app pages at desktop and phone widths. It writes one mobile screenshot to `/tmp/cms-production-readiness-mobile.png`.
+The browser suite covers the public landing and session redirects, provisioning, the app switcher, scoped role permissions, server filters, media upload, and keyboard interactions. It writes a mobile screenshot to `/tmp/cms-production-readiness-mobile.png`.
 
 Use a disposable Postgres control-plane database. The test creates App DBs while provisioning and does not delete them. Never point it at the shared development or production database.
 
@@ -54,9 +54,10 @@ Use a disposable Postgres control-plane database. The test creates App DBs while
 
    ```sh
    CMS_TEST_URL=http://localhost:3001 \
+   NEXT_PUBLIC_API_URL=http://localhost:3000 \
    BROWSER_TEST_EMAIL=browser-test@local.test \
    BROWSER_TEST_PASSWORD=replace-with-a-throwaway-password \
    bun run test:e2e
    ```
 
-The test creates a new application slug for each run unless `BROWSER_TEST_APP_SLUG` is set. When finished, drop the disposable control-plane database and every App DB created by the test.
+The smoke test creates a new application slug for each run unless `BROWSER_TEST_APP_SLUG` is set. The app-context test also creates two apps and an admin with scoped permissions. When finished, drop the disposable control-plane database and the App DBs created in the fixture.

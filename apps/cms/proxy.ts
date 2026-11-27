@@ -17,12 +17,7 @@ export function proxy(request: NextRequest): NextResponse {
   // Presence check saja; API menegakkan validitas sesi yang sebenarnya.
   const hasSession = SESSION_COOKIES.some((name) => request.cookies.has(name));
 
-  if (pathname === "/login" && hasSession) {
-    const homeUrl = request.nextUrl.clone();
-    homeUrl.pathname = "/";
-    return NextResponse.redirect(homeUrl);
-  }
-  if (!isPublic && !hasSession) {
+  if (pathname !== "/" && !isPublic && !hasSession) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     return NextResponse.redirect(loginUrl);

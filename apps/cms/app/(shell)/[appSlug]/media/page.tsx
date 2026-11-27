@@ -19,11 +19,16 @@ import {
   validateClientFile,
 } from "../../../../features/media/upload-client";
 import { useSessionStore } from "../../../../stores/use-session-store";
+import { PageHeader } from "@/components/shared/page-header";
+import { ErrorState, EmptyState, LoadingState } from "@/components/shared/page-state";
+import { Pagination } from "@/components/shared/pagination";
+import { TableToolbar } from "@/components/shared/table-toolbar";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 const PER_PAGE = 24;
 
-const CONTROL_CLASS =
-  "min-h-[44px] border border-slate-300 px-3 py-2 text-sm text-slate-900";
 const LABEL_CLASS = "text-xs font-semibold text-slate-600";
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
@@ -43,12 +48,14 @@ function isImage(item: MediaData): boolean {
 type StatusMessage = { kind: "sukses" | "gagal"; text: string };
 
 interface UploadDialogProps {
+  open: boolean;
   appSlug: string;
+  finalFocus: () => HTMLElement | null;
   onDone: (status: StatusMessage) => void;
   onClose: () => void;
 }
 
-function UploadDialog({ appSlug, onDone, onClose }: UploadDialogProps): JSX.Element {
+function UploadDialog({ open, appSlug, finalFocus, onDone, onClose }: UploadDialogProps): JSX.Element {
   const [file, setFile] = useState<File | null>(null);
   const [altText, setAltText] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -58,15 +65,14 @@ function UploadDialog({ appSlug, onDone, onClose }: UploadDialogProps): JSX.Elem
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    fileInputRef.current?.focus();
-    function onKey(event: KeyboardEvent): void {
-      if (event.key === "Escape" && abortRef.current === null) {
-        onClose();
-      }
+    if (!open) {
+      setFile(null);
+      setAltText("");
+      setError(null);
+      setPercent(0);
+      setUploading(false);
     }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [open]);
 
   useEffect(() => {
     return () => abortRef.current?.abort();
@@ -107,6 +113,7 @@ function UploadDialog({ appSlug, onDone, onClose }: UploadDialogProps): JSX.Elem
         onProgress: setPercent,
         signal: controller.signal,
       });
+      abortRef.current = null;
       onDone({ kind: "sukses", text: `Berkas "${result.fileName}" terunggah.` });
     } catch (err: unknown) {
       const text = err instanceof Error ? err.message : "Unggah gagal.";
@@ -122,49 +129,38 @@ function UploadDialog({ appSlug, onDone, onClose }: UploadDialogProps): JSX.Elem
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
-      onClick={() => {
-        if (!uploading) {
-          onClose();
-        }
-      }}
-    >
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="judul-unggah"
-        className="w-full max-w-md border border-slate-200 bg-white p-4"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <h2 id="judul-unggah" className="text-sm font-semibold text-slate-900">
-          Unggah media
-        </h2>
-        <form className="mt-3 flex flex-col gap-3" onSubmit={(e) => void handleSubmit(e)}>
+    <Dialog open={open} onOpenChange={(next, details) => {
+      if (!next && uploading) details.cancel();
+      else if (!next) onClose();
+    }}>
+      <DialogContent showCloseButton={false} initialFocus={fileInputRef} finalFocus={finalFocus}
+        className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Unggah media</DialogTitle>
+          <DialogDescription>{`Tipe: ${allowedTypeLabels()}. Ukuran maksimal ${formatBytes(5 * 1024 * 1024)}.`}</DialogDescription>
+        </DialogHeader>
+        <form className="flex flex-col gap-3" aria-busy={uploading} onSubmit={(e) => void handleSubmit(e)}>
           <label className="flex flex-col gap-1">
             <span className={LABEL_CLASS}>Berkas (wajib)</span>
-            <input
+            <Input
               ref={fileInputRef}
               type="file"
               accept="image/jpeg,image/png,image/webp,application/pdf"
               disabled={uploading}
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className={CONTROL_CLASS}
+              className="min-h-11"
             />
           </label>
-          <p className="text-xs text-slate-600">
-            {`Tipe: ${allowedTypeLabels()}. Ukuran maksimal ${formatBytes(5 * 1024 * 1024)}.`}
-          </p>
           <label className="flex flex-col gap-1">
             <span className={LABEL_CLASS}>Teks alternatif (opsional)</span>
-            <input
+            <Input
               type="text"
               value={altText}
               maxLength={512}
               disabled={uploading}
               onChange={(e) => setAltText(e.target.value)}
               placeholder="Deskripsi singkat gambar"
-              className={CONTROL_CLASS}
+              className="min-h-11"
             />
           </label>
           {uploading && (
@@ -182,26 +178,27 @@ function UploadDialog({ appSlug, onDone, onClose }: UploadDialogProps): JSX.Elem
           {uploading && (
             <p className="text-xs text-slate-600">{`Mengunggah… ${percent}%`}</p>
           )}
-          {error && <p className="text-sm text-red-700">{error}</p>}
+          {error && <ErrorState>{error}</ErrorState>}
           <div className="flex gap-2">
-            <button
+            <Button
               type="submit"
               disabled={uploading}
-              className="min-h-[44px] bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              className="min-h-11"
             >
               {uploading ? "Mengunggah…" : "Unggah"}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={handleCancel}
-              className="min-h-[44px] border border-slate-300 px-4 py-2 text-sm text-slate-900"
+              variant="outline"
+              className="min-h-11"
             >
               {uploading ? "Batalkan" : "Batal"}
-            </button>
+            </Button>
           </div>
         </form>
-      </section>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -231,6 +228,7 @@ export default function MediaPage({
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<StatusMessage | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const uploadTrigger = useRef<HTMLButtonElement>(null);
 
   const [deleteMedia, { loading: deleting }] = useMutation(
     DELETE_MEDIA_MUTATION,
@@ -270,7 +268,8 @@ export default function MediaPage({
     try {
       await deleteMedia({
         variables: { id: item.id },
-        refetchQueries: [{ query: MEDIA_QUERY }],
+        refetchQueries: [MEDIA_QUERY],
+        awaitRefetchQueries: true,
       });
       setStatus({
         kind: "sukses",
@@ -285,15 +284,18 @@ export default function MediaPage({
   }
 
   const total = data?.media.total ?? 0;
-  const from = total === 0 ? 0 : (page - 1) * PER_PAGE + 1;
-  const to = Math.min(page * PER_PAGE, total);
+  useEffect(() => {
+    if (!loading && data) {
+      const lastPage = Math.max(1, Math.ceil(data.media.total / PER_PAGE));
+      if (page > lastPage) setPage(lastPage);
+    }
+  }, [data, loading, page]);
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-8 font-sans">
-      <p className="text-sm text-slate-600">Media {appSlug}</p>
-      <h1 className="mt-2 text-2xl font-bold text-slate-900">
-        Perpustakaan media
-      </h1>
+    <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+      <PageHeader title="Perpustakaan media" description={appSlug} actions={canView && canCreate &&
+        <Button className="min-h-11" type="button" ref={uploadTrigger}
+          onClick={() => { setStatus(null); setDialogOpen(true); }}>Unggah media</Button>} />
       {!ready && <p className="mt-6 text-slate-900">Memuat…</p>}
       {ready && !canView && (
         <p className="mt-6 text-sm text-slate-600">
@@ -307,51 +309,38 @@ export default function MediaPage({
           )}
           {contextReady && (
             <>
-              <form
-                className="mt-6 flex flex-wrap items-end gap-3"
-                onSubmit={handleApply}
-              >
-                <label className="flex flex-col gap-1">
+              <TableToolbar onSubmit={handleApply}>
+                <label className="flex min-w-0 flex-col gap-1">
                   <span className={LABEL_CLASS}>Pencarian</span>
-                  <input
+                  <Input
                     type="search"
                     placeholder="Cari nama berkas…"
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
-                    className={CONTROL_CLASS}
+                    className="min-h-11 bg-card"
                   />
                 </label>
                 <div className="flex gap-2">
-                  <button
+                  <Button
                     type="submit"
-                    className="min-h-[44px] bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+                    className="min-h-11"
                   >
                     Cari
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
                     onClick={handleReset}
-                    className="min-h-[44px] border border-slate-300 px-4 py-2 text-sm text-slate-900"
+                    variant="outline"
+                    className="min-h-11"
                   >
                     Atur ulang
-                  </button>
+                  </Button>
                 </div>
-                {canCreate && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStatus(null);
-                      setDialogOpen(true);
-                    }}
-                    className="min-h-[44px] border border-slate-900 px-4 py-2 text-sm font-semibold text-slate-900"
-                  >
-                    Unggah media
-                  </button>
-                )}
-              </form>
+              </TableToolbar>
 
               {status && (
                 <p
+                  role={status.kind === "sukses" ? "status" : "alert"}
                   className={
                     status.kind === "sukses"
                       ? "mt-4 text-sm text-green-700"
@@ -362,9 +351,11 @@ export default function MediaPage({
                 </p>
               )}
 
-              {dialogOpen && canCreate && (
+              {canCreate && (
                 <UploadDialog
+                  open={dialogOpen}
                   appSlug={appSlug}
+                  finalFocus={() => uploadTrigger.current}
                   onClose={() => setDialogOpen(false)}
                   onDone={(next) => {
                     setStatus(next);
@@ -376,30 +367,19 @@ export default function MediaPage({
                 />
               )}
 
-              {loading && <p className="mt-6 text-slate-900">Memuat…</p>}
+              {loading && <LoadingState />}
               {error && (
-                <div className="mt-6">
-                  <p className="text-sm text-red-700">
-                    {graphQLErrorMessage(error, "Gagal memuat media.")}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => void refetch()}
-                    className="mt-2 min-h-[44px] underline"
-                  >
-                    Muat ulang
-                  </button>
-                </div>
+                <ErrorState onRetry={() => void refetch()}>{graphQLErrorMessage(error, "Gagal memuat media.")}</ErrorState>
               )}
               {data && total === 0 && applied.trim() === "" && (
-                <p className="mt-6 text-sm text-slate-600">
+                <EmptyState>
                   Belum ada media di aplikasi ini.
-                </p>
+                </EmptyState>
               )}
               {data && total === 0 && applied.trim() !== "" && (
-                <p className="mt-6 text-sm text-slate-600">
+                <EmptyState>
                   Tidak ada media yang cocok dengan pencarian.
-                </p>
+                </EmptyState>
               )}
               {data && total > 0 && (
                 <>
@@ -407,7 +387,7 @@ export default function MediaPage({
                     {data.media.items.map((item) => (
                       <li
                         key={item.id}
-                        className="flex flex-col border border-slate-200"
+                        className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-card"
                       >
                         {isImage(item) ? (
                           <img
@@ -460,26 +440,9 @@ export default function MediaPage({
                       </li>
                     ))}
                   </ul>
-                  <div className="mt-4 flex items-center gap-4 text-sm">
-                    <button
-                      type="button"
-                      disabled={page <= 1}
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      className="min-h-[44px] underline disabled:opacity-50"
-                    >
-                      Sebelumnya
-                    </button>
-                    <span className="text-slate-600">
-                      {`${from}–${to} dari ${total}`}
-                    </span>
-                    <button
-                      type="button"
-                      disabled={page * PER_PAGE >= total}
-                      onClick={() => setPage((p) => p + 1)}
-                      className="min-h-[44px] underline disabled:opacity-50"
-                    >
-                      Berikutnya
-                    </button>
+                  <div className="mt-4">
+                    <Pagination pageIndex={page - 1} pageSize={PER_PAGE} totalRows={total}
+                      onPageChange={(index) => setPage(index + 1)} />
                   </div>
                 </>
               )}

@@ -2,113 +2,82 @@
 
 import { useQuery } from "@apollo/client/react";
 import { useState } from "react";
-import type { FormEvent, JSX } from "react";
-import { PermissionGate } from "../../../../features/rbac/components/permission-gate";
-import { graphQLErrorMessage } from "../../../../features/rbac/graphql/errors";
-import { APPS_LIST_QUERY } from "../../../../features/apps/graphql/apps.graphql";
+import type { JSX } from "react";
+import { ButtonLink } from "@/components/shared/button-link";
+import { PageHeader } from "@/components/shared/page-header";
+import { EmptyState, ErrorState, LoadingState } from "@/components/shared/page-state";
+import { TableToolbar } from "@/components/shared/table-toolbar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { AppStatusBadge } from "@/features/apps/components/app-status-badge";
+import { APPS_LIST_QUERY } from "@/features/apps/graphql/apps.graphql";
+import { PermissionGate } from "@/features/rbac/components/permission-gate";
+import { graphQLErrorMessage } from "@/features/rbac/graphql/errors";
 
-const STATUSES = ["all", "active", "suspended", "archived", "provisioning", "failed"];
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
+const statuses = [
+  ["all", "Semua status"],
+  ["active", "Aktif"],
+  ["suspended", "Ditangguhkan"],
+  ["archived", "Diarsipkan"],
+  ["provisioning", "Disiapkan"],
+  ["failed", "Gagal"],
+];
+const date = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" });
 
 export default function AppsPage(): JSX.Element {
   const [draft, setDraft] = useState("");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
-  const { data, loading, error } = useQuery(APPS_LIST_QUERY, {
-    variables: {
-      status,
-      search: search === "" ? null : search,
-    },
+  const { data, loading, error, refetch } = useQuery(APPS_LIST_QUERY, {
+    variables: { status, search: search || null },
   });
 
-  function handleSearch(event: FormEvent<HTMLFormElement>): void {
-    event.preventDefault();
-    setSearch(draft);
-  }
-
   return (
-    <main className="mx-auto max-w-3xl px-6 py-8 font-sans">
-      <p className="text-sm text-slate-600">Platform CMS Multi-Aplikasi</p>
-      <div className="mt-2 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900">Aplikasi</h1>
+    <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+      <PageHeader title="Aplikasi" description="Lihat status dan buka pengaturan tiap aplikasi." actions={
         <PermissionGate requires="platform.apps.manage">
-          <a className="text-sm underline" href="/platform/apps/new">
-            Tambah aplikasi
-          </a>
+          <ButtonLink href="/platform/apps/new">Tambah aplikasi</ButtonLink>
         </PermissionGate>
-      </div>
-      <form className="mt-6 flex gap-2" onSubmit={handleSearch}>
-        <input
-          type="search"
-          placeholder="Cari nama atau slug…"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          className="border border-slate-300 px-3 py-2 text-sm text-slate-900"
-        />
-        <select
-          aria-label="Status"
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          className="border border-slate-300 px-3 py-2 text-sm text-slate-900"
-        >
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s === "all" ? "Semua status" : s}
-            </option>
-          ))}
-        </select>
-        <button
-          type="submit"
-          className="bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-        >
-          Cari
-        </button>
-      </form>
-      {loading && <p className="mt-6 text-slate-900">Memuat…</p>}
-      {error && (
-        <p className="mt-6 text-sm text-red-700">
-          {graphQLErrorMessage(error, "Gagal memuat daftar aplikasi.")}
-        </p>
-      )}
-      {data && data.apps.length === 0 && (
-        <p className="mt-6 text-sm text-slate-600">Belum ada aplikasi.</p>
-      )}
+      } />
+      <TableToolbar onSubmit={(event) => {
+        event.preventDefault();
+        setSearch(draft.trim());
+      }}>
+        <div className="w-full min-w-0 sm:max-w-xs">
+          <label htmlFor="app-search" className="mb-1 block text-sm font-medium">Cari aplikasi</label>
+          <Input id="app-search" type="search" placeholder="Nama atau slug" value={draft}
+            onChange={(event) => setDraft(event.target.value)} className="min-h-11 bg-card" />
+        </div>
+        <div>
+          <label htmlFor="app-status" className="mb-1 block text-sm font-medium">Status</label>
+          <select id="app-status" value={status} onChange={(event) => setStatus(event.target.value)}
+            className="min-h-11 rounded-lg border border-input bg-card px-2 text-sm">
+            {statuses.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select>
+        </div>
+        <Button type="submit" variant="outline" className="min-h-11">Cari</Button>
+      </TableToolbar>
+      {loading && <LoadingState />}
+      {error && <ErrorState onRetry={() => void refetch()}>{graphQLErrorMessage(error, "Gagal memuat daftar aplikasi.")}</ErrorState>}
+      {data?.apps.length === 0 && <EmptyState>
+        {search || status !== "all" ? "Tidak ada aplikasi yang cocok dengan filter." : "Belum ada aplikasi."}
+      </EmptyState>}
       {data && data.apps.length > 0 && (
-        <table className="mt-6 w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-slate-200 text-slate-600">
-              <th className="py-2 pr-4 font-semibold">Nama</th>
-              <th className="py-2 pr-4 font-semibold">Slug</th>
-              <th className="py-2 pr-4 font-semibold">Status</th>
-              <th className="py-2 pr-4 font-semibold">Dibuat</th>
-              <th className="py-2 font-semibold">Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.apps.map((app) => (
-              <tr key={app.id} className="border-b border-slate-100">
-                <td className="py-2 pr-4 text-slate-900">{app.name}</td>
-                <td className="py-2 pr-4 text-slate-600">{app.slug}</td>
-                <td className="py-2 pr-4 text-slate-600">{app.status}</td>
-                <td className="py-2 pr-4 text-slate-600">
-                  {formatDate(app.createdAt)}
-                </td>
-                <td className="py-2">
-                  <a className="underline" href={`/platform/apps/${app.slug}`}>
-                    Kelola
-                  </a>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <Table scrollLabel="Daftar aplikasi" className="min-w-max bg-card">
+          <TableHeader className="bg-muted"><TableRow>
+            {["Nama", "Slug", "Status", "Dibuat", "Aksi"].map((title) => <TableHead key={title} scope="col" className="px-3">{title}</TableHead>)}
+          </TableRow></TableHeader>
+          <TableBody>
+            {data.apps.map((app) => <TableRow key={app.id}>
+              <TableCell className="max-w-72 px-3 font-medium whitespace-normal wrap-anywhere">{app.name}</TableCell>
+              <TableCell className="px-3 text-muted-foreground">{app.slug}</TableCell>
+              <TableCell className="px-3"><AppStatusBadge status={app.status} /></TableCell>
+              <TableCell className="px-3">{date.format(new Date(app.createdAt))}</TableCell>
+              <TableCell className="px-3"><ButtonLink href={`/platform/apps/${app.slug}`} variant="link">Kelola</ButtonLink></TableCell>
+            </TableRow>)}
+          </TableBody>
+        </Table>
       )}
     </main>
   );

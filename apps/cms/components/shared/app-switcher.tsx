@@ -3,6 +3,10 @@
 import { useRouter } from "next/navigation";
 import type { JSX } from "react";
 import { useSessionStore } from "../../stores/use-session-store";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CMS_PICKER_PATH } from "@/features/shell/routes";
+
+const EVERY_APP = "__all";
 
 export function AppSwitcher(): JSX.Element {
   const router = useRouter();
@@ -10,33 +14,24 @@ export function AppSwitcher(): JSX.Element {
   const activeSlug = useSessionStore((state) => state.activeSlug);
   const setActiveSlug = useSessionStore((state) => state.setActiveSlug);
   if (apps.length === 0) {
-    return <p className="text-sm text-slate-600">Tanpa aplikasi</p>;
+    return <p className="text-sm text-muted-foreground">Tanpa aplikasi</p>;
   }
   return (
-    <label className="flex items-center gap-2 text-sm">
-      <span className="text-slate-600">Aplikasi</span>
-      <select
-        aria-label="Pilih aplikasi"
-        value={activeSlug ?? ""}
-        onChange={(event) => {
-          const slug = event.target.value;
-          if (slug === "") {
-            setActiveSlug(null);
-            router.push("/");
-            return;
-          }
-          setActiveSlug(slug);
-          router.push(`/${slug}`);
-        }}
-        className="min-h-[44px] border border-slate-300 px-2 py-2 text-sm text-slate-900"
-      >
-        <option value="">Semua aplikasi</option>
+    <Select value={activeSlug ?? EVERY_APP} onValueChange={(value) => {
+      if (value === null) return;
+      const slug = value === EVERY_APP ? null : value;
+      setActiveSlug(slug);
+      router.push(slug === null ? CMS_PICKER_PATH : `/${slug}`);
+    }}>
+      <SelectTrigger aria-label="Pilih aplikasi" className="min-h-11 max-w-52 bg-card">
+        <SelectValue>{apps.find((app) => app.slug === activeSlug)?.name ?? "Semua aplikasi"}</SelectValue>
+      </SelectTrigger>
+      <SelectContent align="start" alignItemWithTrigger={false}>
+        <SelectItem value={EVERY_APP} className="min-h-11">Semua aplikasi</SelectItem>
         {apps.map((app) => (
-          <option key={app.id} value={app.slug}>
-            {app.name}
-          </option>
+          <SelectItem key={app.id} value={app.slug} className="min-h-11 wrap-anywhere">{app.name}</SelectItem>
         ))}
-      </select>
-    </label>
+      </SelectContent>
+    </Select>
   );
 }

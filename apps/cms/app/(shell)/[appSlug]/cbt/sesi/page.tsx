@@ -1,5 +1,11 @@
 "use client";
 
+import { PageHeader } from "@/components/shared/page-header";
+import { TableToolbar } from "@/components/shared/table-toolbar";
+import { useBoundedPage } from "@/hooks/use-bounded-page";
+import { LoadingState } from "@/components/shared/page-state";
+import { Table } from "@/components/ui/table";
+
 import { useMutation, useQuery } from "@apollo/client/react";
 import { use, useEffect, useState } from "react";
 import type { FormEvent, JSX } from "react";
@@ -22,8 +28,8 @@ import { useSessionStore } from "../../../../../stores/use-session-store";
 
 const PER_PAGE = 20;
 const CONTROL_CLASS =
-  "min-h-[44px] border border-slate-300 px-3 py-2 text-sm text-slate-900";
-const LABEL_CLASS = "text-xs font-semibold text-slate-600";
+  "min-h-11 max-w-full rounded-md border border-input bg-card px-3 py-2 text-sm";
+const LABEL_CLASS = "text-sm font-medium text-muted-foreground";
 const OPTIONS: CbtOption[] = ["A", "B", "C", "D", "E"];
 
 type StatusMessage = { kind: "sukses" | "gagal"; text: string };
@@ -340,7 +346,8 @@ export default function CbtSesiPage({
             participantName: participantMode === "nama" ? participantName : null,
           },
         },
-        refetchQueries: [{ query: CBT_SESSIONS_QUERY }],
+        refetchQueries: [CBT_SESSIONS_QUERY],
+        awaitRefetchQueries: true,
       });
       const created = result.data?.startCbtSimulation;
       if (created) {
@@ -360,20 +367,20 @@ export default function CbtSesiPage({
   }
 
   const total = data?.cbtSessions.total ?? 0;
+  const pageValid = useBoundedPage(page, setPage, PER_PAGE, loading ? undefined : data?.cbtSessions.total);
   const from = total === 0 ? 0 : (page - 1) * PER_PAGE + 1;
   const to = Math.min(page * PER_PAGE, total);
   const packageItems = packages.data?.cbtPackages.items ?? [];
   const userItems = users.data?.appUsers.items ?? [];
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-8 font-sans">
-      <p className="text-sm text-slate-600">Modul CBT {appSlug}</p>
-      <h1 className="mt-2 text-2xl font-bold text-slate-900">Sesi ujian</h1>
+    <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+      <PageHeader title="Sesi ujian" description={appSlug} />
       <p className="mt-2 text-sm text-slate-600">
         Fase CMS: simulasi penilaian. Mulai sesi untuk peserta, isi jawaban,
         lalu selesaikan untuk menilai otomatis.
       </p>
-      {!ready && <p className="mt-6 text-slate-900">Memuat…</p>}
+      {!ready && <LoadingState />}
       {ready && !canView && (
         <p className="mt-6 text-sm text-slate-600">
           Anda tidak memiliki izin untuk melihat sesi ujian aplikasi ini.
@@ -386,10 +393,7 @@ export default function CbtSesiPage({
           )}
           {contextReady && (
             <>
-              <form
-                className="mt-6 flex flex-wrap items-end gap-3"
-                onSubmit={handleApply}
-              >
+              <TableToolbar onSubmit={handleApply}>
                 <label className="flex flex-col gap-1">
                   <span className={LABEL_CLASS}>Cari peserta</span>
                   <input
@@ -443,7 +447,7 @@ export default function CbtSesiPage({
                     Mulai simulasi
                   </button>
                 )}
-              </form>
+              </TableToolbar>
 
               {status && (
                 <p
@@ -509,6 +513,7 @@ export default function CbtSesiPage({
                       </div>
                       {participantMode === "user" ? (
                         <select
+                          aria-label="User aplikasi aktif"
                           required
                           value={appUserId}
                           disabled={starting}
@@ -524,6 +529,7 @@ export default function CbtSesiPage({
                         </select>
                       ) : (
                         <input
+                          aria-label="Nama peserta simulasi"
                           type="text"
                           required
                           maxLength={255}
@@ -595,10 +601,10 @@ export default function CbtSesiPage({
                   Belum ada sesi. Mulai simulasi untuk membuat sesi pertama.
                 </p>
               )}
-              {data && total > 0 && (
+              {data && total > 0 && pageValid && (
                 <>
                   <div className="mt-6 overflow-x-auto">
-                    <table className="w-full text-left text-sm">
+                    <Table scrollLabel="Daftar sesi CBT" className="min-w-max bg-card text-left">
                       <thead>
                         <tr className="border-b border-slate-200 text-slate-600">
                           <th className="py-2 pr-4 font-semibold">Peserta</th>
@@ -646,7 +652,7 @@ export default function CbtSesiPage({
                           </tr>
                         ))}
                       </tbody>
-                    </table>
+                    </Table>
                   </div>
                   <div className="mt-4 flex items-center gap-4 text-sm">
                     <button

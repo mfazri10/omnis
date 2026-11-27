@@ -21,7 +21,7 @@ Konsep koding untuk proyek ini (scope: CMS/platform dulu). Sifatnya **menjelaska
 - File `kebab-case`, class/interface `PascalCase`, fungsi/variabel `camelCase`, tabel & kolom `snake_case`, env `UPPER_SNAKE_CASE`.
 - Tidak ada secret di kode; hanya via environment.
 
-## Keputusan Tertunda yang Mempengaruhi Pattern
+## Fondasi
 
 - **Package manager: Bun** (+ Turborepo) — dikunci saat setup F00.
-- Komponen UI web (shadcn-style atau alternatif) — pola di [frontend-pattern.md](frontend-pattern.md) tidak bergantung mereknya.
+- CMS memakai shadcn/ui dengan Base UI dan token Tailwind v4. Lihat [konvensi komponen](frontend-pattern.md#4-komponen-tabel-form-dan-upload).

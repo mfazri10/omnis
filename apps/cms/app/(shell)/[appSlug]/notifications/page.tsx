@@ -1,5 +1,14 @@
 "use client";
 
+import { PageHeader } from "@/components/shared/page-header";
+import { Button } from "@/components/ui/button";
+import { TableToolbar } from "@/components/shared/table-toolbar";
+import { useBoundedPage } from "@/hooks/use-bounded-page";
+import { LoadingState } from "@/components/shared/page-state";
+import { StatusBadge } from "@/components/shared/status-badge";
+import type { StatusTone } from "@/components/shared/status-badge";
+import { Table } from "@/components/ui/table";
+
 import { useMutation, useQuery } from "@apollo/client/react";
 import { Fragment, use, useState } from "react";
 import type { FormEvent, JSX } from "react";
@@ -23,8 +32,8 @@ import { useSessionStore } from "../../../../stores/use-session-store";
 const PER_PAGE = 20;
 
 const CONTROL_CLASS =
-  "min-h-[44px] border border-slate-300 px-3 py-2 text-sm text-slate-900";
-const LABEL_CLASS = "text-xs font-semibold text-slate-600";
+  "min-h-11 max-w-full rounded-md border border-input bg-card px-3 py-2 text-sm";
+const LABEL_CLASS = "text-sm font-medium text-muted-foreground";
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "Draf",
@@ -37,24 +46,16 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: "Dibatalkan",
 };
 
-const STATUS_BADGES: Record<string, string> = {
-  draft: "bg-slate-200 text-slate-700",
-  scheduled: "bg-blue-100 text-blue-800",
-  sending: "bg-amber-100 text-amber-800",
-  sent: "bg-green-100 text-green-800",
-  simulated: "bg-slate-200 text-slate-700",
-  unknown: "bg-purple-100 text-purple-800",
-  failed: "bg-red-100 text-red-800",
-  cancelled: "bg-slate-200 text-slate-700",
-};
+const STATUS_TONES = new Map<string, StatusTone>([
+  ["scheduled", "info"],
+  ["sending", "warning"],
+  ["sent", "success"],
+  ["unknown", "warning"],
+  ["failed", "danger"],
+]);
 
 function statusLabel(status: string): string {
   return STATUS_LABELS[status] ?? status;
-}
-
-function statusBadge(status: string): string {
-  const color = STATUS_BADGES[status] ?? STATUS_BADGES.draft;
-  return `px-2 py-1 text-xs font-semibold ${color}`;
 }
 
 function formatDateTime(iso: string | null): string {
@@ -238,7 +239,8 @@ function CampaignForm({
         };
         await createCampaign({
           variables: { input },
-          refetchQueries: [{ query: CAMPAIGNS_QUERY }],
+          refetchQueries: [CAMPAIGNS_QUERY],
+          awaitRefetchQueries: true,
         });
         onDone({ kind: "sukses", text: "Kampanye dibuat." });
       } else {
@@ -253,7 +255,8 @@ function CampaignForm({
         };
         await updateCampaign({
           variables: { id: initial.id, input },
-          refetchQueries: [{ query: CAMPAIGNS_QUERY }],
+          refetchQueries: [CAMPAIGNS_QUERY],
+          awaitRefetchQueries: true,
         });
         onDone({ kind: "sukses", text: "Perubahan kampanye tersimpan." });
       }
@@ -266,7 +269,7 @@ function CampaignForm({
   }
 
   return (
-    <section className="border border-slate-200 p-4">
+    <section className="rounded-xl border border-border bg-card p-4">
       <h2 className="text-sm font-semibold text-slate-900">
         {initial === null ? "Buat kampanye" : `Ubah kampanye: ${initial.title}`}
       </h2>
@@ -387,21 +390,22 @@ function CampaignForm({
           Kirim sekarang.
         </p>
         <div className="flex gap-2 md:col-span-2">
-          <button
+          <Button
             type="submit"
             disabled={saving}
-            className="min-h-[44px] bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            className="min-h-11"
           >
             {saving ? "Menyimpan…" : "Simpan"}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             disabled={saving}
             onClick={onCancel}
-            className="min-h-[44px] border border-slate-300 px-4 py-2 text-sm text-slate-900 disabled:opacity-50"
+            variant="outline"
+            className="min-h-11"
           >
             Batal
-          </button>
+          </Button>
         </div>
       </form>
       <MediaPicker
@@ -549,7 +553,8 @@ export default function NotificationsPage({
     try {
       const result = await sendNow({
         variables: { id: campaign.id },
-        refetchQueries: [{ query: CAMPAIGNS_QUERY }],
+        refetchQueries: [CAMPAIGNS_QUERY],
+        awaitRefetchQueries: true,
       });
       const sent = result.data?.sendCampaignNow;
       setStatus({
@@ -577,7 +582,8 @@ export default function NotificationsPage({
     try {
       await cancelCampaign({
         variables: { id: campaign.id },
-        refetchQueries: [{ query: CAMPAIGNS_QUERY }],
+        refetchQueries: [CAMPAIGNS_QUERY],
+        awaitRefetchQueries: true,
       });
       setStatus({
         kind: "sukses",
@@ -592,16 +598,14 @@ export default function NotificationsPage({
   }
 
   const total = data?.campaigns.total ?? 0;
+  const pageValid = useBoundedPage(page, setPage, PER_PAGE, loading ? undefined : data?.campaigns.total);
   const from = total === 0 ? 0 : (page - 1) * PER_PAGE + 1;
   const to = Math.min(page * PER_PAGE, total);
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-8 font-sans">
-      <p className="text-sm text-slate-600">Notifikasi {appSlug}</p>
-      <h1 className="mt-2 text-2xl font-bold text-slate-900">
-        Kampanye notifikasi
-      </h1>
-      {!ready && <p className="mt-6 text-slate-900">Memuat…</p>}
+    <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+      <PageHeader title="Kampanye notifikasi" description={appSlug} />
+      {!ready && <LoadingState />}
       {ready && !canView && (
         <p className="mt-6 text-sm text-slate-600">
           Anda tidak memiliki izin untuk melihat kampanye aplikasi ini.
@@ -614,10 +618,7 @@ export default function NotificationsPage({
           )}
           {contextReady && (
             <>
-              <form
-                className="mt-6 flex flex-wrap items-end gap-3"
-                onSubmit={handleApply}
-              >
+              <TableToolbar onSubmit={handleApply}>
                 <label className="flex flex-col gap-1">
                   <span className={LABEL_CLASS}>Pencarian</span>
                   <input
@@ -674,7 +675,7 @@ export default function NotificationsPage({
                     Buat kampanye
                   </button>
                 )}
-              </form>
+              </TableToolbar>
 
               {status && (
                 <p
@@ -731,10 +732,10 @@ export default function NotificationsPage({
                   Tidak ada kampanye yang cocok dengan filter.
                 </p>
               )}
-              {data && total > 0 && (
+              {data && total > 0 && pageValid && (
                 <>
                   <div className="mt-6 overflow-x-auto">
-                    <table className="w-full text-left text-sm">
+                    <Table scrollLabel="Daftar kampanye" className="min-w-max bg-card text-left">
                       <thead>
                         <tr className="border-b border-slate-200 text-slate-600">
                           <th className="py-2 pr-4 font-semibold">Judul</th>
@@ -759,9 +760,7 @@ export default function NotificationsPage({
                                   {campaign.title}
                                 </td>
                                 <td className="py-2 pr-4">
-                                  <span className={statusBadge(campaign.status)}>
-                                    {statusLabel(campaign.status)}
-                                  </span>
+                                  <StatusBadge label={statusLabel(campaign.status)} tone={STATUS_TONES.get(campaign.status)} />
                                 </td>
                                 <td className="py-2 pr-4 text-slate-600">
                                   {formatDateTime(campaign.scheduledAt)}
@@ -829,7 +828,7 @@ export default function NotificationsPage({
                           );
                         })}
                       </tbody>
-                    </table>
+                    </Table>
                   </div>
                   <div className="mt-4 flex items-center gap-4 text-sm">
                     <button

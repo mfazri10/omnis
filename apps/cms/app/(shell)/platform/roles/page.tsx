@@ -3,6 +3,11 @@
 import { useMutation, useQuery } from "@apollo/client/react";
 import { useState } from "react";
 import type { JSX } from "react";
+import { ButtonLink } from "@/components/shared/button-link";
+import { PageHeader } from "@/components/shared/page-header";
+import { EmptyState, ErrorState, LoadingState } from "@/components/shared/page-state";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PermissionGate } from "../../../../features/rbac/components/permission-gate";
 import { graphQLErrorMessage } from "../../../../features/rbac/graphql/errors";
 import {
@@ -11,7 +16,7 @@ import {
 } from "../../../../features/rbac/graphql/roles.graphql";
 
 export default function RolesPage(): JSX.Element {
-  const { data, loading, error } = useQuery(ROLES_QUERY);
+  const { data, loading, error, refetch } = useQuery(ROLES_QUERY);
   const [deleteRole, { loading: deleting }] = useMutation(DELETE_ROLE_MUTATION);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -31,68 +36,57 @@ export default function RolesPage(): JSX.Element {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-8 font-sans">
-      <p className="text-sm text-slate-600">Platform CMS Multi-Aplikasi</p>
-      <div className="mt-2 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900">Role</h1>
+    <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+      <PageHeader title="Role" description="Atur peran serta izin di platform dan aplikasi." actions={
         <PermissionGate requires="platform.roles.manage">
-          <a className="text-sm underline" href="/platform/roles/new">
-            Tambah role
-          </a>
+          <ButtonLink href="/platform/roles/new">Tambah role</ButtonLink>
         </PermissionGate>
-      </div>
-      {loading && <p className="mt-6 text-slate-900">Memuat…</p>}
+      } />
+      {loading && <LoadingState />}
       {error && (
-        <p className="mt-6 text-sm text-red-700">
+        <ErrorState onRetry={() => void refetch()}>
           {graphQLErrorMessage(error, "Gagal memuat daftar role.")}
-        </p>
+        </ErrorState>
       )}
       {actionError && (
-        <p className="mt-4 text-sm text-red-700">{actionError}</p>
+        <ErrorState>{actionError}</ErrorState>
       )}
       {data && data.roles.length === 0 && (
-        <p className="mt-6 text-sm text-slate-600">Belum ada role.</p>
+        <EmptyState>Belum ada role.</EmptyState>
       )}
       {data && data.roles.length > 0 && (
-        <table className="mt-6 w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-slate-200 text-slate-600">
-              <th className="py-2 pr-4 font-semibold">Nama</th>
-              <th className="py-2 pr-4 font-semibold">Cakupan</th>
-              <th className="py-2 pr-4 font-semibold">Permission</th>
-              <th className="py-2 font-semibold">Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
+        <div className="mt-4">
+        <Table scrollLabel="Daftar role" className="min-w-max bg-card">
+          <TableHeader className="bg-muted">
+            <TableRow>
+              {["Nama", "Cakupan", "Izin", "Aksi"].map((label) => <TableHead scope="col" key={label}>{label}</TableHead>)}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {data.roles.map((role) => (
-              <tr key={role.id} className="border-b border-slate-100">
-                <td className="py-2 pr-4 text-slate-900">{role.name}</td>
-                <td className="py-2 pr-4 text-slate-600">{role.scopeType}</td>
-                <td className="py-2 pr-4 text-slate-600">
-                  {role.permissionKeys.length}
-                </td>
-                <td className="flex gap-3 py-2">
-                  <a
-                    className="underline"
-                    href={`/platform/roles/${role.id}`}
-                  >
-                    Ubah
-                  </a>
+              <TableRow key={role.id}>
+                <TableCell className="max-w-60 font-medium whitespace-normal wrap-anywhere">{role.name}</TableCell>
+                <TableCell>{role.scopeType === "app" ? "Aplikasi" : "Global"}</TableCell>
+                <TableCell>{role.permissionKeys.length}</TableCell>
+                <TableCell>
+                  <ButtonLink variant="link" href={`/platform/roles/${role.id}`}>Ubah</ButtonLink>
                   <PermissionGate requires="platform.roles.manage">
-                    <button
+                    <Button
                       type="button"
                       disabled={deleting}
                       onClick={() => void handleDelete(role.id, role.name)}
-                      className="underline disabled:opacity-50"
+                      variant="destructive"
+                      className="min-h-11"
                     >
                       Hapus
-                    </button>
+                    </Button>
                   </PermissionGate>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
+        </div>
       )}
     </main>
   );

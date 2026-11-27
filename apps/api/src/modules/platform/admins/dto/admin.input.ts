@@ -1,5 +1,14 @@
-import { Field, InputType } from "@nestjs/graphql";
-import { IsEmail, IsString, MaxLength, MinLength } from "class-validator";
+import { ArgsType, Field, InputType } from "@nestjs/graphql";
+import { IsEmail, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
+import { PaginationArgs } from "../../../../common/types/pagination";
+
+@ArgsType()
+export class ListAdminsArgs extends PaginationArgs {
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  search?: string | null;
+}
 
 @InputType()
 export class CreateAdminInput {

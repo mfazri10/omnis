@@ -1,7 +1,15 @@
 "use client";
 
+import { PageHeader } from "@/components/shared/page-header";
+import { TableToolbar } from "@/components/shared/table-toolbar";
+import { ErrorState, LoadingState } from "@/components/shared/page-state";
+import { DataTable } from "@/components/shared/data-table";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { Button } from "@/components/ui/button";
+import type { ColumnDef } from "@tanstack/react-table";
+
 import { useMutation, useQuery } from "@apollo/client/react";
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import type { FormEvent, JSX } from "react";
 import { graphQLErrorMessage } from "../../../../features/rbac/graphql/errors";
 import {
@@ -23,8 +31,8 @@ import { useSessionStore } from "../../../../stores/use-session-store";
 const PER_PAGE = 20;
 
 const CONTROL_CLASS =
-  "min-h-[44px] border border-slate-300 px-3 py-2 text-sm text-slate-900";
-const LABEL_CLASS = "text-xs font-semibold text-slate-600";
+  "min-h-11 max-w-full rounded-md border border-input bg-card px-3 py-2 text-sm";
+const LABEL_CLASS = "text-sm font-medium text-muted-foreground";
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("id-ID", {
@@ -110,7 +118,8 @@ function UserForm({ initial, onDone, onCancel }: UserFormProps): JSX.Element {
         };
         await createUser({
           variables: { input },
-          refetchQueries: [{ query: APP_USERS_QUERY }],
+          refetchQueries: [APP_USERS_QUERY],
+          awaitRefetchQueries: true,
         });
         onDone({ kind: "sukses", text: "User aplikasi ditambahkan." });
       } else {
@@ -123,7 +132,8 @@ function UserForm({ initial, onDone, onCancel }: UserFormProps): JSX.Element {
         };
         await updateUser({
           variables: { id: initial.id, input },
-          refetchQueries: [{ query: APP_USERS_QUERY }],
+          refetchQueries: [APP_USERS_QUERY],
+          awaitRefetchQueries: true,
         });
         onDone({ kind: "sukses", text: "Perubahan user tersimpan." });
       }
@@ -136,7 +146,7 @@ function UserForm({ initial, onDone, onCancel }: UserFormProps): JSX.Element {
   }
 
   return (
-    <section className="border border-slate-200 p-4">
+    <section className="rounded-xl border border-border bg-card p-4">
       <h2 className="text-sm font-semibold text-slate-900">
         {initial === null ? "Tambah user" : `Ubah user: ${initial.name}`}
       </h2>
@@ -207,21 +217,22 @@ function UserForm({ initial, onDone, onCancel }: UserFormProps): JSX.Element {
           Minimal salah satu dari email atau nomor telepon wajib diisi.
         </p>
         <div className="flex gap-2 md:col-span-2">
-          <button
+          <Button
             type="submit"
             disabled={saving}
-            className="min-h-[44px] bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            className="min-h-11"
           >
             {saving ? "Menyimpan…" : "Simpan"}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             disabled={saving}
             onClick={onCancel}
-            className="min-h-[44px] border border-slate-300 px-4 py-2 text-sm text-slate-900 disabled:opacity-50"
+            variant="outline"
+            className="min-h-11"
           >
             Batal
-          </button>
+          </Button>
         </div>
       </form>
     </section>
@@ -302,7 +313,8 @@ export default function AppUsersPage({
     try {
       await setActive({
         variables: { id: user.id, active: !user.isActive },
-        refetchQueries: [{ query: APP_USERS_QUERY }],
+        refetchQueries: [APP_USERS_QUERY],
+        awaitRefetchQueries: true,
       });
       setStatus({
         kind: "sukses",
@@ -319,16 +331,39 @@ export default function AppUsersPage({
   }
 
   const total = data?.appUsers.total ?? 0;
-  const from = total === 0 ? 0 : (page - 1) * PER_PAGE + 1;
-  const to = Math.min(page * PER_PAGE, total);
+  const lastPage = Math.max(1, Math.ceil(total / PER_PAGE));
+  useEffect(() => {
+    if (data && !loading && page > lastPage) setPage(lastPage);
+  }, [data, lastPage, loading, page]);
+
+  const columns: ColumnDef<AppUserData>[] = [
+    { id: "name", header: "Nama", cell: ({ row: { original: user } }) => (
+      <span className="flex items-center gap-2">
+        {user.avatarUrl && <img src={user.avatarUrl} alt="" width={24} height={24}
+          className="size-6 rounded-sm object-cover" />}
+        <span className="max-w-64 whitespace-normal wrap-anywhere">{user.name}</span>
+      </span>
+    ) },
+    { id: "contact", header: "Kontak", cell: ({ row }) => contactOf(row.original) },
+    { id: "status", header: "Status", cell: ({ row }) => <StatusBadge
+      label={row.original.isActive ? "Aktif" : "Nonaktif"} tone={row.original.isActive ? "success" : "neutral"} /> },
+    { id: "lastLogin", header: "Terakhir login", cell: ({ row }) =>
+      row.original.lastLoginAt ? formatDateTime(row.original.lastLoginAt) : "Belum pernah" },
+  ];
+  if (canManage) {
+    columns.push({ id: "actions", header: "Aksi", cell: ({ row: { original: user } }) => (
+      <div className="flex gap-2">
+        <Button type="button" variant="ghost" className="min-h-11" onClick={() => openEdit(user)}>Ubah</Button>
+        <Button type="button" variant="outline" className="min-h-11" disabled={toggling}
+          onClick={() => void handleToggle(user)}>{user.isActive ? "Nonaktifkan" : "Aktifkan"}</Button>
+      </div>
+    ) });
+  }
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-8 font-sans">
-      <p className="text-sm text-slate-600">User aplikasi {appSlug}</p>
-      <h1 className="mt-2 text-2xl font-bold text-slate-900">
-        Pengguna aplikasi
-      </h1>
-      {!ready && <p className="mt-6 text-slate-900">Memuat…</p>}
+    <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+      <PageHeader title="Pengguna aplikasi" description={appSlug} />
+      {!ready && <LoadingState />}
       {ready && !canView && (
         <p className="mt-6 text-sm text-slate-600">
           Anda tidak memiliki izin untuk melihat user aplikasi ini.
@@ -341,10 +376,7 @@ export default function AppUsersPage({
           )}
           {contextReady && (
             <>
-              <form
-                className="mt-6 flex flex-wrap items-end gap-3"
-                onSubmit={handleApply}
-              >
+              <TableToolbar onSubmit={handleApply}>
                 <label className="flex flex-col gap-1">
                   <span className={LABEL_CLASS}>Pencarian</span>
                   <input
@@ -400,7 +432,7 @@ export default function AppUsersPage({
                   filter={toFilterInput(applied)}
                   labelSumber="user aplikasi"
                 />
-              </form>
+              </TableToolbar>
 
               {status && (
                 <p
@@ -430,136 +462,14 @@ export default function AppUsersPage({
                 </div>
               )}
 
-              {loading && <p className="mt-6 text-slate-900">Memuat…</p>}
-              {error && (
-                <div className="mt-6">
-                  <p className="text-sm text-red-700">
-                    {graphQLErrorMessage(error, "Gagal memuat user aplikasi.")}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => void refetch()}
-                    className="mt-2 min-h-[44px] underline"
-                  >
-                    Muat ulang
-                  </button>
-                </div>
-              )}
-              {data && total === 0 && !isFiltered(applied) && (
-                <p className="mt-6 text-sm text-slate-600">
-                  Belum ada user di aplikasi ini.
-                </p>
-              )}
-              {data && total === 0 && isFiltered(applied) && (
-                <p className="mt-6 text-sm text-slate-600">
-                  Tidak ada user yang cocok dengan filter.
-                </p>
-              )}
-              {data && total > 0 && (
-                <>
-                  <div className="mt-6 overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                      <thead>
-                        <tr className="border-b border-slate-200 text-slate-600">
-                          <th className="py-2 pr-4 font-semibold">Nama</th>
-                          <th className="py-2 pr-4 font-semibold">Kontak</th>
-                          <th className="py-2 pr-4 font-semibold">Status</th>
-                          <th className="py-2 pr-4 font-semibold">
-                            Terakhir login
-                          </th>
-                          {canManage && (
-                            <th className="py-2 font-semibold">Aksi</th>
-                          )}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {data.appUsers.items.map((user) => (
-                          <tr
-                            key={user.id}
-                            className="border-b border-slate-100"
-                          >
-                            <td className="py-2 pr-4 text-slate-900">
-                              <span className="flex items-center gap-2">
-                                {user.avatarUrl && (
-                                  <img
-                                    src={user.avatarUrl}
-                                    alt=""
-                                    width={24}
-                                    height={24}
-                                    className="h-6 w-6 border border-slate-200 object-cover"
-                                  />
-                                )}
-                                {user.name}
-                              </span>
-                            </td>
-                            <td className="py-2 pr-4 text-slate-600">
-                              {contactOf(user)}
-                            </td>
-                            <td className="py-2 pr-4">
-                              <span
-                                className={
-                                  user.isActive
-                                    ? "bg-green-100 px-2 py-1 text-xs font-semibold text-green-800"
-                                    : "bg-slate-200 px-2 py-1 text-xs font-semibold text-slate-700"
-                                }
-                              >
-                                {user.isActive ? "Aktif" : "Nonaktif"}
-                              </span>
-                            </td>
-                            <td className="whitespace-nowrap py-2 pr-4 text-slate-600">
-                              {user.lastLoginAt
-                                ? formatDateTime(user.lastLoginAt)
-                                : "Belum pernah"}
-                            </td>
-                            {canManage && (
-                              <td className="whitespace-nowrap py-2">
-                                <button
-                                  type="button"
-                                  onClick={() => openEdit(user)}
-                                  className="min-h-[44px] pr-3 underline"
-                                >
-                                  Ubah
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={toggling}
-                                  onClick={() => void handleToggle(user)}
-                                  className="min-h-[44px] underline disabled:opacity-50"
-                                >
-                                  {user.isActive
-                                    ? "Nonaktifkan"
-                                    : "Aktifkan"}
-                                </button>
-                              </td>
-                            )}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="mt-4 flex items-center gap-4 text-sm">
-                    <button
-                      type="button"
-                      disabled={page <= 1}
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      className="min-h-[44px] underline disabled:opacity-50"
-                    >
-                      Sebelumnya
-                    </button>
-                    <span className="text-slate-600">
-                      {`${from}–${to} dari ${total}`}
-                    </span>
-                    <button
-                      type="button"
-                      disabled={page * PER_PAGE >= total}
-                      onClick={() => setPage((p) => p + 1)}
-                      className="min-h-[44px] underline disabled:opacity-50"
-                    >
-                      Berikutnya
-                    </button>
-                  </div>
-                </>
-              )}
+              {(loading || page > lastPage) && <LoadingState />}
+              {error && <ErrorState onRetry={() => void refetch()}>{graphQLErrorMessage(error, "Gagal memuat pengguna aplikasi.")}</ErrorState>}
+              {data && !loading && !error && page <= lastPage && <DataTable
+                rows={data.appUsers.items} columns={columns} getRowId={(user) => user.id}
+                label="Daftar pengguna"
+                emptyMessage={isFiltered(applied) ? "Tidak ada pengguna yang cocok dengan filter." : "Belum ada pengguna di aplikasi ini."}
+                pagination={{ pageIndex: page - 1, pageSize: PER_PAGE, totalRows: total, onPageChange: (index) => setPage(index + 1) }}
+              />}
             </>
           )}
         </>

@@ -4,6 +4,9 @@ import type { TypedDocumentNode } from "@apollo/client";
 import { useMutation, useQuery } from "@apollo/client/react";
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { graphQLErrorMessage } from "../../rbac/graphql/errors";
 import { EXPORT_JOB_QUERY } from "../graphql/exports.graphql";
 import type {
@@ -119,7 +122,7 @@ export function ExportButton<F>({
       <div className="flex flex-wrap items-center gap-2">
         <a
           href={`${API_URL}${job.downloadPath}`}
-          className="inline-flex min-h-[44px] items-center bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+          className={cn(buttonVariants(), "min-h-11")}
         >
           Unduh CSV
         </a>
@@ -128,13 +131,14 @@ export function ExportButton<F>({
           {job.fileSizeBytes !== null && ` (${formatSize(job.fileSizeBytes)})`}
           {job.expiresAt && `, berlaku sampai ${formatExpiry(job.expiresAt)}`}
         </p>
-        <button
+        <Button
           type="button"
           onClick={handleReset}
-          className="min-h-[44px] text-sm underline"
+          variant="link"
+          className="min-h-11"
         >
           Buat ekspor baru
-        </button>
+        </Button>
       </div>
     );
   }
@@ -142,42 +146,44 @@ export function ExportButton<F>({
   if (job?.status === "FAILED" || job?.status === "EXPIRED") {
     return (
       <div className="flex flex-wrap items-center gap-2">
-        <p className="text-sm text-red-700">
+        <p className="text-sm text-destructive" role="alert">
           {job.status === "FAILED"
             ? (job.errorMessage ?? `Ekspor ${labelSumber} gagal. Coba lagi.`)
             : "Tautan unduh sudah kedaluwarsa. Buat ekspor baru."}
         </p>
-        <button
+        <Button
           type="button"
           onClick={handleReset}
-          className="min-h-[44px] border border-slate-300 px-4 py-2 text-sm text-slate-900"
+          variant="outline"
+          className="min-h-11"
         >
           Coba lagi
-        </button>
+        </Button>
       </div>
     );
   }
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <button
+      <Button
         type="button"
         disabled={busy}
         onClick={() => void handleExport()}
         aria-label={`Ekspor ${labelSumber} ke CSV`}
-        className="min-h-[44px] border border-slate-900 px-4 py-2 text-sm font-semibold text-slate-900 disabled:opacity-50"
+        variant="outline"
+        className="min-h-11"
       >
         {requesting || job?.status === "QUEUED"
           ? "Menyiapkan ekspor…"
           : job?.status === "RUNNING"
             ? "Memproses ekspor…"
             : "Ekspor CSV"}
-      </button>
+      </Button>
       {requestError && (
-        <p className="text-sm text-red-700">{requestError}</p>
+        <p className="text-sm text-destructive" role="alert">{requestError}</p>
       )}
       {pollError && jobId !== null && (
-        <p className="text-sm text-red-700">
+        <p className="text-sm text-destructive" role="alert">
           {graphQLErrorMessage(pollError, "Gagal memantau status ekspor.")}
         </p>
       )}

@@ -8,4 +8,7 @@ export default tseslint.config(...base, {
       tsconfigRootDir: import.meta.dirname,
     },
   },
+}, {
+  files: ["components/ui/**/*.tsx", "hooks/use-mobile.ts"],
+  rules: { "@typescript-eslint/explicit-function-return-type": "off" },
 });

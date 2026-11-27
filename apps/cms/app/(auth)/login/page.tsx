@@ -1,9 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent, JSX } from "react";
-import { authClient } from "../../../lib/auth-client";
+import Link from "next/link";
+import { authClient, useSession } from "@/lib/auth-client";
+import { CMS_PICKER_PATH } from "@/features/shell/routes";
+import { AuthField, AuthPanel } from "@/features/auth/components/auth-panel";
+import { Button } from "@/components/ui/button";
+import { ErrorState } from "@/components/shared/page-state";
 
 export default function LoginPage(): JSX.Element {
   const router = useRouter();
@@ -11,6 +16,11 @@ export default function LoginPage(): JSX.Element {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const { data: session } = useSession();
+
+  useEffect(() => {
+    if (session) router.replace(CMS_PICKER_PATH);
+  }, [router, session]);
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
@@ -24,57 +34,30 @@ export default function LoginPage(): JSX.Element {
         setError("Email atau kata sandi salah.");
         return;
       }
-      router.push("/");
+      router.replace(CMS_PICKER_PATH);
       router.refresh();
+    } catch {
+      setError("Tidak bisa masuk. Periksa koneksi dan coba lagi.");
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <main className="mx-auto max-w-sm px-6 py-16 font-sans">
-      <p className="text-sm text-slate-600">Platform CMS Multi-Aplikasi</p>
-      <h1 className="mt-2 text-2xl font-bold text-slate-900">Masuk</h1>
-      <form
-        className="mt-6 flex flex-col gap-4"
-        onSubmit={(e) => void handleSubmit(e)}
-      >
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-slate-900">Email</span>
-          <input
-            type="email"
-            required
-            autoComplete="username"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="border border-slate-300 px-3 py-2 text-slate-900"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-slate-900">Kata sandi</span>
-          <input
-            type="password"
-            required
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="border border-slate-300 px-3 py-2 text-slate-900"
-          />
-        </label>
-        {error && <p className="text-sm text-red-700">{error}</p>}
-        <button
-          type="submit"
-          disabled={busy}
-          className="bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-        >
+    <AuthPanel title="Masuk" description="Gunakan akun admin untuk membuka ruang kerja CMS.">
+      <form className="mt-6 flex flex-col gap-4" onSubmit={(e) => void handleSubmit(e)} aria-busy={busy}>
+        <AuthField id="login-email" label="Email" type="email" required autoComplete="username"
+          value={email} onChange={(e) => setEmail(e.target.value)} />
+        <AuthField id="login-password" label="Kata sandi" type="password" required autoComplete="current-password"
+          value={password} onChange={(e) => setPassword(e.target.value)} />
+        {error && <ErrorState>{error}</ErrorState>}
+        <Button className="min-h-11" type="submit" disabled={busy}>
           {busy ? "Memeriksa…" : "Masuk"}
-        </button>
+        </Button>
       </form>
-      <p className="mt-4 text-sm">
-        <a className="underline" href="/forgot-password">
-          Lupa kata sandi?
-        </a>
-      </p>
-    </main>
+      <Link className="mt-2 inline-flex min-h-11 items-center text-sm text-primary underline underline-offset-4" href="/forgot-password">
+        Lupa kata sandi?
+      </Link>
+    </AuthPanel>
   );
 }

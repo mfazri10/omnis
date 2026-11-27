@@ -1,5 +1,9 @@
 "use client";
 
+import { PageHeader } from "@/components/shared/page-header";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
 import { useMutation, useQuery } from "@apollo/client/react";
 import { use, useState } from "react";
 import type { FormEvent, JSX } from "react";
@@ -15,7 +19,7 @@ import { graphQLErrorMessage } from "../../../../features/rbac/graphql/errors";
 import { useSessionStore } from "../../../../stores/use-session-store";
 
 const inputClass =
-  "w-full border border-slate-300 px-3 py-2 text-slate-900 disabled:bg-slate-100 disabled:text-slate-500";
+  "min-h-11 w-full min-w-0 rounded-md border border-input bg-card px-3 py-2 text-sm disabled:bg-muted disabled:text-muted-foreground";
 
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 const DEFAULT_COLOR = "#1976D2";
@@ -142,7 +146,8 @@ function SettingsForm({
     try {
       await saveConfig({
         variables: { input },
-        refetchQueries: [{ query: APP_CONFIG_QUERY }],
+        refetchQueries: [APP_CONFIG_QUERY],
+        awaitRefetchQueries: true,
       });
       onStatus({ kind: "sukses", text: "Pengaturan tersimpan." });
     } catch (err: unknown) {
@@ -193,7 +198,7 @@ function SettingsForm({
         <div className="mt-2 grid grid-cols-1 gap-3 md:grid-cols-2">
           <label className="flex flex-col gap-1">
             <span className="text-slate-900">Android (format 1.2.3)</span>
-            <input
+            <Input
               type="text"
               required
               value={minAndroid}
@@ -205,7 +210,7 @@ function SettingsForm({
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-slate-900">iOS (format 1.2.3)</span>
-            <input
+            <Input
               type="text"
               required
               value={minIos}
@@ -299,7 +304,7 @@ function SettingsForm({
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-slate-900">WhatsApp (contoh +62812…)</span>
-            <input
+            <Input
               type="tel"
               value={whatsapp}
               disabled={disabled}
@@ -312,13 +317,13 @@ function SettingsForm({
       </section>
 
       <div>
-        <button
+        <Button
           type="submit"
           disabled={disabled}
-          className="min-h-[44px] bg-slate-900 px-4 py-2 font-semibold text-white disabled:opacity-50"
+          className="min-h-11"
         >
           {saving ? "Menyimpan…" : "Simpan pengaturan"}
-        </button>
+        </Button>
         {!canManage && (
           <p className="mt-2 text-sm text-slate-600">
             Anda hanya bisa melihat pengaturan ini. Menyimpan perubahan butuh
@@ -355,11 +360,8 @@ export default function AppSettingsPage({
   const config = data?.appConfig;
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-8 font-sans">
-      <p className="text-sm text-slate-600">Pengaturan aplikasi</p>
-      <h1 className="mt-2 text-2xl font-bold text-slate-900">
-        {config ? config.displayName : appSlug}
-      </h1>
+    <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
+      <PageHeader title={config?.displayName ?? appSlug} description="Pengaturan aplikasi" />
       {!contextReady && (
         <p className="mt-6 text-slate-900">Menyiapkan konteks…</p>
       )}

@@ -1,5 +1,7 @@
 "use client";
 
+import { PageHeader } from "@/components/shared/page-header";
+
 import { useMutation, useQuery } from "@apollo/client/react";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -320,11 +322,8 @@ export default function AppDetailPage(): JSX.Element {
   const app = data?.app;
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-8 font-sans">
-      <p className="text-sm text-slate-600">Platform CMS Multi-Aplikasi</p>
-      <h1 className="mt-2 text-2xl font-bold text-slate-900">
-        {app ? app.name : "Detail aplikasi"}
-      </h1>
+    <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
+      <PageHeader title={app?.name ?? "Detail aplikasi"} />
       {loading && <p className="mt-6 text-slate-900">Memuat…</p>}
       {error && (
         <p className="mt-6 text-sm text-red-700">

@@ -1,5 +1,12 @@
 "use client";
 
+import { PageHeader } from "@/components/shared/page-header";
+import { Button } from "@/components/ui/button";
+import { TableToolbar } from "@/components/shared/table-toolbar";
+import { useBoundedPage } from "@/hooks/use-bounded-page";
+import { LoadingState } from "@/components/shared/page-state";
+import { Table } from "@/components/ui/table";
+
 import { useMutation, useQuery } from "@apollo/client/react";
 import { use, useState } from "react";
 import type { FormEvent, JSX } from "react";
@@ -22,8 +29,8 @@ import { useSessionStore } from "../../../../../stores/use-session-store";
 
 const PER_PAGE = 20;
 const CONTROL_CLASS =
-  "min-h-[44px] border border-slate-300 px-3 py-2 text-sm text-slate-900";
-const LABEL_CLASS = "text-xs font-semibold text-slate-600";
+  "min-h-11 max-w-full rounded-md border border-input bg-card px-3 py-2 text-sm";
+const LABEL_CLASS = "text-sm font-medium text-muted-foreground";
 const OPTIONS: CbtOption[] = ["A", "B", "C", "D", "E"];
 const CATEGORIES: CbtCategory[] = ["TWK", "TIU", "TKP"];
 
@@ -133,13 +140,15 @@ function QuestionForm({
       if (initial === null) {
         await createQuestion({
           variables: { input },
-          refetchQueries: [{ query: CBT_QUESTIONS_QUERY }],
+          refetchQueries: [CBT_QUESTIONS_QUERY],
+          awaitRefetchQueries: true,
         });
         onDone({ kind: "sukses", text: "Soal ditambahkan." });
       } else {
         await updateQuestion({
           variables: { id: initial.id, input },
-          refetchQueries: [{ query: CBT_QUESTIONS_QUERY }],
+          refetchQueries: [CBT_QUESTIONS_QUERY],
+          awaitRefetchQueries: true,
         });
         onDone({ kind: "sukses", text: "Perubahan soal tersimpan." });
       }
@@ -149,7 +158,7 @@ function QuestionForm({
   }
 
   return (
-    <section className="border border-slate-200 p-4">
+    <section className="rounded-xl border border-border bg-card p-4">
       <h2 className="text-sm font-semibold text-slate-900">
         {initial === null ? "Tambah soal" : `Ubah soal #${initial.id}`}
       </h2>
@@ -173,15 +182,16 @@ function QuestionForm({
           </select>
         </label>
         <div className="flex flex-col gap-1">
-          <span className={LABEL_CLASS}>Gambar soal (opsional)</span>
-          <div className="flex gap-2">
+          <label htmlFor="question-image" className={LABEL_CLASS}>Gambar soal (opsional)</label>
+          <div className="flex flex-wrap gap-2">
             <input
+              id="question-image"
               type="url"
               value={imageUrl}
               disabled={saving}
               onChange={(e) => setImageUrl(e.target.value)}
               placeholder="https://…"
-              className={`${CONTROL_CLASS} flex-1`}
+              className={`${CONTROL_CLASS} min-w-0 flex-1`}
             />
             <button
               type="button"
@@ -274,21 +284,22 @@ function QuestionForm({
           />
         </label>
         <div className="flex gap-2 md:col-span-2">
-          <button
+          <Button
             type="submit"
             disabled={saving}
-            className="min-h-[44px] bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            className="min-h-11"
           >
             {saving ? "Menyimpan…" : "Simpan"}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             disabled={saving}
             onClick={onCancel}
-            className="min-h-[44px] border border-slate-300 px-4 py-2 text-sm text-slate-900 disabled:opacity-50"
+            variant="outline"
+            className="min-h-11"
           >
             Batal
-          </button>
+          </Button>
         </div>
       </form>
       <MediaPicker
@@ -356,7 +367,8 @@ export default function CbtSoalPage({
     try {
       await setActive({
         variables: { id: q.id, active: !q.isActive },
-        refetchQueries: [{ query: CBT_QUESTIONS_QUERY }],
+        refetchQueries: [CBT_QUESTIONS_QUERY],
+        awaitRefetchQueries: true,
       });
       setStatus({
         kind: "sukses",
@@ -371,14 +383,14 @@ export default function CbtSoalPage({
   }
 
   const total = data?.cbtQuestions.total ?? 0;
+  const pageValid = useBoundedPage(page, setPage, PER_PAGE, loading ? undefined : data?.cbtQuestions.total);
   const from = total === 0 ? 0 : (page - 1) * PER_PAGE + 1;
   const to = Math.min(page * PER_PAGE, total);
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-8 font-sans">
-      <p className="text-sm text-slate-600">Modul CBT {appSlug}</p>
-      <h1 className="mt-2 text-2xl font-bold text-slate-900">Bank soal</h1>
-      {!ready && <p className="mt-6 text-slate-900">Memuat…</p>}
+    <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+      <PageHeader title="Bank soal" description={appSlug} />
+      {!ready && <LoadingState />}
       {ready && !canView && (
         <p className="mt-6 text-sm text-slate-600">
           Anda tidak memiliki izin untuk melihat bank soal aplikasi ini.
@@ -391,10 +403,7 @@ export default function CbtSoalPage({
           )}
           {contextReady && (
             <>
-              <form
-                className="mt-6 flex flex-wrap items-end gap-3"
-                onSubmit={handleApply}
-              >
+              <TableToolbar onSubmit={handleApply}>
                 <label className="flex flex-col gap-1">
                   <span className={LABEL_CLASS}>Pencarian</span>
                   <input
@@ -466,7 +475,7 @@ export default function CbtSoalPage({
                     Tambah soal
                   </button>
                 )}
-              </form>
+              </TableToolbar>
 
               {status && (
                 <p
@@ -515,10 +524,10 @@ export default function CbtSoalPage({
                   Belum ada soal yang cocok. Tambah soal atau ubah filter.
                 </p>
               )}
-              {data && total > 0 && (
+              {data && total > 0 && pageValid && (
                 <>
                   <div className="mt-6 overflow-x-auto">
-                    <table className="w-full text-left text-sm">
+                    <Table scrollLabel="Daftar soal CBT" className="min-w-max bg-card text-left">
                       <thead>
                         <tr className="border-b border-slate-200 text-slate-600">
                           <th className="py-2 pr-4 font-semibold">#</th>
@@ -586,7 +595,7 @@ export default function CbtSoalPage({
                           </tr>
                         ))}
                       </tbody>
-                    </table>
+                    </Table>
                   </div>
                   <div className="mt-4 flex items-center gap-4 text-sm">
                     <button

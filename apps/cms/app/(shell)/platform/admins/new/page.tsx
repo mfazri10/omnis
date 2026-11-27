@@ -1,5 +1,11 @@
 "use client";
 
+import { PageHeader } from "@/components/shared/page-header";
+import { ButtonLink } from "@/components/shared/button-link";
+import { ErrorState } from "@/components/shared/page-state";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
 import { useMutation } from "@apollo/client/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -7,7 +13,7 @@ import type { FormEvent, JSX } from "react";
 import { graphQLErrorMessage } from "../../../../../features/rbac/graphql/errors";
 import { CREATE_ADMIN_MUTATION } from "../../../../../features/rbac/graphql/admins.graphql";
 
-const inputClass = "border border-slate-300 px-3 py-2 text-slate-900";
+const inputClass = "min-h-11 bg-card";
 
 export default function NewAdminPage(): JSX.Element {
   const router = useRouter();
@@ -34,18 +40,15 @@ export default function NewAdminPage(): JSX.Element {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-8 font-sans">
-      <p className="text-sm text-slate-600">Platform CMS Multi-Aplikasi</p>
-      <h1 className="mt-2 text-2xl font-bold text-slate-900">
-        Tambah admin
-      </h1>
+    <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
+      <PageHeader title="Tambah admin" />
       <form
         className="mt-6 flex flex-col gap-4"
         onSubmit={(e) => void handleSubmit(e)}
       >
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-slate-900">Nama</span>
-          <input
+          <Input
             type="text"
             required
             value={name}
@@ -55,7 +58,7 @@ export default function NewAdminPage(): JSX.Element {
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-slate-900">Email</span>
-          <input
+          <Input
             type="email"
             required
             autoComplete="username"
@@ -66,7 +69,7 @@ export default function NewAdminPage(): JSX.Element {
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-slate-900">Kata sandi awal (min. 8 karakter)</span>
-          <input
+          <Input
             type="password"
             required
             minLength={8}
@@ -76,18 +79,16 @@ export default function NewAdminPage(): JSX.Element {
             className={inputClass}
           />
         </label>
-        {error && <p className="text-sm text-red-700">{error}</p>}
-        <div className="flex gap-4">
-          <button
+        {error && <ErrorState>{error}</ErrorState>}
+        <div className="flex flex-wrap gap-2">
+          <Button
             type="submit"
             disabled={saving}
-            className="bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            className="min-h-11"
           >
             {saving ? "Menyimpan…" : "Simpan"}
-          </button>
-          <a className="px-4 py-2 text-sm underline" href="/platform/admins">
-            Batal
-          </a>
+          </Button>
+          <ButtonLink variant="outline" href="/platform/admins">Batal</ButtonLink>
         </div>
       </form>
     </main>
