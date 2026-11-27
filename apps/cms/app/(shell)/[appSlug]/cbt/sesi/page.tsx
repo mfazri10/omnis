@@ -614,9 +614,6 @@ export default function CbtSesiPage({
                   {graphQLErrorMessage(error, "Gagal memuat sesi ujian.")}
                 </ErrorState>
               )}
-              {data && total === 0 && (
-                <EmptyState>Belum ada sesi. Mulai simulasi untuk membuat sesi pertama.</EmptyState>
-              )}
               {data && pageValid && (
                 <div className="mt-6">
                   <DataTable

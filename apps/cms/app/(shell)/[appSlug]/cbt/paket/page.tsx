@@ -624,9 +624,6 @@ export default function CbtPaketPage({
                   {graphQLErrorMessage(error, "Gagal memuat paket ujian.")}
                 </ErrorState>
               )}
-              {data && total === 0 && (
-                <EmptyState>Belum ada paket yang cocok. Tambah paket atau ubah filter.</EmptyState>
-              )}
               {data && pageValid && (
                 <div className="mt-6">
                   <DataTable

@@ -29,7 +29,7 @@ function initialsOf(email: string): string {
 
 export function NavUser(): JSX.Element {
   const router = useRouter();
-  const { isMobile } = useSidebar();
+  const { isMobile, setOpenMobile } = useSidebar();
   const admin = useSessionStore((state) => state.admin);
   const reset = useSessionStore((state) => state.reset);
 
@@ -99,13 +99,21 @@ export function NavUser(): JSX.Element {
             <DropdownMenuGroup>
               <DropdownMenuItem
                 className="min-h-11"
-                render={<Link href="/profile/change-password" />}
+                render={
+                  <Link
+                    href="/profile/change-password"
+                    onClick={() => setOpenMobile(false)}
+                  />
+                }
               >
                 Ubah kata sandi
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="min-h-11"
-                onClick={() => void handleLogout()}
+                onClick={() => {
+                  setOpenMobile(false);
+                  void handleLogout();
+                }}
               >
                 Keluar
               </DropdownMenuItem>

@@ -57,7 +57,7 @@ Komponen produk: `components/shared/sidebar.tsx` → `CmsSidebar`.
 - `SidebarContent` berisi `<nav aria-label="Menu utama">` dengan dua `SidebarGroup`: grup "Platform" (`GLOBAL_MENU`) dan grup berlabel nama aplikasi aktif (`appMenu(slug, modules)`).
 - `MenuList` (lokal di file itu): memetakan item ke `SidebarMenuItem` + `SidebarMenuButton` dengan `render={<Link href>}`, `isActive` (exact match, atau prefix kecuali key `dashboard`), `aria-current="page"` saat exact, `min-h-11 rounded-md`, ikon lucide per item (`aria-hidden`), dan `onClick` menutup menu mobile.
 - Sumber menu dan aturan tampil: `features/shell/menu.ts`. Setiap `MenuItem` kini punya field `icon: LucideIcon` (Dasbor `LayoutDashboard`, Aplikasi `Smartphone`, Admin `UserCog`, Role `ShieldCheck`, Audit Log `ScrollText`, Pengguna `Users`, Media `Images`, Notifikasi `Bell`, Pengaturan `Settings`, Soal CBT `FileQuestion`, Paket CBT `Package`, Sesi CBT `CalendarClock`, Hasil CBT `ClipboardCheck`). `isVisible`: super admin lolos semua, selain itu wajib punya permission; penyaringan juga memperhitungkan `permissionsContext` dari `useSessionStore`.
-- `SidebarFooter` baru berisi `NavUser` (`components/shared/nav-user.tsx`, pola nav-user `sidebar-16`): trigger `SidebarMenuButton size="lg"` dengan `aria-label="Akun"` (dikunci stabil, bukan email), avatar fallback inisial email, email admin, chevron; dropdown berisi label email, `Ubah kata sandi` (link `/profile/change-password`), `Keluar` (signOut better-auth, reset store, push `/login`). Di mobile, footer ikut dirender di dalam drawer.
+- `SidebarFooter` baru berisi `NavUser` (`components/shared/nav-user.tsx`, pola nav-user `sidebar-16`): trigger `SidebarMenuButton size="lg"` dengan `aria-label="Akun"` (dikunci stabil, bukan email), avatar fallback inisial email, nama admin di atas email, chevron; dropdown berisi label identitas, `Ubah kata sandi` (link `/profile/change-password`), `Keluar` (signOut better-auth, reset store, push `/login`). Klik item menutup drawer mobile. Di mobile, footer ikut dirender di dalam drawer.
 - `collapsible` tetap `offcanvas`; mode icon tidak diaktifkan. Cookie state `sidebar_state` dan shortcut Ctrl/Cmd+B tetap.
 
 ## 5. Pola halaman, state, dan kontrol bersama (`components/shared/`)
@@ -87,7 +87,7 @@ Pola wadah halaman: `<main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">` (pi
 
 `components/ui/table.tsx`: `Table` membungkus `div` `overflow-x-auto rounded-lg border border-border` (menjadi `role="region"` bila `scrollLabel` diisi); `TableRow` punya `hover:bg-muted/50`; `TableHead` `h-10 px-2`; `TableCell` `p-2 whitespace-nowrap`. Baris tetap `role="row"` semantik sehingga selektor e2e `getByRole("row", ...)` bekerja.
 
-Kelas mentah (`slate-*`, `red-700`, `green-700`) sudah nol di seluruh `app/`, `features/`, dan `components/shared/`; kontrol memakai primitif `Input`/`Button` atau konstanta bertoken (`CONTROL_CLASS`), state memakai `LoadingState`/`EmptyState`/`ErrorState`, status sukses `text-emerald-700`, gagal `text-destructive`.
+Kelas mentah `slate-*`/`red-700`/`green-700` sudah nol di seluruh `app/`, `features/`, dan `components/shared/`; kontrol memakai primitif `Input`/`Button` atau konstanta bertoken (`CONTROL_CLASS`), state memakai `LoadingState`/`EmptyState`/`ErrorState`. Teks sukses memakai konvensi `text-emerald-700` (kelas palet mentah yang disetujui, sama dengan preseden tone success di `status-badge.tsx`; lulus AA di atas `bg-card`), teks gagal `text-destructive`.
 
 ## 7. Dashboard
 

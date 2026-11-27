@@ -317,11 +317,6 @@ export default function CbtHasilPage({
                   {graphQLErrorMessage(error, "Gagal memuat hasil ujian.")}
                 </ErrorState>
               )}
-              {data && total === 0 && (
-                <EmptyState>
-                  Belum ada hasil yang cocok. Selesaikan sesi simulasi atau ubah filter.
-                </EmptyState>
-              )}
               {data && pageValid && (
                 <div className="mt-6">
                   <DataTable

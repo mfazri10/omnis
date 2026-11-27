@@ -793,15 +793,6 @@ export default function NotificationsPage({
                   {graphQLErrorMessage(error, "Gagal memuat kampanye.")}
                 </ErrorState>
               )}
-              {data && total === 0 && !isFiltered(applied) && (
-                <EmptyState>
-                  Belum ada kampanye di aplikasi ini. Buat kampanye pertama
-                  lewat tombol Buat kampanye.
-                </EmptyState>
-              )}
-              {data && total === 0 && isFiltered(applied) && (
-                <EmptyState>Tidak ada kampanye yang cocok dengan filter.</EmptyState>
-              )}
               {data && pageValid && (
                 <div className="mt-6">
                   <DataTable
@@ -809,7 +800,7 @@ export default function NotificationsPage({
                     columns={columns}
                     getRowId={(campaign) => campaign.id}
                     label="Daftar kampanye"
-                    emptyMessage={isFiltered(applied) ? "Tidak ada kampanye yang cocok dengan filter." : "Belum ada kampanye di aplikasi ini."}
+                    emptyMessage={isFiltered(applied) ? "Tidak ada kampanye yang cocok dengan filter." : "Belum ada kampanye di aplikasi ini. Buat kampanye pertama lewat tombol Buat kampanye."}
                     pagination={{ pageIndex: page - 1, pageSize: PER_PAGE, totalRows: total, onPageChange: (index) => setPage(index + 1) }}
                   />
                 </div>

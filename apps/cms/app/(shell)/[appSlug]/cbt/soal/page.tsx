@@ -575,9 +575,6 @@ export default function CbtSoalPage({
                   {graphQLErrorMessage(error, "Gagal memuat bank soal.")}
                 </ErrorState>
               )}
-              {data && total === 0 && (
-                <EmptyState>Belum ada soal yang cocok. Tambah soal atau ubah filter.</EmptyState>
-              )}
               {data && pageValid && (
                 <div className="mt-6">
                   <DataTable
