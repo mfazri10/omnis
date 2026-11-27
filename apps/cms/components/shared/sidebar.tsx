@@ -6,9 +6,10 @@ import { useParams, usePathname } from "next/navigation";
 import { GLOBAL_MENU, appMenu } from "../../features/shell/menu";
 import type { MenuItem } from "../../features/shell/menu";
 import { useSessionStore } from "../../stores/use-session-store";
-import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { CMS_PICKER_PATH } from "@/features/shell/routes";
 import { Button } from "@/components/ui/button";
+import { NavUser } from "./nav-user";
 
 function isVisible(
   item: MenuItem,
@@ -26,7 +27,7 @@ function MenuList({ items }: { items: MenuItem[] }): JSX.Element {
   const { setOpenMobile } = useSidebar();
   return (
     <SidebarMenu>
-      {items.map(({ href, key, label }) => {
+      {items.map(({ href, key, label, icon: Icon }) => {
         if (href === null) return null;
         const exact = pathname === href;
         const active = exact || (key !== "dashboard" && pathname.startsWith(`${href}/`));
@@ -38,6 +39,7 @@ function MenuList({ items }: { items: MenuItem[] }): JSX.Element {
               render={<Link href={href} aria-current={exact ? "page" : undefined}
                 onClick={() => setOpenMobile(false)} />}
             >
+              <Icon aria-hidden="true" className="size-4 shrink-0" />
               {label}
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -73,7 +75,7 @@ export function CmsSidebar(): JSX.Element {
         <Link href={CMS_PICKER_PATH} className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold"
           onClick={() => setOpenMobile(false)}>
           <span aria-hidden="true" className="h-4 w-1 rounded-sm bg-primary" />
-          Pilih aplikasi
+          CMS Platform
         </Link>
         {isMobile && <Button type="button" variant="ghost" className="min-h-11"
           onClick={() => setOpenMobile(false)}>Tutup menu</Button>}
@@ -90,6 +92,9 @@ export function CmsSidebar(): JSX.Element {
           </SidebarGroup>}
         </nav>
       </SidebarContent>
+      {admin !== null && <SidebarFooter inert={!isMobile && !open} className="border-t border-sidebar-border px-2 py-2">
+        <NavUser />
+      </SidebarFooter>}
     </Sidebar>
   );
 }

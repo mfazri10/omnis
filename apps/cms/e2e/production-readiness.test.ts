@@ -294,6 +294,7 @@ describe("CMS production-readiness smoke", () => {
       await page.getByRole("button", { name: "Cari", exact: true }).click();
       await adminPage.getByText("Hasil filter").waitFor();
       await page.unroute("**/graphql");
+      await page.getByRole("button", { name: "Menu utama" }).click();
       await page.getByRole("button", { name: "Akun", exact: true }).click();
       await page.getByRole("menuitem", { name: "Ubah kata sandi" }).click();
       await page.getByRole("heading", { name: "Ubah kata sandi" }).waitFor();

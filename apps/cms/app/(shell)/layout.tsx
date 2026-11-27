@@ -117,9 +117,9 @@ function CmsSession({
         Lewati ke konten
       </a>
       <CmsSidebar />
-      <div className="min-w-0 flex-1">
+      <div className="relative flex min-w-0 flex-1 flex-col bg-background">
         <ShellHeader />
-        <div id="cms-content" tabIndex={-1} className="min-w-0">
+        <div id="cms-content" tabIndex={-1} className="min-w-0 scroll-mt-20">
           {permsQuery.loading || permissionsContext !== context || (globalRoute && activeSlug !== null)
             ? <main className="px-4 py-6 sm:px-6"><LoadingState>Menyiapkan ruang kerja…</LoadingState></main>
             : children}
