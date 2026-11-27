@@ -3,19 +3,29 @@
 import { PageHeader } from "@/components/shared/page-header";
 import { TableToolbar } from "@/components/shared/table-toolbar";
 import { useBoundedPage } from "@/hooks/use-bounded-page";
-import { LoadingState } from "@/components/shared/page-state";
-import { Table } from "@/components/ui/table";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "@/components/shared/page-state";
+import { DataTable } from "@/components/shared/data-table";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { Button } from "@/components/ui/button";
 
 import { useQuery } from "@apollo/client/react";
 import { use, useState } from "react";
 import type { FormEvent, JSX } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { graphQLErrorMessage } from "../../../../../features/rbac/graphql/errors";
 import {
   CBT_PACKAGES_QUERY,
   CBT_PACKAGE_STATS_QUERY,
   CBT_RESULTS_QUERY,
 } from "../../../../../features/cbt/graphql/cbt.graphql";
-import type { CbtResultsFilter } from "../../../../../features/cbt/graphql/cbt.graphql";
+import type {
+  CbtResultData,
+  CbtResultsFilter,
+} from "../../../../../features/cbt/graphql/cbt.graphql";
 import { ExportButton } from "../../../../../features/exports/components/export-button";
 import { EXPORT_CBT_RESULTS_MUTATION } from "../../../../../features/exports/graphql/exports.graphql";
 import { useSessionStore } from "../../../../../stores/use-session-store";
@@ -103,29 +113,87 @@ export default function CbtHasilPage({
 
   const total = data?.cbtResults.total ?? 0;
   const pageValid = useBoundedPage(page, setPage, PER_PAGE, loading ? undefined : data?.cbtResults.total);
-  const from = total === 0 ? 0 : (page - 1) * PER_PAGE + 1;
-  const to = Math.min(page * PER_PAGE, total);
   const packageItems = packages.data?.cbtPackages.items ?? [];
   const statsData = stats.data?.cbtPackageStats;
+
+  const columns: ColumnDef<CbtResultData>[] = [
+    {
+      id: "participant",
+      header: "Peserta",
+      cell: ({ row: { original: r } }) => (
+        <span className="font-medium">{r.participantName}</span>
+      ),
+    },
+    {
+      id: "package",
+      header: "Paket",
+      cell: ({ row: { original: r } }) => (
+        <span className="text-muted-foreground">{r.packageTitle}</span>
+      ),
+    },
+    {
+      id: "twk",
+      header: "TWK",
+      cell: ({ row: { original: r } }) => (
+        <span className="tabular-nums text-muted-foreground">{r.twkScore}</span>
+      ),
+    },
+    {
+      id: "tiu",
+      header: "TIU",
+      cell: ({ row: { original: r } }) => (
+        <span className="tabular-nums text-muted-foreground">{r.tiuScore}</span>
+      ),
+    },
+    {
+      id: "tkp",
+      header: "TKP",
+      cell: ({ row: { original: r } }) => (
+        <span className="tabular-nums text-muted-foreground">{r.tkpScore}</span>
+      ),
+    },
+    {
+      id: "total",
+      header: "Total",
+      cell: ({ row: { original: r } }) => (
+        <span className="font-semibold tabular-nums">{r.totalScore}</span>
+      ),
+    },
+    {
+      id: "status",
+      header: "Status",
+      cell: ({ row: { original: r } }) => (
+        <StatusBadge
+          label={r.passed ? "Lulus" : "Tidak lulus"}
+          tone={r.passed ? "success" : "danger"}
+        />
+      ),
+    },
+    {
+      id: "finishedAt",
+      header: "Selesai",
+      cell: ({ row: { original: r } }) => (
+        <span className="whitespace-nowrap text-muted-foreground">
+          {formatDateTime(r.finishedAt)}
+        </span>
+      ),
+    },
+  ];
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
       <PageHeader title="Hasil & analitik" description={appSlug} />
       {!ready && <LoadingState />}
       {ready && !canView && (
-        <p className="mt-6 text-sm text-slate-600">
-          Anda tidak memiliki izin untuk melihat hasil ujian aplikasi ini.
-        </p>
+        <EmptyState>Anda tidak memiliki izin untuk melihat hasil ujian aplikasi ini.</EmptyState>
       )}
       {ready && canView && (
         <>
-          {!contextReady && (
-            <p className="mt-6 text-slate-900">Menyiapkan konteks…</p>
-          )}
+          {!contextReady && <LoadingState>Menyiapkan konteks…</LoadingState>}
           {contextReady && (
             <>
-              <section className="mt-6 border border-slate-200 p-4">
-                <h2 className="text-sm font-semibold text-slate-900">
+              <section className="mt-6 rounded-xl border border-border bg-card p-4">
+                <h2 className="text-sm font-semibold">
                   Analitik per paket
                 </h2>
                 <label className="mt-2 flex flex-col gap-1">
@@ -144,55 +212,55 @@ export default function CbtHasilPage({
                   </select>
                 </label>
                 {stats.loading && (
-                  <p className="mt-3 text-sm text-slate-900">Menghitung statistik…</p>
+                  <LoadingState>Menghitung statistik…</LoadingState>
                 )}
                 {stats.error && (
-                  <p className="mt-3 text-sm text-red-700">
+                  <ErrorState>
                     {graphQLErrorMessage(stats.error, "Gagal memuat statistik.")}
-                  </p>
+                  </ErrorState>
                 )}
                 {statsData && (
                   <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
-                    <div className="border border-slate-100 p-3">
+                    <div className="rounded-lg border border-border p-3">
                       <p className={LABEL_CLASS}>Sesi selesai</p>
-                      <p className="mt-1 text-xl font-bold text-slate-900">
+                      <p className="mt-1 text-xl font-semibold tabular-nums">
                         {statsData.completed}
                       </p>
                     </div>
-                    <div className="border border-slate-100 p-3">
+                    <div className="rounded-lg border border-border p-3">
                       <p className={LABEL_CLASS}>Lulus</p>
-                      <p className="mt-1 text-xl font-bold text-slate-900">
+                      <p className="mt-1 text-xl font-semibold tabular-nums">
                         {statsData.passedCount}
-                        <span className="ml-1 text-sm font-normal text-slate-600">
+                        <span className="ml-1 text-sm font-normal text-muted-foreground">
                           ({formatAvg(statsData.passRate)}%)
                         </span>
                       </p>
                     </div>
-                    <div className="border border-slate-100 p-3">
+                    <div className="rounded-lg border border-border p-3">
                       <p className={LABEL_CLASS}>Rata-rata total</p>
-                      <p className="mt-1 text-xl font-bold text-slate-900">
+                      <p className="mt-1 text-xl font-semibold tabular-nums">
                         {formatAvg(statsData.avgTotal)}
                       </p>
-                      <p className="text-xs text-slate-600">
+                      <p className="text-xs text-muted-foreground">
                         {`tertinggi ${statsData.maxTotal ?? "-"} / terendah ${statsData.minTotal ?? "-"}`}
                       </p>
                     </div>
-                    <div className="border border-slate-100 p-3">
+                    <div className="rounded-lg border border-border p-3">
                       <p className={LABEL_CLASS}>Rata-rata per kategori</p>
-                      <p className="mt-1 text-sm text-slate-900">
+                      <p className="mt-1 text-sm">
                         {`TWK ${formatAvg(statsData.avgTwk)}`}
                       </p>
-                      <p className="text-sm text-slate-900">
+                      <p className="text-sm">
                         {`TIU ${formatAvg(statsData.avgTiu)}`}
                       </p>
-                      <p className="text-sm text-slate-900">
+                      <p className="text-sm">
                         {`TKP ${formatAvg(statsData.avgTkp)}`}
                       </p>
                     </div>
                   </div>
                 )}
                 {statsData && statsData.completed === 0 && (
-                  <p className="mt-3 text-sm text-slate-600">
+                  <p className="mt-3 text-sm text-muted-foreground">
                     Belum ada sesi selesai pada paket ini.
                   </p>
                 )}
@@ -231,19 +299,10 @@ export default function CbtHasilPage({
                   </select>
                 </label>
                 <div className="flex gap-2">
-                  <button
-                    type="submit"
-                    className="min-h-[44px] bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-                  >
-                    Terapkan filter
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleReset}
-                    className="min-h-[44px] border border-slate-300 px-4 py-2 text-sm text-slate-900"
-                  >
+                  <Button type="submit" className="min-h-11">Terapkan filter</Button>
+                  <Button type="button" variant="outline" className="min-h-11" onClick={handleReset}>
                     Atur ulang
-                  </button>
+                  </Button>
                 </div>
                 <ExportButton
                   requestMutation={EXPORT_CBT_RESULTS_MUTATION}
@@ -252,105 +311,28 @@ export default function CbtHasilPage({
                 />
               </TableToolbar>
 
-              {loading && <p className="mt-6 text-slate-900">Memuat…</p>}
+              {loading && <LoadingState />}
               {error && (
-                <div className="mt-6">
-                  <p className="text-sm text-red-700">
-                    {graphQLErrorMessage(error, "Gagal memuat hasil ujian.")}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => void refetch()}
-                    className="mt-2 min-h-[44px] underline"
-                  >
-                    Muat ulang
-                  </button>
-                </div>
+                <ErrorState onRetry={() => void refetch()}>
+                  {graphQLErrorMessage(error, "Gagal memuat hasil ujian.")}
+                </ErrorState>
               )}
               {data && total === 0 && (
-                <p className="mt-6 text-sm text-slate-600">
-                  Belum ada hasil yang cocok. Selesaikan sesi simulasi atau
-                  ubah filter.
-                </p>
+                <EmptyState>
+                  Belum ada hasil yang cocok. Selesaikan sesi simulasi atau ubah filter.
+                </EmptyState>
               )}
-              {data && total > 0 && pageValid && (
-                <>
-                  <div className="mt-6 overflow-x-auto">
-                    <Table scrollLabel="Hasil ujian" className="min-w-max bg-card text-left">
-                      <thead>
-                        <tr className="border-b border-slate-200 text-slate-600">
-                          <th className="py-2 pr-4 font-semibold">Peserta</th>
-                          <th className="py-2 pr-4 font-semibold">Paket</th>
-                          <th className="py-2 pr-4 font-semibold">TWK</th>
-                          <th className="py-2 pr-4 font-semibold">TIU</th>
-                          <th className="py-2 pr-4 font-semibold">TKP</th>
-                          <th className="py-2 pr-4 font-semibold">Total</th>
-                          <th className="py-2 pr-4 font-semibold">Status</th>
-                          <th className="py-2 font-semibold">Selesai</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {data.cbtResults.items.map((r) => (
-                          <tr key={r.id} className="border-b border-slate-100">
-                            <td className="py-2 pr-4 text-slate-900">
-                              {r.participantName}
-                            </td>
-                            <td className="py-2 pr-4 text-slate-600">
-                              {r.packageTitle}
-                            </td>
-                            <td className="py-2 pr-4 text-slate-600">
-                              {r.twkScore}
-                            </td>
-                            <td className="py-2 pr-4 text-slate-600">
-                              {r.tiuScore}
-                            </td>
-                            <td className="py-2 pr-4 text-slate-600">
-                              {r.tkpScore}
-                            </td>
-                            <td className="py-2 pr-4 font-semibold text-slate-900">
-                              {r.totalScore}
-                            </td>
-                            <td className="py-2 pr-4">
-                              <span
-                                className={
-                                  r.passed
-                                    ? "bg-green-100 px-2 py-1 text-xs font-semibold text-green-800"
-                                    : "bg-red-100 px-2 py-1 text-xs font-semibold text-red-800"
-                                }
-                              >
-                                {r.passed ? "Lulus" : "Tidak lulus"}
-                              </span>
-                            </td>
-                            <td className="whitespace-nowrap py-2 text-slate-600">
-                              {formatDateTime(r.finishedAt)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </Table>
-                  </div>
-                  <div className="mt-4 flex items-center gap-4 text-sm">
-                    <button
-                      type="button"
-                      disabled={page <= 1}
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      className="min-h-[44px] underline disabled:opacity-50"
-                    >
-                      Sebelumnya
-                    </button>
-                    <span className="text-slate-600">
-                      {`${from}–${to} dari ${total}`}
-                    </span>
-                    <button
-                      type="button"
-                      disabled={page * PER_PAGE >= total}
-                      onClick={() => setPage((p) => p + 1)}
-                      className="min-h-[44px] underline disabled:opacity-50"
-                    >
-                      Berikutnya
-                    </button>
-                  </div>
-                </>
+              {data && pageValid && (
+                <div className="mt-6">
+                  <DataTable
+                    rows={data.cbtResults.items}
+                    columns={columns}
+                    getRowId={(r) => r.id}
+                    label="Hasil ujian"
+                    emptyMessage={total === 0 ? "Belum ada hasil yang cocok. Selesaikan sesi simulasi atau ubah filter." : "Tidak ada hasil pada halaman ini."}
+                    pagination={{ pageIndex: page - 1, pageSize: PER_PAGE, totalRows: total, onPageChange: (index) => setPage(index + 1) }}
+                  />
+                </div>
               )}
             </>
           )}
