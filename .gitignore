@@ -46,3 +46,4 @@ schema.gql
 
 # Ledger eksekusi plan (superpowers, per-plan)
 .superpowers/
+.worktrees/
