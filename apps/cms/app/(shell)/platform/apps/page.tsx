@@ -3,15 +3,17 @@
 import { useQuery } from "@apollo/client/react";
 import { useState } from "react";
 import type { JSX } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { ButtonLink } from "@/components/shared/button-link";
+import { DataTable } from "@/components/shared/data-table";
 import { PageHeader } from "@/components/shared/page-header";
-import { EmptyState, ErrorState, LoadingState } from "@/components/shared/page-state";
+import { LoadingState, ErrorState } from "@/components/shared/page-state";
 import { TableToolbar } from "@/components/shared/table-toolbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AppStatusBadge } from "@/features/apps/components/app-status-badge";
 import { APPS_LIST_QUERY } from "@/features/apps/graphql/apps.graphql";
+import type { AppListData } from "@/features/apps/graphql/apps.graphql";
 import { PermissionGate } from "@/features/rbac/components/permission-gate";
 import { graphQLErrorMessage } from "@/features/rbac/graphql/errors";
 
@@ -32,6 +34,42 @@ export default function AppsPage(): JSX.Element {
   const { data, loading, error, refetch } = useQuery(APPS_LIST_QUERY, {
     variables: { status, search: search || null },
   });
+
+  const columns: ColumnDef<AppListData>[] = [
+    {
+      id: "name",
+      header: "Nama",
+      cell: ({ row: { original: app } }) => (
+        <span className="block max-w-72 whitespace-normal font-medium wrap-anywhere">
+          {app.name}
+        </span>
+      ),
+    },
+    {
+      id: "slug",
+      header: "Slug",
+      cell: ({ row: { original: app } }) => (
+        <span className="text-muted-foreground">{app.slug}</span>
+      ),
+    },
+    {
+      id: "status",
+      header: "Status",
+      cell: ({ row: { original: app } }) => <AppStatusBadge status={app.status} />,
+    },
+    {
+      id: "createdAt",
+      header: "Dibuat",
+      cell: ({ row: { original: app } }) => date.format(new Date(app.createdAt)),
+    },
+    {
+      id: "actions",
+      header: "Aksi",
+      cell: ({ row: { original: app } }) => (
+        <ButtonLink href={`/platform/apps/${app.slug}`} variant="link">Kelola</ButtonLink>
+      ),
+    },
+  ];
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
@@ -60,24 +98,14 @@ export default function AppsPage(): JSX.Element {
       </TableToolbar>
       {loading && <LoadingState />}
       {error && <ErrorState onRetry={() => void refetch()}>{graphQLErrorMessage(error, "Gagal memuat daftar aplikasi.")}</ErrorState>}
-      {data?.apps.length === 0 && <EmptyState>
-        {search || status !== "all" ? "Tidak ada aplikasi yang cocok dengan filter." : "Belum ada aplikasi."}
-      </EmptyState>}
-      {data && data.apps.length > 0 && (
-        <Table scrollLabel="Daftar aplikasi" className="min-w-max bg-card">
-          <TableHeader className="bg-muted"><TableRow>
-            {["Nama", "Slug", "Status", "Dibuat", "Aksi"].map((title) => <TableHead key={title} scope="col" className="px-3">{title}</TableHead>)}
-          </TableRow></TableHeader>
-          <TableBody>
-            {data.apps.map((app) => <TableRow key={app.id}>
-              <TableCell className="max-w-72 px-3 font-medium whitespace-normal wrap-anywhere">{app.name}</TableCell>
-              <TableCell className="px-3 text-muted-foreground">{app.slug}</TableCell>
-              <TableCell className="px-3"><AppStatusBadge status={app.status} /></TableCell>
-              <TableCell className="px-3">{date.format(new Date(app.createdAt))}</TableCell>
-              <TableCell className="px-3"><ButtonLink href={`/platform/apps/${app.slug}`} variant="link">Kelola</ButtonLink></TableCell>
-            </TableRow>)}
-          </TableBody>
-        </Table>
+      {data && (
+        <DataTable
+          rows={data.apps}
+          columns={columns}
+          getRowId={(app) => app.id}
+          label="Daftar aplikasi"
+          emptyMessage={search || status !== "all" ? "Tidak ada aplikasi yang cocok dengan filter." : "Belum ada aplikasi."}
+        />
       )}
     </main>
   );

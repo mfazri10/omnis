@@ -3,17 +3,19 @@
 import { useMutation, useQuery } from "@apollo/client/react";
 import { useState } from "react";
 import type { JSX } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { ButtonLink } from "@/components/shared/button-link";
+import { DataTable } from "@/components/shared/data-table";
 import { PageHeader } from "@/components/shared/page-header";
-import { EmptyState, ErrorState, LoadingState } from "@/components/shared/page-state";
+import { ErrorState, LoadingState } from "@/components/shared/page-state";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { PermissionGate } from "../../../../features/rbac/components/permission-gate";
-import { graphQLErrorMessage } from "../../../../features/rbac/graphql/errors";
+import { PermissionGate } from "@/features/rbac/components/permission-gate";
+import { graphQLErrorMessage } from "@/features/rbac/graphql/errors";
+import type { RoleData } from "@/features/rbac/graphql/roles.graphql";
 import {
   DELETE_ROLE_MUTATION,
   ROLES_QUERY,
-} from "../../../../features/rbac/graphql/roles.graphql";
+} from "@/features/rbac/graphql/roles.graphql";
 
 export default function RolesPage(): JSX.Element {
   const { data, loading, error, refetch } = useQuery(ROLES_QUERY);
@@ -35,6 +37,53 @@ export default function RolesPage(): JSX.Element {
     }
   }
 
+  const columns: ColumnDef<RoleData>[] = [
+    {
+      id: "name",
+      header: "Nama",
+      cell: ({ row: { original: role } }) => (
+        <span className="block max-w-60 whitespace-normal font-medium wrap-anywhere">
+          {role.name}
+        </span>
+      ),
+    },
+    {
+      id: "scope",
+      header: "Cakupan",
+      cell: ({ row: { original: role } }) =>
+        role.scopeType === "app" ? "Aplikasi" : "Global",
+    },
+    {
+      id: "permissions",
+      header: "Izin",
+      cell: ({ row: { original: role } }) => (
+        <span className="tabular-nums">{role.permissionKeys.length}</span>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Aksi",
+      cell: ({ row: { original: role } }) => (
+        <div className="flex items-center gap-2">
+          <ButtonLink variant="link" href={`/platform/roles/${role.id}`}>
+            Ubah
+          </ButtonLink>
+          <PermissionGate requires="platform.roles.manage">
+            <Button
+              type="button"
+              disabled={deleting}
+              onClick={() => void handleDelete(role.id, role.name)}
+              variant="destructive"
+              className="min-h-11"
+            >
+              Hapus
+            </Button>
+          </PermissionGate>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
       <PageHeader title="Role" description="Atur peran serta izin di platform dan aplikasi." actions={
@@ -48,44 +97,16 @@ export default function RolesPage(): JSX.Element {
           {graphQLErrorMessage(error, "Gagal memuat daftar role.")}
         </ErrorState>
       )}
-      {actionError && (
-        <ErrorState>{actionError}</ErrorState>
-      )}
-      {data && data.roles.length === 0 && (
-        <EmptyState>Belum ada role.</EmptyState>
-      )}
-      {data && data.roles.length > 0 && (
+      {actionError && <ErrorState>{actionError}</ErrorState>}
+      {data && (
         <div className="mt-4">
-        <Table scrollLabel="Daftar role" className="min-w-max bg-card">
-          <TableHeader className="bg-muted">
-            <TableRow>
-              {["Nama", "Cakupan", "Izin", "Aksi"].map((label) => <TableHead scope="col" key={label}>{label}</TableHead>)}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.roles.map((role) => (
-              <TableRow key={role.id}>
-                <TableCell className="max-w-60 font-medium whitespace-normal wrap-anywhere">{role.name}</TableCell>
-                <TableCell>{role.scopeType === "app" ? "Aplikasi" : "Global"}</TableCell>
-                <TableCell>{role.permissionKeys.length}</TableCell>
-                <TableCell>
-                  <ButtonLink variant="link" href={`/platform/roles/${role.id}`}>Ubah</ButtonLink>
-                  <PermissionGate requires="platform.roles.manage">
-                    <Button
-                      type="button"
-                      disabled={deleting}
-                      onClick={() => void handleDelete(role.id, role.name)}
-                      variant="destructive"
-                      className="min-h-11"
-                    >
-                      Hapus
-                    </Button>
-                  </PermissionGate>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+          <DataTable
+            rows={data.roles}
+            columns={columns}
+            getRowId={(role) => role.id}
+            label="Daftar role"
+            emptyMessage="Belum ada role."
+          />
         </div>
       )}
     </main>
