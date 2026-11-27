@@ -9,6 +9,7 @@ import type { AppRow } from "../entities/apps.entity";
 import type { RoleRow } from "../entities/roles.entity";
 import type { PermissionsRepository } from "./permissions.repository";
 import type { RbacService } from "./rbac.service";
+import { PLATFORM_CATALOG } from "./platform.permissions";
 import { RolesService } from "./roles.service";
 import type { AssignmentsRepository } from "./assignments.repository";
 
@@ -133,6 +134,33 @@ describe("RolesService", () => {
       permissionKeys: ["platform.users.view"],
     });
     expect(roles.replaceRolePermissions).toHaveBeenCalled();
+  });
+
+  it("menerima permission menu mobile pada role cakupan-app", async () => {
+    const { service, roles, permissions, apps } = makeService();
+    apps.findById.mockResolvedValue(appRow());
+    permissions.findByKey.mockResolvedValue({ id: 41 });
+    roles.insert.mockResolvedValue(roleRow());
+    roles.findRolePermissionKeys.mockResolvedValue([
+      "platform.mobile-menus.create",
+    ]);
+    const catalogPermission = PLATFORM_CATALOG.find(
+      ({ key }) => key === "platform.mobile-menus.create",
+    );
+
+    expect(catalogPermission?.globalOnly).toBe(false);
+    await expect(
+      service.create({
+        name: "Pengelola Menu",
+        scopeType: "app",
+        appId: "1",
+        permissionKeys: ["platform.mobile-menus.create"],
+      }),
+    ).resolves.toMatchObject({
+      scopeType: "app",
+      appId: "1",
+      permissionKeys: ["platform.mobile-menus.create"],
+    });
   });
 
   it("menolak role app tanpa appId", async () => {

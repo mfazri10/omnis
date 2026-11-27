@@ -24,6 +24,10 @@ export const PLATFORM_CATALOG: PermissionDef[] = [
   { key: "platform.notifications.send", module: "platform", label: "Mengirim notifikasi", globalOnly: false },
   { key: "platform.app-config.view", module: "platform", label: "Melihat konfigurasi aplikasi", globalOnly: false },
   { key: "platform.app-config.manage", module: "platform", label: "Mengubah konfigurasi aplikasi", globalOnly: false },
+  { key: "platform.mobile-menus.view", module: "platform", label: "Melihat menu mobile", globalOnly: false },
+  { key: "platform.mobile-menus.create", module: "platform", label: "Membuat menu mobile", globalOnly: false },
+  { key: "platform.mobile-menus.update", module: "platform", label: "Mengubah menu mobile", globalOnly: false },
+  { key: "platform.mobile-menus.delete", module: "platform", label: "Menghapus menu mobile", globalOnly: false },
   { key: "platform.audit.view", module: "platform", label: "Melihat log audit", globalOnly: false },
 ];
 

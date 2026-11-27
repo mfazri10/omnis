@@ -48,6 +48,9 @@ function parseId(value: string, label: string): number {
 }
 
 function parseName(value: string): string {
+  if (typeof value !== "string") {
+    throw new BadRequestException("Nama menu harus berupa teks.");
+  }
   const name = value.trim();
   if (name.length === 0 || name.length > 255) {
     throw new BadRequestException("Nama menu harus berisi 1 sampai 255 karakter.");
@@ -56,6 +59,9 @@ function parseName(value: string): string {
 }
 
 function parseSlug(value: string): string {
+  if (typeof value !== "string") {
+    throw new BadRequestException("Slug menu harus berupa teks.");
+  }
   const slug = value.trim();
   if (slug.length > 255 || !SLUG_PATTERN.test(slug)) {
     throw new BadRequestException(
@@ -144,7 +150,7 @@ export class MobileMenusService {
     const db = this.database.getControlPlaneConnection();
     const numericAppId = parseId(appId, "ID aplikasi");
     const numericId = parseId(id, "ID menu");
-    const current = await this.mustFind(db, numericAppId, numericId);
+    await this.mustFind(db, numericAppId, numericId);
     const patch: UpdateMobileMenuRow = {};
 
     if (input.name !== undefined) {

@@ -11,6 +11,7 @@ import { AppsModule } from "./modules/platform/apps/apps.module";
 import { DashboardModule } from "./modules/platform/dashboard/dashboard.module";
 import { ActivityLogsModule } from "./modules/platform/activity-logs/activity-logs.module";
 import { AppConfigModule } from "./modules/platform/app-config/app-config.module";
+import { MobileMenusModule } from "./modules/platform/mobile-menus/mobile-menus.module";
 import { AppUsersModule } from "./modules/platform/app-users/app-users.module";
 import { ExportsModule } from "./modules/platform/exports/exports.module";
 import { MediaModule } from "./modules/platform/media/media.module";
@@ -38,6 +39,7 @@ import { GraphqlExceptionFilter } from "./common/filters/graphql-exception.filte
     AppsModule,
     DashboardModule,
     AppConfigModule,
+    MobileMenusModule,
     AppUsersModule,
     CbtModule,
     ExportsModule,

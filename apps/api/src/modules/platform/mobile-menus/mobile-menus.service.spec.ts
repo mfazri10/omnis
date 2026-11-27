@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   ConflictException,
-  NotFoundException,
 } from "@nestjs/common";
 import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
@@ -55,12 +54,20 @@ function menuRow(over: Partial<MobileMenuRow> = {}): MobileMenuRow {
 
 function menuQuery(rows: MobileMenuRow[] = []): {
   db: Db;
-  where: jest.Mock;
+  filter: () => SQL;
   orderBy: jest.Mock;
   limit: jest.Mock;
 } {
-  const query = {
-    where: jest.fn().mockReturnThis(),
+  let capturedFilter: SQL | undefined;
+  const query: {
+    where: (condition: SQL) => typeof query;
+    orderBy: jest.Mock;
+    limit: jest.Mock;
+  } = {
+    where(condition) {
+      capturedFilter = condition;
+      return query;
+    },
     orderBy: jest.fn().mockResolvedValue(rows),
     limit: jest.fn().mockResolvedValue(rows),
   };
@@ -69,41 +76,48 @@ function menuQuery(rows: MobileMenuRow[] = []): {
       from: jest.fn().mockReturnValue(query),
     }),
   } as unknown as Db;
-  return { db, ...query };
+  return {
+    db,
+    filter: () => {
+      if (capturedFilter === undefined) {
+        throw new Error("Where condition was not captured.");
+      }
+      return capturedFilter;
+    },
+    orderBy: query.orderBy,
+    limit: query.limit,
+  };
 }
 
 describe("MobileMenusRepository", () => {
   it("scopes list to app and orders by orderNo then id", async () => {
     const repository = new MobileMenusRepository();
-    const { db, where, orderBy } = menuQuery();
+    const { db, filter, orderBy } = menuQuery();
 
     await repository.listByAppId(db, 7);
 
-    const filter = where.mock.calls[0]?.[0] as SQL;
-    expect(new PgDialect().sqlToQuery(filter).params).toContain(7);
+    expect(new PgDialect().sqlToQuery(filter()).params).toContain(7);
     expect(orderBy).toHaveBeenCalledWith(menus.orderNo, menus.id);
   });
 
   it("scopes ID lookup to both app and menu", async () => {
     const repository = new MobileMenusRepository();
-    const { db, where } = menuQuery([menuRow()]);
+    const { db, filter } = menuQuery([menuRow()]);
 
     await repository.findByAppIdAndId(db, 7, 9);
 
-    const filter = where.mock.calls[0]?.[0] as SQL;
-    expect(new PgDialect().sqlToQuery(filter).params).toEqual(
+    expect(new PgDialect().sqlToQuery(filter()).params).toEqual(
       expect.arrayContaining([7, 9]),
     );
   });
 
   it("scopes slug lookup to both app and slug", async () => {
     const repository = new MobileMenusRepository();
-    const { db, where } = menuQuery([menuRow()]);
+    const { db, filter } = menuQuery([menuRow()]);
 
     await repository.findByAppIdAndSlug(db, 7, "beranda");
 
-    const filter = where.mock.calls[0]?.[0] as SQL;
-    const query = new PgDialect().sqlToQuery(filter);
+    const query = new PgDialect().sqlToQuery(filter());
     expect(query.params).toContain(7);
     expect(query.params).toContain("beranda");
   });
@@ -177,7 +191,11 @@ describe("MobileMenusService", () => {
       4: menuRow({ id: 4, parentId: 2 }),
     };
     repository.findByAppIdAndId.mockImplementation(
-      async (_db: unknown, _appId: number, id: number) => byId[id] ?? null,
+      (
+        _db: unknown,
+        _appId: number,
+        id: number,
+      ): Promise<MobileMenuRow | null> => Promise.resolve(byId[id] ?? null),
     );
 
     await expect(
@@ -196,6 +214,21 @@ describe("MobileMenusService", () => {
     ).rejects.toBeInstanceOf(ConflictException);
     expect(repository.updateByAppIdAndId).not.toHaveBeenCalled();
   });
+
+  it.each(["name", "slug"])(
+    "rejects an explicit null %s during update as a client error",
+    async (field) => {
+      const { service, repository } = makeService();
+      repository.findByAppIdAndId.mockResolvedValue(menuRow());
+      const input = { [field]: null } as unknown as Parameters<
+        typeof service.update
+      >[2];
+
+      await expect(service.update("7", "1", input)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    },
+  );
 
   it("maps a concurrent duplicate-slug update to conflict", async () => {
     const { service, repository } = makeService();
