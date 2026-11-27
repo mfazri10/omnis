@@ -5,7 +5,7 @@
 | FR | Usulan kebutuhan baru: navigasi mobile dapat dikonfigurasi per aplikasi |
 | Fase | 3 |
 | Prioritas | Must untuk aplikasi mobile yang memakai menu dinamis |
-| Status | Backend admin tahap pertama selesai; migrasi belum diterapkan; CMS UI dan integrasi F13 belum mulai |
+| Status | Backend admin tahap pertama selesai; tahap CMS UI selesai (identifier, tanpa manifest); migrasi belum diterapkan; integrasi F13 belum mulai |
 | Dependensi | F03, F05, F06, F13 |
 
 ## Tujuan
@@ -55,15 +55,15 @@ API baca runtime untuk aplikasi mobile, autentikasi sesi user aplikasi, serta pe
 
 ## Lingkup CMS UI
 
-- [ ] Sediakan halaman **Menu Mobile** pada konteks aplikasi yang dipilih.
-- [ ] Tampilkan halaman dan datanya hanya untuk admin dengan `platform.mobile-menus.view` pada aplikasi yang dipilih; Super Admin dapat mengakses lintas aplikasi.
-- [ ] Izinkan admin dengan permission yang sesuai mengubah hierarki, label, slug, ikon, layar tujuan, urutan, dan status aktif.
-- [ ] Tampilkan pohon menu hasil konfigurasi, termasuk parent dan submenu, sebelum perubahan disimpan.
-- [ ] Tampilkan layar tujuan dari daftar layar yang didaftarkan aplikasi; jangan menerima URL atau path sembarang.
-- [ ] Tahap UI setelah backend: tampilkan checkbox permission di form Role di bawah grup Menu Mobile: lihat, buat, ubah/urutkan/aktifkan, dan hapus. Simpan assignment melalui `role_permissions` F05, bukan tabel role-menu baru.
-- [ ] Tahap UI setelah backend: sembunyikan atau nonaktifkan setiap tombol sesuai permission aksinya. Tombol bukan sumber otorisasi; mutation tetap memeriksa permission yang sama di server.
-- [ ] Tampilkan error validasi dari API dan pertahankan input yang belum berhasil disimpan.
-- [ ] Jangan mengubah item sidebar CMS melalui halaman ini.
+- [x] Sediakan halaman **Menu Mobile** pada konteks aplikasi yang dipilih (`/{appSlug}/menu-mobile`, commit f6e943a).
+- [x] Tampilkan halaman dan datanya hanya untuk admin dengan `platform.mobile-menus.view` pada aplikasi yang dipilih; Super Admin dapat mengakses lintas aplikasi.
+- [x] Izinkan admin dengan permission yang sesuai mengubah hierarki (parent via select tanpa diri/keturunan), label, slug, ikon (`icon_key`), layar tujuan (`route_key`, identifier tahap awal), urutan (field urutan + Naik/Turun), dan status aktif.
+- [x] Tampilkan pohon menu hasil konfigurasi, termasuk parent dan submenu, sebelum perubahan disimpan (kartu Pohon menu).
+- [ ] Tampilkan layar tujuan dari daftar layar yang didaftarkan aplikasi; jangan menerima URL atau path sembarang. (Menunggu manifest F13; tahap awal memakai input identifier dengan validasi format `^[a-z][a-z0-9._-]{0,254}$`, URL/path ditolak.)
+- [x] Tahap UI setelah backend: tampilkan checkbox permission di form Role di bawah grup Menu Mobile: lihat, buat, ubah/urutkan/aktifkan, dan hapus. Simpan assignment melalui `role_permissions` F05, bukan tabel role-menu baru (commit ef08d3f).
+- [x] Tahap UI setelah backend: sembunyikan atau nonaktifkan setiap tombol sesuai permission aksinya. Tombol bukan sumber otorisasi; mutation tetap memeriksa permission yang sama di server.
+- [x] Tampilkan error validasi dari API dan pertahankan input yang belum berhasil disimpan.
+- [x] Jangan mengubah item sidebar CMS melalui halaman ini. (Item sidebar "Menu Mobile" ditambahkan sebagai navigasi ke halaman, bukan diubah oleh halaman; sidebar CMS lain tetap.)
 
 ## Lingkup Aplikasi Mobile (Tahap Lanjutan F13)
 
