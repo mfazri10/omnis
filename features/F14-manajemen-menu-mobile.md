@@ -5,7 +5,7 @@
 | FR | Usulan kebutuhan baru: navigasi mobile dapat dikonfigurasi per aplikasi |
 | Fase | 3 |
 | Prioritas | Must untuk aplikasi mobile yang memakai menu dinamis |
-| Status | Backend admin tahap pertama selesai; tahap CMS UI selesai (identifier, tanpa manifest); migrasi belum diterapkan; integrasi F13 belum mulai |
+| Status | Backend admin tahap pertama selesai; tahap CMS UI selesai (identifier, tanpa manifest); migrasi sudah diterapkan ke control-plane produksi; integrasi F13 belum mulai |
 | Dependensi | F03, F05, F06, F13 |
 
 ## Tujuan
